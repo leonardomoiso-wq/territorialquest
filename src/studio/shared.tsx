@@ -1,6 +1,7 @@
 "use client";
 
-import type { CampaignData, Membership, Observation } from "@/domain/types";
+import type { Campaign, CampaignData, Membership, Observation } from "@/domain/types";
+import { mediaUrl } from "@/lib/data";
 import { KIND_LABEL } from "@/domain/types";
 import { Tag } from "@/ui/kit";
 
@@ -35,4 +36,15 @@ export function Swatches({ value, onChange }: { value: string; onChange: (c: str
       ))}
     </div>
   );
+}
+
+/** Impostazioni di sfondo della campagna, pronte per la mappa. */
+export function backdrop(c: Pick<Campaign, "basemap" | "basemap_url" | "basemap_opacity" | "overlay">) {
+  const url = mediaUrl(c.overlay?.path ?? null);
+  return {
+    basemap: c.basemap ?? "mappa",
+    basemapUrl: c.basemap_url ?? null,
+    basemapOpacity: c.basemap_opacity ?? 1,
+    overlay: c.overlay && url ? { url, coordinates: c.overlay.coordinates, opacity: c.overlay.opacity } : null,
+  };
 }

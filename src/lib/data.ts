@@ -191,10 +191,14 @@ export const heartbeat = (campaignId: string, lng?: number, lat?: number) =>
 export const saveArea = (a: {
   id?: string; campaign_id: string; name: string; color: string; geometry: Polygon;
   team_id: string | null; opens_at: string | null; closes_at: string | null;
+  environment?: string; terrain?: Record<string, string>;
 }) => {
-  const { id, ...row } = a;
+  const { id, name, color, geometry, team_id, opens_at, closes_at, campaign_id, environment, terrain } = a;
+  const row = { name, color, geometry, team_id, opens_at, closes_at, campaign_id, environment: environment ?? "urbano", terrain: terrain ?? {} };
   return id ? unwrap(db().from("areas").update(row).eq("id", id)) : unwrap(db().from("areas").insert(row));
 };
+export const paintArea = (id: string, terrain: Record<string, string>) =>
+  unwrap(db().from("areas").update({ terrain }).eq("id", id));
 export const deleteArea = (id: string) => unwrap(db().from("areas").delete().eq("id", id));
 
 export const saveMission = (m: Partial<Mission> & { campaign_id: string; title: string }) => {

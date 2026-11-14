@@ -9,7 +9,7 @@ import { ago, areaOpen, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
 import { FIELD_ROLES, KIND_HINT, KIND_LABEL, type FieldRole, type Observation, type ObservationKind } from "@/domain/types";
 import { addObservation, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
 import { useAction, useNow } from "@/lib/hooks";
-import { KIND_COLOR, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
+import { backdrop, KIND_COLOR, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Area, Button, cx, Dot, Empty, Field, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
 
@@ -122,7 +122,7 @@ export default function Campo() {
   return (
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView
-        className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations} grid fit controls={false}
+        className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations} grid fit controls={false} {...backdrop(c)}
         pin={picking || panel === "new" ? pin : null}
         players={position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#0b0b0c", lng: position[0], lat: position[1], online: true }] : []}
         onClick={picking ? (p) => setPin(p) : undefined}

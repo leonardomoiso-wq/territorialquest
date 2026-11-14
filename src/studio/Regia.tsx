@@ -5,9 +5,9 @@ import { indicators, MISSION_KIND, missionProgress } from "@/domain/scoring";
 import { ago, isOnline, remaining } from "@/domain/time";
 import { announce } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
-import MapView, { type MapPlayer } from "@/ui/MapView";
-import { Area, Button, Card, Dot, Label, Meter, Notice, Ring, Select } from "@/ui/kit";
-import { KindTag, nameOf, teamOf, type Ctx } from "./shared";
+import MapView, { type MapMode, type MapPlayer } from "@/ui/MapView";
+import { Area, Button, Card, Dot, Label, Meter, Notice, Ring, Segmented, Select } from "@/ui/kit";
+import { backdrop, KindTag, nameOf, teamOf, type Ctx } from "./shared";
 
 export default function Regia({ data, me, now }: Ctx) {
   const ind = useMemo(() => indicators(data), [data]);
@@ -22,6 +22,7 @@ export default function Regia({ data, me, now }: Ctx) {
   const missions = data.missions.map((m) => missionProgress(m, data, now)).filter((p) => p.state === "active" || p.state === "done");
   const pending = data.observations.filter((o) => o.status === "pending").length;
 
+  const [mode, setMode] = useState<MapMode>("2d");
   const [body, setBody] = useState("");
   const [target, setTarget] = useState("");
   const { busy, error, run } = useAction();
@@ -37,8 +38,11 @@ export default function Regia({ data, me, now }: Ctx) {
         <div className="relative h-[62dvh] min-h-[420px] overflow-hidden rounded-panel border hairline">
           <MapView
             className="size-full" center={[data.campaign.center_lng, data.campaign.center_lat]} zoom={data.campaign.zoom}
-            areas={data.areas} observations={data.observations} players={onMap} grid fit
+            areas={data.areas} observations={data.observations} players={onMap} grid fit mode={mode} {...backdrop(data.campaign)}
           />
+          <div className="glass absolute top-16 left-4 rounded-full p-1">
+            <Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "3d", label: "3D reale" }, { id: "model", label: "Modello" }]} />
+          </div>
           <div className="glass absolute top-4 left-4 flex items-center gap-4 rounded-full py-2 pr-5 pl-4">
             <Dot color="var(--color-leaf)" live={online.length > 0} />
             <span className="text-sm"><b className="num font-medium">{online.length}</b> sul campo ora</span>

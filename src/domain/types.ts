@@ -27,7 +27,20 @@ export interface Campaign {
   center_lng: number;
   center_lat: number;
   zoom: number;
+  basemap?: Basemap;
+  basemap_url?: string | null;
+  basemap_opacity?: number;
+  overlay?: Overlay | null;
   created_at: string;
+}
+
+export type Basemap = "mappa" | "satellite" | "custom" | "nessuno";
+
+/** Immagine caricata e posata sulla mappa: angoli in senso orario da nord-ovest. */
+export interface Overlay {
+  path: string;
+  coordinates: [[number, number], [number, number], [number, number], [number, number]];
+  opacity: number;
 }
 
 export interface Team {
@@ -59,6 +72,8 @@ export interface Area {
   name: string;
   color: string;
   geometry: Polygon;
+  environment?: string;
+  terrain?: Record<string, string>;
   opens_at: string | null;
   closes_at: string | null;
 }
