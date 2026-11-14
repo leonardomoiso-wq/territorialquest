@@ -1,26 +1,137 @@
 @import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource/instrument-serif/400-italic.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ------------------------------------------------------------------ token */
+@theme {
+  --color-ink: #0b0b0c;
+  --color-ink-2: #151517;
+  --color-ink-3: #222226;
+  --color-paper: #f4f3ee;
+  --color-paper-2: #eae9e2;
+  --color-card: #ffffff;
+  --color-line: #d4d3ce;
+  --color-mute: #8b8f98;
+  --color-graphite: #3d4046;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-moss: #1c4839;
+  --color-leaf: #17804f;
+  --color-glow: #37e08b;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* le tre famiglie di rilievo */
+  --color-field: #17804f;
+  --color-desk: #2f6fe0;
+  --color-feel: #e2578f;
+  --color-sun: #e8a81c;
+  --color-alert: #d4452f;
+
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+  --radius-card: 22px;
+  --radius-panel: 32px;
+
+  --shadow-float: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 40px -18px rgb(11 11 12 / 0.35), 0 2px 6px rgb(11 11 12 / 0.06);
+  --shadow-soft: 0 10px 30px -18px rgb(11 11 12 / 0.25), 0 1px 2px rgb(11 11 12 / 0.05);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-rise: rise 0.7s var(--ease-out-expo) both;
+  --animate-fade: fade 0.5s ease both;
+  --animate-pulse-ring: pulse-ring 2.2s ease-out infinite;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+    100% { box-shadow: 0 0 0 10px transparent; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ------------------------------------------------------------------- base */
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body { min-height: 100dvh; }
+::selection { background: var(--color-glow); color: var(--color-ink); }
+:focus-visible { outline: 2px solid var(--color-leaf); outline-offset: 2px; border-radius: 6px; }
+.on-ink :focus-visible { outline-color: var(--color-glow); }
+
+/* Superficie scura: inverte i colori di testo e bordo per i componenti figli. */
+.on-ink { background: var(--color-ink); color: var(--color-paper); --line: rgb(255 255 255 / 0.14); --soft: rgb(255 255 255 / 0.6); --surface: var(--color-ink-2); }
+:root, .on-paper { --line: var(--color-line); --soft: var(--color-graphite); --surface: var(--color-card); }
+.on-paper { background: var(--color-paper); color: var(--color-ink); }
+
+/* ------------------------------------------------------------- tipografia */
+@utility display {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+@utility serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+@utility label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+@utility soft { color: var(--soft); }
+@utility hairline { border-color: var(--line); }
+@utility surface { background: var(--surface); }
+
+/* Vetro: pannelli flottanti sopra mappa e scene. */
+@utility glass {
+  background: color-mix(in srgb, var(--color-card) 78%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow: var(--shadow-float);
+}
+@utility glass-ink {
+  background: color-mix(in srgb, var(--color-ink) 82%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  color: var(--color-paper);
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.6);
+}
+
+/* Righello graduato dell'HUD. */
+@utility ruler {
+  background-image: repeating-linear-gradient(to right, currentColor 0 1px, transparent 1px 8px);
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.maplibregl-map { font-family: var(--font-sans); }
+.maplibregl-ctrl-attrib { font-size: 10px; background: rgb(255 255 255 / 0.6) !important; border-radius: 8px 0 0 0; }
+.maplibregl-ctrl-group { border-radius: 14px !important; overflow: hidden; box-shadow: var(--shadow-soft) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
