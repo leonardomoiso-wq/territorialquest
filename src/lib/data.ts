@@ -144,18 +144,18 @@ export function useCampaign(id: string | undefined) {
 
   useEffect(() => {
     if (!id) return;
-    refresh();
-    const soon = () => {
+    const soon = (delay = 250) => {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(refresh, 250);
+      timer.current = setTimeout(refresh, delay);
     };
+    soon(0);
     const supabase = db();
     const channel = supabase.channel(`campaign:${id}`);
     for (const table of LIVE_TABLES) {
       channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table, filter: `${table === "campaigns" ? "id" : "campaign_id"}=eq.${id}` },
-        soon,
+        () => soon(),
       );
     }
     channel.subscribe();

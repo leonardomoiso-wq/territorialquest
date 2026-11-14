@@ -19,8 +19,11 @@ export default function Studio() {
   const [open, setOpen] = useState(false);
   const { busy, error, run } = useAction();
 
-  const inTwoWeeks = () => new Date(Date.now() + 14 * 86400000).toISOString();
-  const [form, setForm] = useState({ name: "", description: "", starts: toLocalInput(new Date().toISOString()), ends: toLocalInput(inTwoWeeks()) });
+  const [form, setForm] = useState(() => ({
+    name: "", description: "",
+    starts: toLocalInput(new Date().toISOString()),
+    ends: toLocalInput(new Date(Date.now() + 14 * 86400000).toISOString()),
+  }));
 
   useEffect(() => {
     if (!user) return;

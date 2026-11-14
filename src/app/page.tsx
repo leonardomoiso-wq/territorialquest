@@ -31,7 +31,7 @@ export default function Home() {
           <span className="glass inline-flex h-9 items-center gap-2 rounded-full px-3.5">
             <span className="size-2 rounded-full bg-glow" />
             <span className="num text-sm">1 284</span>
-            <span className="label soft">pt insieme</span>
+            <span className="label soft whitespace-nowrap">pt insieme</span>
           </span>
         </header>
 

@@ -1,10 +1,12 @@
 "use client";
 
-import { Map as MLMap, NavigationControl, type GeoJSONSource, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
+import { Map as MLMap, NavigationControl, setWorkerUrl, type GeoJSONSource, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
 import { boundsOf, cellRing, cellsOf } from "@/domain/geo";
 import type { Area, Observation } from "@/domain/types";
+
+setWorkerUrl("/maplibre-gl-worker.mjs");
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 /** Stile di riserva se le tessere non sono raggiungibili: restano visibili i dati. */
@@ -46,6 +48,8 @@ interface Props {
   fit?: boolean;
   pitch?: number;
   interactive?: boolean;
+  /** Pulsanti di zoom (su telefono basta il gesto). */
+  controls?: boolean;
   className?: string;
 }
 
@@ -57,7 +61,6 @@ export default function MapView(props: Props) {
   const map = useRef<MLMap | null>(null);
   const ready = useRef(false);
   const latest = useRef(props);
-  latest.current = props;
   const fitted = useRef(false);
 
   const sync = () => {
@@ -103,7 +106,7 @@ export default function MapView(props: Props) {
       const b = boundsOf(p.areas.map((a) => a.geometry));
       if (b) {
         fitted.current = true;
-        m.fitBounds(b, { padding: 80, duration: 0, maxZoom: 16 });
+        m.fitBounds(b, { padding: Math.min(80, m.getContainer().clientWidth / 8), duration: 0, maxZoom: 16 });
       }
     }
   };
@@ -125,7 +128,7 @@ export default function MapView(props: Props) {
         attributionControl: { compact: true },
       });
       map.current = m;
-      if (p.interactive ?? true) m.addControl(new NavigationControl({ showCompass: false }), "top-right");
+      if ((p.interactive ?? true) && (p.controls ?? true)) m.addControl(new NavigationControl({ showCompass: false }), "top-right");
 
       m.on("load", () => {
         const empty = fc([]);
@@ -168,9 +171,10 @@ export default function MapView(props: Props) {
       m.on("click", (e: MapMouseEvent) => {
         const cur = latest.current;
         const hit = (layer: string) => m.getLayer(layer) ? m.queryRenderedFeatures(e.point, { layers: [layer] })[0] : undefined;
-        const o = hit("obs");
-        if (o && cur.onObservationClick && !cur.draft) return cur.onObservationClick(String(o.properties.id));
+        // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick([e.lngLat.lng, e.lngLat.lat]);
+        const o = hit("obs");
+        if (o && cur.onObservationClick) return cur.onObservationClick(String(o.properties.id));
         const a = hit("areas-fill");
         if (a && cur.onAreaClick) cur.onAreaClick(String(a.properties.id));
       });
@@ -193,11 +197,17 @@ export default function MapView(props: Props) {
       map.current?.remove();
       map.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(sync);
+  useEffect(() => {
+    latest.current = props;
+    sync();
+  });
 
   const cursor = props.onClick ? "crosshair" : undefined;
-  return <div ref={el} className={props.className} style={{ cursor }} data-map />;
+  return (
+    <div className={props.className} style={{ cursor }}>
+      <div ref={el} className="size-full" />
+    </div>
+  );
 }

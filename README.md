@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Territorial Quest
 
-## Getting Started
+Ricerca sul campo cooperativa: team diversi esplorano un territorio, ogni rilievo
+validato colora una mappa comune. Nasce dalla tesi di dottorato *Learners, Players,
+Designers* e ne corregge il prototipo: niente classifica, un solo punteggio collettivo.
 
-First, run the development server:
+Architettura, modello dei dati e direzione di stile: [docs/ARCHITETTURA.md](docs/ARCHITETTURA.md).
+
+## Cosa c'è
+
+| Percorso | A cosa serve |
+|---|---|
+| `/` | Presentazione |
+| `/accedi` | Accesso e registrazione (email e password) |
+| `/entra` | Ingresso dei giocatori con il codice della campagna |
+| `/studio` | Elenco delle campagne, creazione |
+| `/studio/[id]` | Pannello del master: regia dal vivo, tempi e missioni, aree, team e giocatori, rilievi, export |
+| `/campo/[id]` | App di rilievo per telefono: mappa, nuovo rilievo, validazione tra team, missioni |
+| `/design` | Design system: colori, tipografia, componenti |
+
+## Avvio
+
+1. **Database.** In Supabase → SQL Editor esegui, in ordine, i file in `supabase/migrations/`.
+2. **Variabili.** Copia `.env.example` in `.env.local` e inserisci URL e chiave pubblica del progetto.
+3. **Avvio locale.**
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Su Vercel imposta le stesse due variabili (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) nelle impostazioni del progetto.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verifiche
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test              # punteggio, tempi, geografia, export
+node scripts/check-schema.mjs   # schema e regole di accesso su Postgres in memoria
+npm run build
+```
 
-## Learn More
+## Struttura
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/app        pagine (App Router)
+src/studio     sezioni del pannello del master
+src/ui         design system (kit, mappa, scena esagonale)
+src/domain     logica pura: punteggio, tempi, geografia, export
+src/lib        accesso ai dati Supabase e hook
+supabase/      migrazioni SQL: tabelle, regole di accesso, funzioni
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Mappe: MapLibre GL con tessere OpenFreeMap (nessuna chiave richiesta).

@@ -42,3 +42,6 @@ next-env.d.ts
 
 # esempio di configurazione
 !.env.example
+
+# generato da scripts/copy-map-worker.mjs
+/public/maplibre-gl-worker.mjs

@@ -122,7 +122,7 @@ export default function Campo() {
   return (
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView
-        className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations} grid fit
+        className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations} grid fit controls={false}
         pin={picking || panel === "new" ? pin : null}
         players={position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#0b0b0c", lng: position[0], lat: position[1], online: true }] : []}
         onClick={picking ? (p) => setPin(p) : undefined}
@@ -145,7 +145,7 @@ export default function Campo() {
         <button onClick={() => setPanel("missions")} className="glass pointer-events-auto flex items-center gap-2 rounded-full py-2 pr-4 pl-3">
           <span className="size-2 rounded-full bg-glow" />
           <span className="num text-sm">{ind.score.toLocaleString("it-IT")}</span>
-          <span className="label soft">pt insieme</span>
+          <span className="label soft whitespace-nowrap">pt<span className="hidden sm:inline"> insieme</span></span>
         </button>
       </div>
 
@@ -170,17 +170,17 @@ export default function Campo() {
           {picking ? (
             <>
               <span className="hidden px-3 text-sm sm:inline">{pin ? "Sposta il punto toccando la mappa" : "Tocca la mappa dove hai osservato"}</span>
-              {position && <Button size="sm" variant="ghost" onClick={() => setPin(position)}>La mia posizione</Button>}
+              {position && <Button size="sm" variant="ghost" onClick={() => setPin(position)}>Dove sono</Button>}
               <Button size="sm" variant="ghost" onClick={() => { setPicking(false); setPin(null); }}>Annulla</Button>
-              <Button variant="glow" disabled={!pin} onClick={() => { setPicking(false); setPanel("new"); }}>Conferma il punto</Button>
+              <Button variant="glow" disabled={!pin} onClick={() => { setPicking(false); setPanel("new"); }}>Conferma<span className="hidden sm:inline"> il punto</span></Button>
             </>
           ) : (
             <>
-              <Button className="min-w-40" disabled={!canCollect} onClick={startNew}><PlusIcon /> Nuovo rilievo</Button>
+              <Button className="sm:min-w-40" disabled={!canCollect} onClick={startNew}><PlusIcon /> Nuovo rilievo</Button>
               <Button variant="ghost" onClick={() => setPanel("validate")} className="!px-3.5">
                 Valida{toValidate.length > 0 && <span className="num rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-paper">{toValidate.length}</span>}
               </Button>
-              <Button variant="ghost" onClick={() => setPanel("missions")} className="!px-3.5">Missioni</Button>
+              <Button variant="ghost" onClick={() => setPanel("missions")} className="!hidden !px-3.5 sm:!inline-flex">Missioni</Button>
               <IconButton label={myTeam ? `Team ${myTeam.name}` : "Il mio team"} onClick={() => setPanel("team")} className="!shadow-none" style={{ background: myTeam?.color, color: myTeam ? "#fff" : undefined }}>
                 <span className="text-[13px] font-medium">{(myTeam?.name ?? "?").slice(0, 2).toUpperCase()}</span>
               </IconButton>

@@ -69,7 +69,7 @@ export default function Regia({ data, me, now }: Ctx) {
                     {teamOf(data, o.team_id) && <Dot color={teamOf(data, o.team_id)!.color} />}
                     {nameOf(data, o.author_id)}
                   </span>
-                  <span className="label soft w-16 text-right">{ago(o.created_at, now)}</span>
+                  <span className="label soft w-20 shrink-0 text-right whitespace-nowrap">{ago(o.created_at, now)}</span>
                 </li>
               ))}
             </ul>
@@ -133,7 +133,7 @@ export default function Regia({ data, me, now }: Ctx) {
                   <Dot color={isOnline(m.last_seen_at, now) ? "var(--color-leaf)" : "var(--color-line)"} live={isOnline(m.last_seen_at, now)} />
                   <span className="min-w-0 flex-1 truncate">{m.profile?.display_name}</span>
                   <span className="soft text-[13px]">{teamOf(data, m.team_id)?.name ?? "senza team"}</span>
-                  <span className="label soft w-16 text-right">{ago(m.last_seen_at, now)}</span>
+                  <span className="label soft w-20 shrink-0 text-right whitespace-nowrap">{ago(m.last_seen_at, now)}</span>
                 </li>
               ))}
             </ul>
