@@ -107,6 +107,11 @@ export interface Observation {
   area_id: string | null;
   theme_id: string | null;
   kind: ObservationKind;
+  form?: string;
+  lens?: string | null;
+  /** Tracciato di un flusso: [[lng, lat], …] */
+  path?: [number, number][] | null;
+  data?: Record<string, unknown>;
   title: string;
   note: string;
   feeling: string | null;

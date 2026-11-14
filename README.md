@@ -14,13 +14,29 @@ Architettura, modello dei dati e direzione di stile: [docs/ARCHITETTURA.md](docs
 | `/accedi` | Accesso e registrazione (email e password) |
 | `/entra` | Ingresso dei giocatori con il codice della campagna |
 | `/studio` | Elenco delle campagne, creazione |
-| `/studio/[id]` | Pannello del master: regia dal vivo, tempi e missioni, aree, team e giocatori, rilievi, export |
-| `/campo/[id]` | App di rilievo per telefono: mappa, nuovo rilievo, validazione tra team, missioni |
+| `/studio/[id]` | Pannello del master: regia dal vivo, tempi e missioni, editor 3D delle aree, team e giocatori, rilievi, export |
+| `/campo/[id]` | App di rilievo per telefono: sei forme di raccolta, validazione tra team, missioni |
 | `/design` | Design system: colori, tipografia, componenti |
+
+## Raccolta dei dati
+
+Ogni rilievo ha tre coordinate, pensate per la ricerca sul campo:
+
+- **Forma** — che cosa si registra: Immagine, Flusso (tracciato e contato), Percezione
+  (intensità e sensi), Dato (valore e unità), Informazione (fatto e fonte), Idea.
+- **Lente AEIOU** — di che cosa parla: Attività, Ambiente, Interazioni, Oggetti, Persone. Facoltativa.
+- **Field / Desk / Feel** — da dove viene la conoscenza. Si ricava dalla forma, non si chiede.
+
+## Editor 3D delle aree
+
+Nella sezione Aree si disegnano i perimetri, se ne modificano i vertici e si dipinge il
+modello a celle con sette ambienti (urbano, verde, acqua, rilievo, rurale, costa,
+industriale). Sotto il modello si può tenere in trasparenza la mappa, il satellite, un
+servizio di tessere XYZ a scelta oppure un'immagine caricata.
 
 ## Avvio
 
-1. **Database.** In Supabase → SQL Editor esegui, in ordine, i file in `supabase/migrations/`.
+1. **Database.** In Supabase → SQL Editor esegui, in ordine di nome, i tre file in `supabase/migrations/`. Sono idempotenti: rieseguirli non fa danni.
 2. **Variabili.** Copia `.env.example` in `.env.local` e inserisci URL e chiave pubblica del progetto.
 3. **Avvio locale.**
 

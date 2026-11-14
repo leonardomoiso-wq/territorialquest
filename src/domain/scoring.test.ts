@@ -3,6 +3,7 @@ import { cellOf, cellsOf, closeRing, pointInPolygon } from "./geo";
 import { indicators, missionProgress, novelty, scoreObservations } from "./scoring";
 import { phaseOf } from "./time";
 import { toCSV, toGeoJSON } from "./export";
+import { kindOf, pathLength, perHour, summary } from "./forms";
 import type { CampaignData, Observation } from "./types";
 
 const square = closeRing([[7.68, 45.06], [7.69, 45.06], [7.69, 45.07], [7.68, 45.07]]);
@@ -100,6 +101,26 @@ describe("missioni e tempi", () => {
   });
 });
 
+describe("forme di raccolta", () => {
+  it("ricava Field, Desk e Feel dalla forma", () => {
+    expect(kindOf("percezione")).toBe("feel");
+    expect(kindOf("idea")).toBe("feel");
+    expect(kindOf("dato", false)).toBe("desk");
+    expect(kindOf("informazione", true)).toBe("field");
+    expect(kindOf("flusso")).toBe("field");
+  });
+
+  it("riassume un flusso contato e tracciato", () => {
+    const flow = obs({ form: "flusso", data: { mode: "piedi", intensity: 4, count: 30, minutes: 10 }, path: [[7.68, 45.06], [7.681, 45.06]] });
+    expect(perHour(flow.data!)).toBe(180);
+    expect(pathLength(flow.path)).toBeGreaterThan(70);
+    expect(summary(flow)).toContain("A piedi · intensità 4/5 · 180 passaggi/ora");
+    const g = toGeoJSON(base([flow]));
+    expect(g.features[0].geometry.type).toBe("LineString");
+    expect(g.features[0].properties).toMatchObject({ layer: "flussi", forma: "flusso", modo: "piedi" });
+  });
+});
+
 describe("geografia ed export", () => {
   it("riconosce i punti dentro l'area", () => {
     expect(pointInPolygon(7.685, 45.065, square)).toBe(true);
@@ -112,7 +133,7 @@ describe("geografia ed export", () => {
     expect(g.features).toHaveLength(2);
     expect(g.features[0].geometry).toEqual({ type: "Point", coordinates: [7.685, 45.065] });
     const csv = toCSV(data).split("\n");
-    expect(csv[0].startsWith("id,data,tipo,titolo")).toBe(true);
+    expect(csv[0].startsWith("id,data,forma,tipo,lente,titolo")).toBe(true);
     expect(csv[1]).toContain('"Parco ""Dora"", nord"');
   });
 });

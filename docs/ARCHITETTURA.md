@@ -122,6 +122,20 @@ erDiagram
   prodotta. Il punteggio è sempre ricalcolabile e spiegabile.
 - **Scena**: specifica dichiarativa (JSON) di una visualizzazione.
 
+### 3.1 Impianto di raccolta
+
+L'osservazione è descritta da tre coordinate indipendenti.
+
+| Coordinata | Valori | Origine |
+|---|---|---|
+| **Forma** (che cosa registro) | Immagine, Flusso, Percezione, Dato, Informazione, Idea | Strumenti di rilievo: il flusso si traccia e si conta, come nei *public life studies* di Jan Gehl |
+| **Lente** (di che cosa parla) | Attività, Ambiente, Interazioni, Oggetti, Persone | Schema AEIOU dell'osservazione etnografica per il design |
+| **Sorgente** (da dove viene) | Field, Desk, Feel | Triade della tesi; ricavata dalla forma e da «sul posto / da fonte» |
+
+La forma decide il modulo di inserimento e la geometria (linea per i flussi, punto per
+il resto). La lente è facoltativa, per non aumentare il carico sul campo. La sorgente
+alimenta punteggio ed equilibrio senza chiedere una scelta in più.
+
 ---
 
 ## 4. Gamification cooperativa

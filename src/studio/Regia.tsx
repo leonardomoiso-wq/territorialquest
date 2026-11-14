@@ -7,7 +7,9 @@ import { announce } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
 import MapView, { type MapMode, type MapPlayer } from "@/ui/MapView";
 import { Area, Button, Card, Dot, Label, Meter, Notice, Ring, Segmented, Select } from "@/ui/kit";
-import { backdrop, KindTag, nameOf, teamOf, type Ctx } from "./shared";
+import { FormTag } from "@/campo/Collect";
+import { summary } from "@/domain/forms";
+import { backdrop, nameOf, teamOf, type Ctx } from "./shared";
 
 export default function Regia({ data, me, now }: Ctx) {
   const ind = useMemo(() => indicators(data), [data]);
@@ -67,8 +69,8 @@ export default function Regia({ data, me, now }: Ctx) {
             <ul className="divide-y divide-line">
               {data.observations.slice(0, 8).map((o) => (
                 <li key={o.id} className="flex items-center gap-3 py-2.5">
-                  <KindTag o={o} />
-                  <span className="min-w-0 flex-1 truncate text-[15px]">{o.title}</span>
+                  <FormTag form={o.form} />
+                  <span className="min-w-0 flex-1 truncate text-[15px]">{o.title}{summary(o) && <span className="soft"> · {summary(o)}</span>}</span>
                   <span className="soft hidden items-center gap-1.5 text-[13px] sm:inline-flex">
                     {teamOf(data, o.team_id) && <Dot color={teamOf(data, o.team_id)!.color} />}
                     {nameOf(data, o.author_id)}

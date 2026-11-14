@@ -69,6 +69,8 @@ interface Props {
   selectedAreaId?: string | null;
   /** Vertici del poligono in corso di disegno. */
   draft?: Ring;
+  /** Il disegno in corso è un tracciato aperto (flusso), non un perimetro. */
+  draftLine?: boolean;
   /** Vertici di un'area in modifica: si trascinano. */
   edit?: Ring;
   onEdit?: (ring: Ring) => void;
@@ -155,11 +157,15 @@ export default function MapView(props: Props) {
     }
 
     set("observations", fc((p.observations ?? []).map((o) => point([o.lng, o.lat], { id: o.id, color: KIND_COLOR[o.kind], status: o.status }))));
+    set("flows", fc((p.observations ?? []).filter((o) => o.path && o.path.length > 1 && o.status !== "flagged").map((o) => ({
+      type: "Feature", geometry: { type: "LineString", coordinates: o.path! },
+      properties: { id: o.id, intensity: Number((o.data as { intensity?: number } | undefined)?.intensity ?? 2), status: o.status },
+    }))));
     set("players", fc((p.players ?? []).map((u) => point([u.lng, u.lat], { name: u.name, color: u.color, online: u.online }))));
 
     const d = p.draft ?? [];
     set("draft", fc([
-      ...(d.length >= 3 ? [{ type: "Feature" as const, geometry: { type: "Polygon" as const, coordinates: [[...d, d[0]]] }, properties: {} }] : []),
+      ...(d.length >= 3 && !p.draftLine ? [{ type: "Feature" as const, geometry: { type: "Polygon" as const, coordinates: [[...d, d[0]]] }, properties: {} }] : []),
       ...(d.length >= 2 ? [{ type: "Feature" as const, geometry: { type: "LineString" as const, coordinates: d }, properties: {} }] : []),
       ...d.map((c) => point(c)),
     ]));
@@ -210,7 +216,7 @@ export default function MapView(props: Props) {
       const first = applied.current.mode === "";
       applied.current.mode = mode;
       const flat = mode !== "model";
-      for (const id of ["cells-fill", "cells-line", "areas-fill", "obs"]) show(id, flat);
+      for (const id of ["cells-fill", "cells-line", "areas-fill", "flows", "obs"]) show(id, flat);
       show("model", !flat);
       show("tq-buildings", mode === "3d");
       try {
@@ -253,7 +259,7 @@ export default function MapView(props: Props) {
 
       m.on("load", () => {
         const empty = fc([]);
-        for (const id of ["areas", "cells", "model", "observations", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
+        for (const id of ["areas", "cells", "model", "observations", "flows", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
 
         m.addLayer({ id: "tq-veil", type: "background", paint: { "background-color": PAPER, "background-opacity": 0 } });
         m.addLayer({ id: "cells-fill", type: "fill", source: "cells", paint: {
@@ -285,6 +291,10 @@ export default function MapView(props: Props) {
           "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": ["get", "h"], "fill-extrusion-opacity": 0.94,
         } });
 
+        m.addLayer({ id: "flows", type: "line", source: "flows", layout: { "line-cap": "round", "line-join": "round" }, paint: {
+          "line-color": "#0f9aa8", "line-width": ["interpolate", ["linear"], ["get", "intensity"], 1, 2, 5, 8],
+          "line-opacity": ["case", ["==", ["get", "status"], "validated"], 0.9, 0.5],
+        } });
         m.addLayer({ id: "obs", type: "circle", source: "observations", paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 16, 7],
           "circle-color": ["case", ["==", ["get", "status"], "flagged"], "#8b8f98", ["get", "color"]],
@@ -398,7 +408,7 @@ export default function MapView(props: Props) {
         if (cur.edit || cur.onPaint) return;
         // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick(lngLat(e));
-        const o = hit(e, "obs");
+        const o = hit(e, "obs") ?? hit(e, "flows");
         if (o && cur.onObservationClick) return cur.onObservationClick(String(o.properties.id));
         const a = hit(e, "areas-fill");
         if (a && cur.onAreaClick) cur.onAreaClick(String(a.properties.id));

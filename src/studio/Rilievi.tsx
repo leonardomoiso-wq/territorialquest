@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FormIcon, FormTag } from "@/campo/Collect";
 import { toCSV, toGeoJSON, download } from "@/domain/export";
+import { FORMS, formOf, lensLabel, summary } from "@/domain/forms";
 import { scoreObservations } from "@/domain/scoring";
 import { ago } from "@/domain/time";
 import type { ObservationStatus } from "@/domain/types";
@@ -15,11 +17,12 @@ const QUALITY = [[1, "Bassa"], [2, "Media"], [3, "Alta"]] as const;
 export function Rilievi({ data, now, refresh }: Ctx) {
   const [status, setStatus] = useState<ObservationStatus | "all">("pending");
   const [theme, setTheme] = useState("");
+  const [form, setForm] = useState("");
   const { busy, error, run } = useAction();
   const act = (fn: () => Promise<unknown>) => run(async () => { await fn(); await refresh(); });
   const scored = useMemo(() => new Map(scoreObservations(data.observations).map((s) => [s.observation.id, s])), [data.observations]);
   const count = (s: ObservationStatus) => data.observations.filter((o) => o.status === s).length;
-  const list = data.observations.filter((o) => (status === "all" || o.status === status) && (!theme || o.theme_id === theme));
+  const list = data.observations.filter((o) => (status === "all" || o.status === status) && (!theme || o.theme_id === theme) && (!form || (o.form ?? "informazione") === form));
 
   return (
     <div>
@@ -31,6 +34,10 @@ export function Rilievi({ data, now, refresh }: Ctx) {
           { id: "flagged", label: `Segnalati ${count("flagged")}` },
           { id: "all", label: "Tutti" },
         ]} />
+        <Select aria-label="Forma" value={form} onChange={(e) => setForm(e.target.value)} className="w-48">
+          <option value="">Tutte le forme</option>
+          {FORMS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+        </Select>
         <Select aria-label="Tema" value={theme} onChange={(e) => setTheme(e.target.value)} className="w-56">
           <option value="">Tutti i temi</option>
           {data.themes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -49,15 +56,18 @@ export function Rilievi({ data, now, refresh }: Ctx) {
               <Card key={o.id} className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 {img
                   ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={img} alt="" className="size-20 shrink-0 rounded-2xl object-cover" loading="lazy" />
-                  : <div className="grid size-20 shrink-0 place-items-center rounded-2xl bg-paper-2"><span className="label soft">{o.kind}</span></div>}
+                  : <div className="grid size-20 shrink-0 place-items-center rounded-2xl text-white" style={{ background: formOf(o.form).color }}><FormIcon form={o.form} className="!size-7" /></div>}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
+                    <FormTag form={o.form} />
                     <KindTag o={o} />
                     {th && <Tag color={th.color}>{th.name}</Tag>}
+                    {lensLabel(o.lens) && <Tag>{lensLabel(o.lens)}</Tag>}
                     {s && s.novelty < 1 && <Tag>doppione ×{s.novelty}</Tag>}
                   </div>
                   <h3 className="mt-2 truncate text-[17px] tracking-[-0.02em]">{o.title}</h3>
-                  {(o.note || o.feeling) && <p className="soft mt-0.5 line-clamp-2 text-sm">{o.feeling ? `«${o.feeling}» ` : ""}{o.note}</p>}
+                  {summary(o) && <p className="mt-0.5 text-sm" style={{ color: formOf(o.form).color }}>{summary(o)}</p>}
+                  {o.note && <p className="soft mt-0.5 line-clamp-2 text-sm">{o.note}</p>}
                   <div className="soft mt-1.5 flex flex-wrap items-center gap-x-3 text-[13px]">
                     <span className="inline-flex items-center gap-1.5">{team && <Dot color={team.color} />}{nameOf(data, o.author_id)}{team ? ` · ${team.name}` : ""}</span>
                     <span>{ago(o.created_at, now)}</span>

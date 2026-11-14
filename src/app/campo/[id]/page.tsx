@@ -6,15 +6,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { areaAt, cellOf } from "@/domain/geo";
 import { BASE, indicators, MISSION_KIND, missionProgress, novelty } from "@/domain/scoring";
 import { ago, areaOpen, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
-import { FIELD_ROLES, KIND_HINT, KIND_LABEL, type FieldRole, type Observation, type ObservationKind } from "@/domain/types";
+import { Details, emptyEntry, FormPicker, FormTag, type Entry } from "@/campo/Collect";
+import { formOf, kindOf, lensLabel, pathLength, summary, type Form } from "@/domain/forms";
+import { FIELD_ROLES, type FieldRole, type Observation } from "@/domain/types";
 import { addObservation, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
 import { useAction, useNow } from "@/lib/hooks";
-import { backdrop, KIND_COLOR, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
+import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
-import { Area, Button, cx, Dot, Empty, Field, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
+import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
 
-const FEELINGS = ["Accogliente", "Vivace", "Tranquillo", "Trascurato", "Rumoroso", "Insicuro"];
-type Panel = null | "new" | "validate" | "missions" | "team" | "detail";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail";
 
 export default function Campo() {
   const { id } = useParams<{ id: string }>();
@@ -30,8 +31,8 @@ export default function Campo() {
   const [detail, setDetail] = useState<Observation | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [seenNotice, setSeenNotice] = useState<string | null>(null);
-  const [form, setForm] = useState({ kind: "field" as ObservationKind, theme_id: "", title: "", note: "", feeling: "", source_url: "" });
-  const [file, setFile] = useState<File | null>(null);
+  const [entry, setEntry] = useState<Entry>(() => emptyEntry("immagine"));
+  const [path, setPath] = useState<[number, number][]>([]);
   const [role, setRole] = useState<FieldRole | null>(null);
   const lastBeat = useRef(0);
 
@@ -91,29 +92,40 @@ export default function Campo() {
   const showNotice = notice && notice.id !== seenNotice && Date.now() - new Date(notice.created_at).getTime() < 6 * 3600000;
 
   // anteprima del valore: scoraggia i doppioni prima che vengano inseriti
-  const here = pin ?? position;
+  const tracing = entry.form === "flusso";
+  const here = tracing ? path[0] ?? null : pin ?? position;
+  const kind = kindOf(entry.form, entry.data.onSite !== false);
   const previous = here
-    ? data.observations.filter((o) => o.status !== "flagged" && o.cell === cellOf(here[0], here[1]) && (o.theme_id ?? "") === form.theme_id).length
+    ? data.observations.filter((o) => o.status !== "flagged" && o.cell === cellOf(here[0], here[1]) && (o.theme_id ?? "") === entry.theme_id).length
     : 0;
-  const worth = Math.round(BASE[form.kind] * novelty(previous) * 10) / 10;
+  const worth = Math.round(BASE[kind] * novelty(previous) * 10) / 10;
   const hereArea = here ? areaAt(here[0], here[1], data.areas) : null;
   const areaClosed = hereArea ? !areaOpen(hereArea, now) : false;
+  const placeNote = `${tracing && path.length > 1 ? `Tracciato di ${pathLength(path)} m. ` : ""}${hereArea ? `Area: ${hereArea.name}.` : "Fuori dalle aree definite."}`;
 
-  const startNew = () => { setPin(position); setPicking(true); setError(null); };
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pin) return;
+  const pick = (f: Form) => {
+    setEntry(emptyEntry(f, entry));
+    setPath([]);
+    setPin(f === "flusso" ? null : position);
+    setPanel(null);
+    setPicking(true);
+    setError(null);
+  };
+  const cancel = () => { setPicking(false); setPanel(null); setPin(null); setPath([]); };
+  const submit = () => {
+    if (!here) return;
     run(async () => {
+      const { file, form, lens, title, note, theme_id, feeling, source_url, data: extra } = entry;
       await addObservation(data, me, {
-        kind: form.kind, title: form.title.trim(), note: form.note.trim(), theme_id: form.theme_id || null,
-        feeling: form.kind === "feel" ? form.feeling || null : null,
-        source_url: form.kind === "desk" ? form.source_url.trim() || null : null,
-        lng: pin[0], lat: pin[1], file,
+        kind, form, lens, title: title.trim(), note: note.trim(), theme_id: theme_id || null,
+        feeling: form === "percezione" ? feeling || null : null,
+        source_url: extra.onSite === false ? source_url.trim() || null : null,
+        path: tracing ? path : null, data: extra as Record<string, unknown>,
+        lng: here[0], lat: here[1], file,
       });
       await refresh();
       setToast(previous === 0 ? `Zona nuova! +${worth} pt appena un altro team conferma.` : `Rilievo salvato: +${worth} pt alla conferma di un altro team.`);
-      setPanel(null); setPin(null); setFile(null);
-      setForm({ ...form, title: "", note: "", feeling: "", source_url: "" });
+      cancel();
     });
   };
   const validate = (o: Observation, q: number, status: "validated" | "flagged" = "validated") =>
@@ -123,9 +135,10 @@ export default function Campo() {
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView
         className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations} grid fit controls={false} {...backdrop(c)}
-        pin={picking || panel === "new" ? pin : null}
+        pin={(picking || panel === "new") && !tracing ? pin : null}
+        draft={(picking || panel === "new") && tracing ? path : undefined} draftLine
         players={position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#0b0b0c", lng: position[0], lat: position[1], online: true }] : []}
-        onClick={picking ? (p) => setPin(p) : undefined}
+        onClick={picking ? (p) => (tracing ? setPath((ps) => [...ps, p]) : setPin(p)) : undefined}
         onObservationClick={(oid) => { const o = data.observations.find((x) => x.id === oid); if (o) { setDetail(o); setPanel("detail"); } }}
       />
 
@@ -168,15 +181,24 @@ export default function Campo() {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="glass pointer-events-auto flex max-w-full items-center gap-1.5 rounded-full p-1.5">
           {picking ? (
-            <>
-              <span className="hidden px-3 text-sm sm:inline">{pin ? "Sposta il punto toccando la mappa" : "Tocca la mappa dove hai osservato"}</span>
-              {position && <Button size="sm" variant="ghost" onClick={() => setPin(position)}>Dove sono</Button>}
-              <Button size="sm" variant="ghost" onClick={() => { setPicking(false); setPin(null); }}>Annulla</Button>
-              <Button variant="glow" disabled={!pin} onClick={() => { setPicking(false); setPanel("new"); }}>Conferma<span className="hidden sm:inline"> il punto</span></Button>
-            </>
+            tracing ? (
+              <>
+                <span className="px-3 text-sm">{path.length < 2 ? "Tocca la mappa lungo il percorso" : `${pathLength(path)} m`}</span>
+                <Button size="sm" variant="ghost" onClick={() => setPath(path.slice(0, -1))} disabled={!path.length}>Indietro</Button>
+                <Button size="sm" variant="ghost" onClick={cancel}>Annulla</Button>
+                <Button variant="glow" disabled={path.length < 2} onClick={() => { setPicking(false); setPanel("new"); }}>Conferma</Button>
+              </>
+            ) : (
+              <>
+                <span className="hidden px-3 text-sm sm:inline">{pin ? "Sposta il punto toccando la mappa" : "Tocca la mappa dove hai osservato"}</span>
+                {position && <Button size="sm" variant="ghost" onClick={() => setPin(position)}>Dove sono</Button>}
+                <Button size="sm" variant="ghost" onClick={cancel}>Annulla</Button>
+                <Button variant="glow" disabled={!pin} onClick={() => { setPicking(false); setPanel("new"); }}>Conferma<span className="hidden sm:inline"> il punto</span></Button>
+              </>
+            )
           ) : (
             <>
-              <Button className="sm:min-w-40" disabled={!canCollect} onClick={startNew}><PlusIcon /> Nuovo rilievo</Button>
+              <Button className="sm:min-w-40" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }}><PlusIcon /> Nuovo rilievo</Button>
               <Button variant="ghost" onClick={() => setPanel("validate")} className="!px-3.5">
                 Valida{toValidate.length > 0 && <span className="num rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-paper">{toValidate.length}</span>}
               </Button>
@@ -190,67 +212,12 @@ export default function Campo() {
       </div>
 
       {/* ------------------------------------------------- nuovo rilievo */}
-      <Sheet open={openPanel === "new"} onClose={() => { setPanel(null); setPin(null); }} kicker="Nuovo rilievo" title="Cosa hai osservato?" wide>
-        <form onSubmit={submit} className="space-y-5">
-          <div>
-            <div className="grid grid-cols-3 gap-2">
-              {(["field", "desk", "feel"] as ObservationKind[]).map((k) => (
-                <button key={k} type="button" onClick={() => setForm({ ...form, kind: k })} aria-pressed={form.kind === k}
-                  className={cx("rounded-2xl border p-3 text-left transition", form.kind === k ? "text-white" : "hairline hover:bg-ink/5")}
-                  style={form.kind === k ? { background: KIND_COLOR[k], borderColor: KIND_COLOR[k] } : undefined}>
-                  <span className="block text-[17px] tracking-[-0.02em]">{KIND_LABEL[k]}</span>
-                  <span className={cx("mt-0.5 block text-xs leading-tight", form.kind !== k && "soft")}>{KIND_HINT[k]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <Label className="mb-2 block">Tema</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {data.themes.map((t) => (
-                <button key={t.id} type="button" onClick={() => setForm({ ...form, theme_id: form.theme_id === t.id ? "" : t.id })} aria-pressed={form.theme_id === t.id}
-                  className={cx("h-9 rounded-full border px-3.5 text-sm transition", form.theme_id === t.id ? "text-white" : "hairline hover:bg-ink/5")}
-                  style={form.theme_id === t.id ? { background: t.color, borderColor: t.color } : undefined}>
-                  {t.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <Field label="Titolo" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required maxLength={80} placeholder="Giardino condiviso di via Cuneo" />
-          {form.kind === "feel" && (
-            <div>
-              <Label className="mb-2 block">Come si sta qui?</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {FEELINGS.map((f) => (
-                  <button key={f} type="button" onClick={() => setForm({ ...form, feeling: form.feeling === f ? "" : f })} aria-pressed={form.feeling === f}
-                    className={cx("h-9 rounded-full border px-3.5 text-sm transition", form.feeling === f ? "border-feel bg-feel text-white" : "hairline hover:bg-ink/5")}>{f}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          {form.kind === "desk" && <Field label="Fonte (link)" type="url" value={form.source_url} onChange={(e) => setForm({ ...form, source_url: e.target.value })} placeholder="https://…" />}
-          <Area label="Note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} maxLength={600} placeholder="Che cosa rende utile questo rilievo per la ricerca?" />
-          <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed hairline p-3.5 transition hover:bg-ink/5">
-            <span className="grid size-10 place-items-center rounded-full bg-paper-2"><PlusIcon /></span>
-            <span className="min-w-0 flex-1 text-sm">{file ? <span className="block truncate">{file.name}</span> : <>Aggiungi una foto <span className="soft">· dalla fotocamera o dalla galleria</span></>}</span>
-            <input type="file" accept="image/*" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          </label>
-
-          <div className="rounded-2xl bg-paper-2 p-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-sm">{previous === 0 ? "Zona nuova per questo tema: vale pieno." : `Qui ci sono già ${previous} ${previous === 1 ? "rilievo" : "rilievi"} su questo tema: vale meno.`}</span>
-              <span className="num text-lg whitespace-nowrap">+{worth} pt</span>
-            </div>
-            <p className="soft mt-1 text-xs">I punti arrivano a tutti quando un altro team conferma il rilievo.{hereArea ? ` Area: ${hereArea.name}.` : " Fuori dalle aree definite."}</p>
-          </div>
-          {areaClosed && <Notice>Quest&apos;area è chiusa in questo momento: il rilievo viene salvato comunque e la regia lo vedrà.</Notice>}
-          {actionError && <Notice tone="error">{actionError}</Notice>}
-          <div className="flex gap-2">
-            <Button variant="outline" size="lg" onClick={() => { setPanel(null); setPicking(true); }}>Sposta il punto</Button>
-            <Button type="submit" size="lg" className="flex-1" disabled={busy || !pin}>{busy ? "Salvo…" : "Salva il rilievo"}</Button>
-          </div>
-        </form>
-      </Sheet>
+      <FormPicker open={openPanel === "form"} onClose={() => setPanel(null)} onPick={pick} />
+      <Details
+        open={openPanel === "new"} entry={entry} setEntry={setEntry} themes={data.themes} worth={worth} previous={previous}
+        placeNote={placeNote} areaClosed={areaClosed} busy={busy} error={actionError}
+        onClose={cancel} onMove={() => { setPanel(null); setPicking(true); }} onSubmit={submit}
+      />
 
       {/* ------------------------------------------------------- valida */}
       <Sheet open={openPanel === "validate"} onClose={() => setPanel(null)} kicker="Validazione tra team" title="Conferma i rilievi degli altri" wide>
@@ -266,9 +233,10 @@ export default function Campo() {
                   <div className="flex gap-3">
                     {img && /* eslint-disable-next-line @next/next/no-img-element */ <img src={img} alt="" className="size-16 shrink-0 rounded-xl object-cover" loading="lazy" />}
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap gap-1.5"><KindTag o={o} />{th && <Tag color={th.color}>{th.name}</Tag>}</div>
+                      <div className="flex flex-wrap gap-1.5"><FormTag form={o.form} /><KindTag o={o} />{th && <Tag color={th.color}>{th.name}</Tag>}</div>
                       <h4 className="mt-1.5 text-[17px] tracking-[-0.02em]">{o.title}</h4>
-                      {(o.note || o.feeling) && <p className="soft text-sm">{o.feeling ? `«${o.feeling}» ` : ""}{o.note}</p>}
+                      {summary(o) && <p className="text-sm" style={{ color: formOf(o.form).color }}>{summary(o)}</p>}
+                      {o.note && <p className="soft text-sm">{o.note}</p>}
                       <p className="label soft mt-1.5 inline-flex items-center gap-1.5">{team && <Dot color={team.color} />}{team?.name ?? nameOf(data, o.author_id)} · {ago(o.created_at, now)}</p>
                     </div>
                   </div>
@@ -354,11 +322,16 @@ export default function Campo() {
           <div className="space-y-3">
             {mediaUrl(detail.media_path) && /* eslint-disable-next-line @next/next/no-img-element */ <img src={mediaUrl(detail.media_path)!} alt="" className="max-h-72 w-full rounded-2xl object-cover" />}
             <div className="flex flex-wrap gap-1.5">
+              <FormTag form={detail.form} />
               <KindTag o={detail} />
+              {lensLabel(detail.lens) && <Tag>{lensLabel(detail.lens)}</Tag>}
               {themeOf(data, detail.theme_id) && <Tag color={themeOf(data, detail.theme_id)!.color}>{themeOf(data, detail.theme_id)!.name}</Tag>}
               <Tag>{detail.status === "validated" ? `validato · qualità ${["", "bassa", "media", "alta"][detail.quality ?? 2]}` : detail.status === "pending" ? "in attesa di conferma" : "segnalato"}</Tag>
             </div>
-            {detail.feeling && <p className="serif text-2xl italic">«{detail.feeling}»</p>}
+            {detail.form === "percezione" && detail.feeling
+              ? <p className="serif text-2xl italic">«{detail.feeling}»</p>
+              : summary(detail) && <p className="display text-2xl" style={{ color: formOf(detail.form).color }}>{summary(detail)}</p>}
+            {detail.form === "percezione" && summary(detail) && <p className="soft text-sm">{summary(detail)}</p>}
             {detail.note && <p className="text-[15px]">{detail.note}</p>}
             {detail.source_url && <a className="text-sm underline underline-offset-2" href={detail.source_url} target="_blank" rel="noreferrer">Apri la fonte</a>}
           </div>

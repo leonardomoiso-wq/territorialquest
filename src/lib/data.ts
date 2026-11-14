@@ -225,7 +225,8 @@ export async function addObservation(
   data: CampaignData,
   me: Membership,
   input: {
-    kind: ObservationKind; title: string; note: string; feeling: string | null; theme_id: string | null;
+    kind: ObservationKind; form: string; lens: string | null; path: [number, number][] | null; data: Record<string, unknown>;
+    title: string; note: string; feeling: string | null; theme_id: string | null;
     source_url: string | null; lng: number; lat: number; file: File | null;
   },
 ) {
