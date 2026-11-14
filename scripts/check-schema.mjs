@@ -12,8 +12,8 @@ await db.exec(`
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true), '')::uuid $$;
   grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;
 `);
-await db.exec(sql);
-await db.exec(sql); // idempotenza
+const forms = readFileSync("supabase/migrations/20261115000000_model_and_forms.sql", "utf8");
+for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); } // due passate: idempotenza
 
 const as = async (uid, q, params) => {
   await db.exec(`set role authenticated; select set_config('app.uid', '${uid}', false);`);
@@ -59,4 +59,9 @@ await fails("fuori dalla finestra temporale", () => as(anna, ins, [camp, anna, t
 await as(master, ins, [camp, master, null]);
 await as(anna, `select heartbeat($1, 7.68, 45.07)`, [camp]);
 console.log("presenza:", one(await as(master, `select last_lng, last_seen_at is not null seen from memberships where user_id = $1`, [anna])));
+const flow = one(await as(master, `insert into observations (campaign_id, author_id, kind, form, lens, title, lng, lat, path, data) values ($1, $2, 'field', 'flusso', 'persone', 'Uscita dalla scuola', 7.68, 45.07, '[[7.68,45.07],[7.681,45.071]]', '{"mode":"piedi","intensity":4}') returning form, data`, [camp, master]));
+console.log("flusso:", flow.form, flow.data);
+await fails("forma non prevista", () => as(master, `insert into observations (campaign_id, author_id, kind, form, title, lng, lat) values ($1, $2, 'field', 'altro', 'x', 7.68, 45.07)`, [camp, master]));
+await as(master, `update areas set environment = 'verde', terrain = '{"8a1f9a5a0007fff":"acqua"}' where campaign_id = $1`, [camp]);
+await as(master, `update campaigns set basemap = 'satellite', basemap_opacity = 0.4 where id = $1`, [camp]);
 console.log("SCHEMA OK");

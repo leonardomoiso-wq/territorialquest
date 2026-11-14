@@ -40,11 +40,6 @@ create table if not exists public.campaigns (
   center_lat double precision not null default 45.0703,
   zoom double precision not null default 12.5,
   rules jsonb not null default '{}'::jsonb,
-  -- sfondo della mappa: 'mappa' | 'satellite' | 'custom' | 'nessuno'
-  basemap text not null default 'mappa' check (basemap in ('mappa', 'satellite', 'custom', 'nessuno')),
-  basemap_url text,            -- tessere XYZ per lo sfondo personalizzato
-  basemap_opacity real not null default 1 check (basemap_opacity between 0 and 1),
-  overlay jsonb,               -- immagine caricata: { path, coordinates[4], opacity }
   created_at timestamptz not null default now(),
   check (ends_at > starts_at)
 );
@@ -79,8 +74,6 @@ create table if not exists public.areas (
   name text not null,
   color text not null default '#1F8A5B',
   geometry jsonb not null, -- GeoJSON Polygon (EPSG:4326)
-  environment text not null default 'urbano', -- ambiente prevalente del modello 3D
-  terrain jsonb not null default '{}'::jsonb, -- ambiente per singola cella H3: { cella: ambiente }
   opens_at timestamptz,
   closes_at timestamptz,
   created_at timestamptz not null default now()
