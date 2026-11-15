@@ -48,7 +48,7 @@ servizio di tessere XYZ a scelta oppure un'immagine caricata.
 
 ## Avvio
 
-1. **Database.** In Supabase → SQL Editor esegui, in ordine di nome, i tre file in `supabase/migrations/`. Sono idempotenti: rieseguirli non fa danni.
+1. **Database.** In Supabase → SQL Editor incolla ed esegui [`supabase/setup.sql`](supabase/setup.sql): contiene tutte le migrazioni in ordine e si può rieseguire senza danni. Poi apri `/stato` sul sito per verificare.
 2. **Variabili.** Copia `.env.example` in `.env.local` e inserisci URL e chiave pubblica del progetto.
 3. **Avvio locale.**
 
