@@ -54,7 +54,7 @@ export default function Stato() {
         <dl className="surface mt-8 divide-y divide-line rounded-card border hairline text-[15px]">
           <div className="flex justify-between gap-4 p-4"><dt className="soft">Progetto Supabase</dt><dd className="num text-right">{projectRef || "non configurato"}</dd></div>
           <div className="flex justify-between gap-4 p-4"><dt className="soft">Indirizzo</dt><dd className="num truncate text-right">{supabaseUrl || "—"}</dd></div>
-          <div className="flex justify-between gap-4 p-4"><dt className="soft">Chiave pubblica da</dt><dd className="num text-right">{keySource}</dd></div>
+          <div className="flex justify-between gap-4 p-4"><dt className="soft">Configurazione</dt><dd className="num text-right">{keySource}</dd></div>
           <div className="flex justify-between gap-4 p-4"><dt className="soft">Sessione</dt><dd className="text-right">{auth}</dd></div>
         </dl>
 
@@ -76,7 +76,7 @@ export default function Stato() {
             <div className="mt-6 rounded-2xl bg-alert/10 p-4 text-[15px]">
               <p>Nel progetto <b className="num">{projectRef}</b>, da Supabase → SQL Editor, esegui in quest&apos;ordine:</p>
               <ol className="num mt-2 list-decimal pl-6">{missing.map((f) => <li key={f}>{f}</li>)}</ol>
-              <p className="soft mt-3 text-sm">Se il progetto non è quello giusto, correggi le variabili NEXT_PUBLIC_SUPABASE_URL e la chiave pubblica su Vercel e ripubblica.</p>
+              <p className="soft mt-3 text-sm">Il progetto è fissato in src/utils/supabase/env.ts; per un altro progetto imposta NEXT_PUBLIC_TQ_SUPABASE_URL e NEXT_PUBLIC_TQ_SUPABASE_KEY su Vercel e ripubblica.</p>
             </div>
           ))}
         <Button variant="outline" className="mt-6" onClick={() => setRound(round + 1)}>Ricontrolla</Button>

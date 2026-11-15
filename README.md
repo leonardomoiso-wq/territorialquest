@@ -49,7 +49,7 @@ servizio di tessere XYZ a scelta oppure un'immagine caricata.
 ## Avvio
 
 1. **Database.** In Supabase → SQL Editor incolla ed esegui [`supabase/setup.sql`](supabase/setup.sql): contiene tutte le migrazioni in ordine e si può rieseguire senza danni. Poi apri `/stato` sul sito per verificare. L'ultima riga mostrata dall'SQL Editor deve dire «Territorial Quest installato». Se tra gli avvisi compare «Spazio per le foto non configurato», crea da Storage un bucket pubblico chiamato `media`.
-2. **Variabili.** Copia `.env.example` in `.env.local` e inserisci URL e chiave pubblica del progetto.
+2. **Progetto Supabase.** È fissato in `src/utils/supabase/env.ts` (indirizzo e chiave publishable, pubblici per natura). Le variabili `NEXT_PUBLIC_SUPABASE_*` impostate dall'integrazione Vercel vengono ignorate; per puntare a un altro progetto usa `NEXT_PUBLIC_TQ_SUPABASE_URL` e `NEXT_PUBLIC_TQ_SUPABASE_KEY`.
 3. **Avvio locale.**
 
 ```bash
@@ -57,8 +57,7 @@ npm install
 npm run dev
 ```
 
-Su Vercel imposta le stesse due variabili (`NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) nelle impostazioni del progetto.
+Su Vercel non serve impostare variabili.
 
 ## Verifiche
 
