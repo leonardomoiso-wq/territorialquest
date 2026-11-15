@@ -7,6 +7,7 @@ import type {
   Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Observation, ObservationKind, Polygon, Team, Theme, Walk,
 } from "@/domain/types";
 import { createClient } from "@/utils/supabase/client";
+import { projectRef } from "@/utils/supabase/env";
 
 const db = () => createClient();
 
@@ -18,7 +19,10 @@ export function explain(error: unknown): string {
   if (/already registered/i.test(m)) return "Questa email è già registrata: accedi.";
   if (/Email not confirmed/i.test(m)) return "Conferma l'indirizzo dal link che ti abbiamo inviato per email.";
   if (/duplicate key.*join_code/i.test(m)) return "Codice campagna già in uso: scegline un altro.";
-  if (/schema cache|does not exist|PGRST205/i.test(m)) return "Il database non è ancora inizializzato: esegui le migrazioni in supabase/migrations.";
+  if (/schema cache|does not exist|PGRST20[25]/i.test(m)) {
+    const what = m.match(/(?:table|function|column) '?"?([\w.]+)/i)?.[1];
+    return `Il database collegato (${projectRef || "progetto sconosciuto"}) non è aggiornato${what ? `: manca ${what}` : ""}. Controlla in /stato.`;
+  }
   if (/Failed to fetch|NetworkError/i.test(m)) return "Connessione assente. Riprova tra poco.";
   return m;
 }
