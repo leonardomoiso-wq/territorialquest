@@ -7,6 +7,13 @@ const SURFACES = [
   { n: "03", name: "Stage", color: "var(--color-feel)", title: "I dati vanno in scena.", body: "La mappa prende colore mentre arrivano i rilievi. Pensata per lo schermo grande e per il pubblico." },
 ];
 
+const STORY = [
+  { title: "Parti", color: "#8b8f98", body: "La mappa è spenta. Inizi un'uscita: da qui l'app conta i passi e ti indica la zona non esplorata più vicina." },
+  { title: "Cammina", color: "#f4f3ee", body: "Ogni zona che attraversi si accende, per te e per tutti gli altri team. Nessuno ci tornerà per niente." },
+  { title: "Osserva", color: "#37e08b", body: "Foto, flussi, percezioni, dati, informazioni, idee. Uno scatto rapido ora, la didascalia quando ti fermi." },
+  { title: "Conferma", color: "#ff9cc2", body: "Passando dove ha lavorato un altro team, confermi i loro rilievi sul posto. Solo allora diventano punti di tutti." },
+];
+
 const INDICATORS = [
   { label: "Copertura", v: 0.62, color: "var(--color-glow)", body: "Quanta parte del territorio è stata esplorata." },
   { label: "Equilibrio", v: 0.78, color: "#7fb0ff", body: "Field, Desk e Feel crescono insieme." },
@@ -51,6 +58,34 @@ export default function Home() {
             <span className="inline-block h-5 w-3 rounded-full border border-current/60 after:mx-auto after:mt-1 after:block after:size-1 after:animate-bounce after:rounded-full after:bg-current" />
             Scorri
           </span>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------- storia */}
+      <section className="on-ink px-6 py-28">
+        <div className="mx-auto max-w-6xl">
+          <Label>Come si gioca</Label>
+          <h2 className="display mt-3 max-w-3xl text-[clamp(2rem,5vw,3.75rem)]">
+            Un&apos;uscita a piedi, <span className="serif italic tracking-normal text-glow">quattro gesti.</span>
+          </h2>
+          <ol className="mt-14 grid gap-px overflow-hidden rounded-panel border hairline bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+            {STORY.map((s, i) => (
+              <li key={s.title} className="flex min-h-64 flex-col bg-ink p-7">
+                <span className="label soft">{String(i + 1).padStart(2, "0")}</span>
+                <span className="mt-6 flex gap-1" aria-hidden>
+                  {[0, 1, 2, 3].map((n) => (
+                    <svg key={n} viewBox="0 0 24 24" className="size-7"><path d="M12 2 21 7v10l-9 5-9-5V7z" fill={n <= i ? s.color : "transparent"} fillOpacity={n === i ? 1 : 0.35} stroke={n <= i ? s.color : "rgb(255 255 255 / 0.25)"} strokeWidth="1.5" /></svg>
+                  ))}
+                </span>
+                <h3 className="serif mt-auto pt-8 text-[34px]">{s.title}</h3>
+                <p className="soft mt-2 text-sm leading-snug">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="soft mt-6 max-w-2xl text-[15px] leading-snug">
+            Pensato per chi cammina con il telefono o il tablet in mano: la mappa ti segue, uno scatto rapido salva la foto e la
+            posizione, i dettagli si scrivono quando ci si ferma.
+          </p>
         </div>
       </section>
 

@@ -59,9 +59,15 @@ export interface Indicators {
   /** Punti portati al totale da ciascun team: contributo, non graduatoria. */
   byTeam: Record<string, number>;
   coveredCells: Map<string, number>;
+  /** Celle attraversate a piedi da qualcuno. */
+  walkedCells: Set<string>;
+  /** Metri percorsi insieme. */
+  walkedMeters: number;
+  /** Celle del territorio. */
+  territory: Set<string>;
 }
 
-export function indicators(data: Pick<CampaignData, "areas" | "observations" | "members">): Indicators {
+export function indicators(data: Pick<CampaignData, "areas" | "observations" | "members"> & { walks?: CampaignData["walks"] }): Indicators {
   const active = data.observations.filter((o) => o.status !== "flagged");
   const scored = scoreObservations(data.observations);
   const byKind: Record<ObservationKind, number> = { field: 0, desk: 0, feel: 0 };
@@ -111,6 +117,9 @@ export function indicators(data: Pick<CampaignData, "areas" | "observations" | "
     byTheme,
     byTeam,
     coveredCells,
+    walkedCells: new Set((data.walks ?? []).flatMap((w) => w.cells ?? [])),
+    walkedMeters: (data.walks ?? []).reduce((s, w) => s + (w.distance_m ?? 0), 0),
+    territory,
   };
 }
 

@@ -2,20 +2,50 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { areaAt, cellOf } from "@/domain/geo";
-import { BASE, indicators, MISSION_KIND, missionProgress, novelty } from "@/domain/scoring";
-import { ago, areaOpen, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Details, emptyEntry, FormPicker, FormTag, type Entry } from "@/campo/Collect";
+import { Celebration, Recap, type Cheer, type WalkSummary } from "@/campo/Moments";
+import Story from "@/campo/Story";
+import { useWalk, vibrate } from "@/campo/useWalk";
 import { formOf, kindOf, lensLabel, pathLength, summary, type Form } from "@/domain/forms";
+import { areaAt, cellOf } from "@/domain/geo";
+import { BASE, indicators, MISSION_KIND, missionProgress, novelty, scoreObservations } from "@/domain/scoring";
+import { ago, areaOpen, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
 import { FIELD_ROLES, type FieldRole, type Observation } from "@/domain/types";
+import { formatDuration, formatMeters, metersBetween, nearestDark, windOf } from "@/domain/walk";
 import { addObservation, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
+import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
 import { useAction, useNow } from "@/lib/hooks";
 import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
 
-type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts";
+type LngLat = [number, number];
+
+const NEAR = 80; // metri: «sei sul posto»
+
+const Icon = ({ d, className }: { d: string; className?: string }) => (
+  <svg viewBox="0 0 24 24" className={cx("size-5", className)} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
+);
+const ICON = {
+  camera: "M4 8h3l1.500-2h7L17 8h3v11H4zM12 16.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
+  check: "M5 12.500 10 17.500 19 7",
+  tray: "M4 13l2.500-7h11L20 13v5H4zM4 13h5l1 2h4l1-2h5",
+  walk: "M13 4.500a1.500 1.500 0 1 0 0-.010M9 21l2-6-2.500-2.500L10 8l3 1 2 3h3M11 15l3 2 1 4",
+  target: "M12 3v3M12 18v3M3 12h3M18 12h3M12 15.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
+};
+
+/** Pulsante a icona con contatore, per il dock in cammino. */
+function Counter({ label, d, count, onClick }: { label: string; d: string; count: number; onClick: () => void }) {
+  return (
+    <button type="button" aria-label={`${label}${count ? `: ${count}` : ""}`} title={label} onClick={onClick}
+      className="relative grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95">
+      <Icon d={d} />
+      {count > 0 && <span className="num absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-ink px-1 text-center text-[10px] leading-4 text-paper">{count}</span>}
+    </button>
+  );
+}
 
 export default function Campo() {
   const { id } = useParams<{ id: string }>();
@@ -26,43 +56,67 @@ export default function Campo() {
 
   const [panel, setPanel] = useState<Panel>(null);
   const [picking, setPicking] = useState(false);
-  const [pin, setPin] = useState<[number, number] | null>(null);
-  const [position, setPosition] = useState<[number, number] | null>(null);
+  const [pin, setPin] = useState<LngLat | null>(null);
+  const [position, setPosition] = useState<LngLat | null>(null);
+  const [follow, setFollow] = useState(true);
   const [detail, setDetail] = useState<Observation | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [cheer, setCheer] = useState<Cheer | null>(null);
+  const [recap, setRecap] = useState<WalkSummary | null>(null);
   const [seenNotice, setSeenNotice] = useState<string | null>(null);
   const [entry, setEntry] = useState<Entry>(() => emptyEntry("immagine"));
-  const [path, setPath] = useState<[number, number][]>([]);
+  const [path, setPath] = useState<LngLat[]>([]);
   const [role, setRole] = useState<FieldRole | null>(null);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [story, setStory] = useState(() => typeof window !== "undefined" && !window.localStorage.getItem(`tq-story-${id}`));
   const lastBeat = useRef(0);
 
   const me = data?.members.find((m) => m.user_id === user?.id);
   const ind = useMemo(() => (data ? indicators(data) : null), [data]);
+  /** Celle già accese da qualcuno: attraversate oppure osservate. */
+  const lit = useMemo(() => {
+    const s = new Set<string>(ind?.walkedCells ?? []);
+    for (const cell of ind?.coveredCells.keys() ?? []) s.add(cell);
+    return s;
+  }, [ind]);
+
+  const celebrate = useCallback((big: string, small: string, color?: string) => setCheer({ id: Date.now(), big, small, color }), []);
+  const onLit = useCallback(() => celebrate("Accesa", "Zona nuova: nessuno era ancora passato di qui."), [celebrate]);
+  const { walk, start, stop, track } = useWalk(id, user?.id, me?.team_id ?? null, lit, onLit);
+  const trackRef = useRef(track);
+  useEffect(() => { trackRef.current = track; }, [track]);
 
   // posizione e presenza: il master vede chi è sul campo
   useEffect(() => {
     if (!me) return;
-    const beat = (p?: [number, number]) => { lastBeat.current = Date.now(); heartbeat(id, p?.[0], p?.[1]); };
+    const beat = (p?: LngLat) => { lastBeat.current = Date.now(); heartbeat(id, p?.[0], p?.[1]); };
     beat();
     const watch = navigator.geolocation?.watchPosition(
       (g) => {
-        const p: [number, number] = [g.coords.longitude, g.coords.latitude];
+        const p: LngLat = [g.coords.longitude, g.coords.latitude];
         setPosition(p);
+        trackRef.current(p, g.coords.accuracy ?? 0);
         if (Date.now() - lastBeat.current > 45000) beat(p);
       },
       () => undefined,
-      { enableHighAccuracy: true, maximumAge: 15000 },
+      { enableHighAccuracy: true, maximumAge: 5000 },
     );
     const t = setInterval(() => beat(), 60000);
     return () => { clearInterval(t); if (watch != null) navigator.geolocation.clearWatch(watch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, me?.id]);
 
+  useEffect(() => { listDrafts(id).then(setDrafts); }, [id]);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4500);
     return () => clearTimeout(t);
   }, [toast]);
+
+  const walked = useMemo(() => [...(ind?.walkedCells ?? []), ...(walk?.cells ?? [])], [ind, walk]);
+  const endCheer = useCallback(() => setCheer(null), []);
 
   if (loading || user === undefined) return <main className="on-ink min-h-dvh"><Spinner label="Preparo la mappa" /></main>;
   if (!data || !me || !ind) {
@@ -82,14 +136,21 @@ export default function Campo() {
   const canCollect = me.status === "active" && (staff || phase === "live");
   const myTeam = teamOf(data, me.team_id);
   const needsTeam = !staff && !me.team_id && data.teams.length > 0;
-  const openPanel: Panel = needsTeam && panel === null ? "team" : panel;
+  const openPanel: Panel = story ? null : needsTeam && panel === null ? "team" : panel;
+  const walking = !!walk;
 
-  const toValidate = data.observations.filter(
-    (o) => o.status === "pending" && o.author_id !== me.user_id && (staff || !o.team_id || o.team_id !== me.team_id),
-  );
+  const distance = (o: Observation) => (position ? metersBetween(position, [o.lng, o.lat]) : Infinity);
+  const toValidate = data.observations
+    .filter((o) => o.status === "pending" && o.author_id !== me.user_id && (staff || !o.team_id || o.team_id !== me.team_id))
+    .sort((a, b) => distance(a) - distance(b));
+  const nearby = toValidate.filter((o) => distance(o) <= NEAR);
   const missions = data.missions.map((m) => missionProgress(m, data, now)).filter((p) => p.state !== "expired" && p.state !== "upcoming");
   const notice = data.announcements.find((a) => !a.team_id || a.team_id === me.team_id);
-  const showNotice = notice && notice.id !== seenNotice && Date.now() - new Date(notice.created_at).getTime() < 6 * 3600000;
+  const showNotice = notice && notice.id !== seenNotice && now.getTime() - new Date(notice.created_at).getTime() < 6 * 3600000;
+
+  // la prossima zona spenta dà una direzione a chi cammina
+  const litNow = new Set([...lit, ...(walk?.cells ?? [])]);
+  const target = walking && position ? nearestDark(position, ind.territory, litNow) : null;
 
   // anteprima del valore: scoraggia i doppioni prima che vengano inseriti
   const tracing = entry.form === "flusso";
@@ -103,15 +164,18 @@ export default function Campo() {
   const areaClosed = hereArea ? !areaOpen(hereArea, now) : false;
   const placeNote = `${tracing && path.length > 1 ? `Tracciato di ${pathLength(path)} m. ` : ""}${hereArea ? `Area: ${hereArea.name}.` : "Fuori dalle aree definite."}`;
 
+  const closeStory = () => { try { localStorage.setItem(`tq-story-${id}`, "1"); } catch { /* memoria non disponibile */ } setStory(false); };
   const pick = (f: Form) => {
     setEntry(emptyEntry(f, entry));
+    setDraftId(null);
     setPath([]);
     setPin(f === "flusso" ? null : position);
     setPanel(null);
     setPicking(true);
+    setFollow(false);
     setError(null);
   };
-  const cancel = () => { setPicking(false); setPanel(null); setPin(null); setPath([]); };
+  const cancel = () => { setPicking(false); setPanel(null); setPin(null); setPath([]); setDraftId(null); };
   const submit = () => {
     if (!here) return;
     run(async () => {
@@ -123,18 +187,59 @@ export default function Campo() {
         path: tracing ? path : null, data: extra as Record<string, unknown>,
         lng: here[0], lat: here[1], file,
       });
+      if (draftId) { await removeDraft(draftId); setDrafts((d) => d.filter((x) => x.id !== draftId)); }
       await refresh();
-      setToast(previous === 0 ? `Zona nuova! +${worth} pt appena un altro team conferma.` : `Rilievo salvato: +${worth} pt alla conferma di un altro team.`);
+      vibrate([20, 40, 20]);
+      celebrate(`+${worth}`, previous === 0 ? "Zona nuova per questo tema. I punti arrivano a tutti alla prima conferma." : "Salvato. I punti arrivano a tutti quando un altro team conferma.", formOf(form).color);
       cancel();
     });
   };
   const validate = (o: Observation, q: number, status: "validated" | "flagged" = "validated") =>
-    run(async () => { await validateObservation(o.id, q, status); await refresh(); setToast(status === "validated" ? "Confermato: il punteggio di tutti è cresciuto." : "Segnalato alla regia."); });
+    run(async () => {
+      await validateObservation(o.id, q, status);
+      await refresh();
+      if (status === "validated") { vibrate([20, 40, 20]); celebrate("Confermato", "Il punteggio di tutti è cresciuto."); }
+      else setToast("Segnalato alla regia.");
+    });
+
+  // scatto rapido: la foto si prende camminando, i dettagli dopo
+  const snap = async (file: File | undefined) => {
+    if (!file) return;
+    const d = await addDraft(id, file, position ?? [c.center_lng, c.center_lat]);
+    setDrafts((list) => [...list, d]);
+    vibrate(30);
+    setToast("Foto salvata. La completi quando ti fermi.");
+  };
+  const complete = (d: Draft) => {
+    setEntry({ ...emptyEntry("immagine", entry), file: new File([d.blob], d.name, { type: d.blob.type || "image/jpeg" }) });
+    setDraftId(d.id);
+    setPin([d.lng, d.lat]);
+    setPath([]);
+    setPanel("new");
+  };
+  const discard = async (d: Draft) => { await removeDraft(d.id); setDrafts((list) => list.filter((x) => x.id !== d.id)); };
+
+  const begin = () => { setFollow(true); start(); };
+  const end = async () => {
+    const w = await stop();
+    if (!w) return;
+    const mine = data.observations.filter((o) => o.author_id === me.user_id && o.created_at >= w.startedAt);
+    const ids = new Set(mine.map((o) => o.id));
+    const potential = scoreObservations(data.observations).filter((s) => ids.has(s.observation.id)).reduce((sum, s) => sum + s.potential + s.value, 0);
+    setRecap({
+      ms: Date.now() - new Date(w.startedAt).getTime(), meters: w.meters, cells: w.cells.length, fresh: w.fresh.length,
+      observations: mine.length, potential: Math.round(potential), drafts: drafts.length,
+      confirms: data.observations.filter((o) => o.validated_by === me.user_id && (o.validated_at ?? "") >= w.startedAt).length,
+    });
+    refresh();
+  };
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView
-        className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations} grid fit controls={false} {...backdrop(c)}
+        className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations}
+        grid fog fit controls={false} walked={walked} {...backdrop(c)}
+        focus={walking && follow && !picking ? position : null} onDrag={() => setFollow(false)}
         pin={(picking || panel === "new") && !tracing ? pin : null}
         draft={(picking || panel === "new") && tracing ? path : undefined} draftLine
         players={position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#0b0b0c", lng: position[0], lat: position[1], online: true }] : []}
@@ -151,9 +256,9 @@ export default function Campo() {
             <span className="label soft block !text-[9px]">{PHASE_LABEL[phase]}{phase === "live" ? ` · ${remaining(c.ends_at, now)}` : ""}</span>
           </span>
         </Link>
-        <div className="hidden flex-col items-center gap-1 pt-2 sm:flex">
+        <div className="hidden flex-col items-center gap-1 pt-2 md:flex">
           <span className="ruler h-2.5 w-48 text-ink/60" />
-          <span className="label rounded-full bg-paper/70 px-2 py-0.5 backdrop-blur">Copertura {Math.round(ind.coverage * 100)}%</span>
+          <span className="label rounded-full bg-paper/70 px-2 py-0.5 backdrop-blur">Mappa accesa {ind.territory.size ? Math.round(([...ind.territory].filter((x) => litNow.has(x)).length / ind.territory.size) * 100) : 0}%</span>
         </div>
         <button onClick={() => setPanel("missions")} className="glass pointer-events-auto flex items-center gap-2 rounded-full py-2 pr-4 pl-3">
           <span className="size-2 rounded-full bg-glow" />
@@ -162,20 +267,47 @@ export default function Campo() {
         </button>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-20 z-20 flex flex-col items-center gap-2 px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-[4.5rem] z-20 flex flex-col items-center gap-2 px-3 sm:top-24">
+        {walking && (
+          <div className="glass-ink pointer-events-auto flex items-center gap-3 rounded-full py-2 pr-4 pl-3 text-sm">
+            <Dot color="var(--color-glow)" live />
+            <span className="num">{formatDuration(now.getTime() - new Date(walk.startedAt).getTime())}</span>
+            <span className="num">{formatMeters(walk.meters)}</span>
+            <span><b className="num font-medium text-glow">{walk.fresh.length}</b> accese</span>
+          </div>
+        )}
+        {walking && !picking && nearby.length > 0 && (
+          <button onClick={() => setPanel("validate")} className="glass pointer-events-auto flex max-w-md animate-rise items-center gap-3 rounded-3xl px-4 py-2.5 text-left">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-paper"><Icon d={ICON.check} /></span>
+            <span className="min-w-0"><span className="label soft block">Sei sul posto · conferma</span><span className="block truncate text-sm">{nearby[0].title}{nearby.length > 1 ? ` e altri ${nearby.length - 1}` : ""}</span></span>
+          </button>
+        )}
+        {walking && !picking && nearby.length === 0 && target && target.meters > 25 && (
+          <div className="glass pointer-events-auto flex items-center gap-3 rounded-full py-2 pr-4 pl-2.5 text-sm">
+            <span className="grid size-8 place-items-center rounded-full bg-ink text-glow" style={{ transform: `rotate(${target.bearing}deg)` }} aria-hidden>
+              <svg viewBox="0 0 16 16" className="size-4"><path d="M8 2 13 13 8 10.500 3 13z" fill="currentColor" /></svg>
+            </span>
+            <span>Zona spenta a <b className="num font-medium">{formatMeters(target.meters)}</b>, verso {windOf(target.bearing)}</span>
+          </div>
+        )}
         {!canCollect && (
           <div className="glass-ink pointer-events-auto rounded-full px-4 py-2 text-sm">
             {me.status === "suspended" ? "La regia ha sospeso il tuo profilo." : phase === "paused" ? "Raccolta in pausa: aspetta il via della regia." : phase === "upcoming" ? `Si parte tra ${remaining(c.starts_at, now)}.` : phase === "draft" ? "La campagna non è ancora partita." : "La campagna è conclusa. Grazie!"}
           </div>
         )}
-        {showNotice && (
-          <button onClick={() => setSeenNotice(notice.id)} className="glass pointer-events-auto max-w-md animate-rise rounded-3xl px-4 py-3 text-left">
-            <span className="label soft">Dalla regia · {ago(notice.created_at, now)}</span>
-            <span className="mt-0.5 block text-sm">{notice.body}</span>
+        {showNotice && !picking && (
+          <button onClick={() => setSeenNotice(notice.id)} title="Tocca per chiudere"
+            className={cx("glass pointer-events-auto max-w-md animate-rise text-left", walking ? "flex !max-w-[min(28rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full px-4 py-2" : "rounded-3xl px-4 py-3")}>
+            <span className="label soft shrink-0">{walking ? "Regia" : `Dalla regia · ${ago(notice.created_at, now)}`}</span>
+            <span className={cx("text-sm", walking ? "min-w-0 truncate" : "mt-0.5 block")}>{notice.body}</span>
           </button>
         )}
         {toast && <div className="glass-ink pointer-events-auto animate-rise rounded-full px-4 py-2 text-sm" role="status">{toast}</div>}
       </div>
+
+      {walking && !follow && !picking && position && (
+        <IconButton label="Torna alla mia posizione" onClick={() => setFollow(true)} className="absolute right-3 bottom-24 z-20 !size-12"><Icon d={ICON.target} /></IconButton>
+      )}
 
       {/* ----------------------------------------------------------- dock */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -198,14 +330,24 @@ export default function Campo() {
             )
           ) : (
             <>
-              <Button className="sm:min-w-40" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }}><PlusIcon /> Nuovo rilievo</Button>
-              <Button variant="ghost" onClick={() => setPanel("validate")} className="!px-3.5">
-                Valida{toValidate.length > 0 && <span className="num rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-paper">{toValidate.length}</span>}
-              </Button>
-              <Button variant="ghost" onClick={() => setPanel("missions")} className="!hidden !px-3.5 sm:!inline-flex">Missioni</Button>
-              <IconButton label={myTeam ? `Team ${myTeam.name}` : "Il mio team"} onClick={() => setPanel("team")} className="!shadow-none" style={{ background: myTeam?.color, color: myTeam ? "#fff" : undefined }}>
-                <span className="text-[13px] font-medium">{(myTeam?.name ?? "?").slice(0, 2).toUpperCase()}</span>
-              </IconButton>
+              {walking ? (
+                <label className={cx("grid size-14 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition active:scale-95", !canCollect && "pointer-events-none opacity-40")} title="Scatto rapido">
+                  <Icon d={ICON.camera} className="!size-6" />
+                  <span className="sr-only">Scatto rapido</span>
+                  <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={!canCollect} onChange={(e) => { snap(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
+              ) : (
+                <Button variant="glow" className="h-12 !px-5" disabled={!canCollect} onClick={begin}><Icon d={ICON.walk} /> Inizia un&apos;uscita</Button>
+              )}
+              <button type="button" aria-label="Nuovo rilievo" title="Nuovo rilievo" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }}
+                className={cx("grid shrink-0 place-items-center rounded-full transition active:scale-95 disabled:opacity-40", walking ? "h-10 gap-2 px-4 text-sm font-medium hover:bg-ink/6 sm:flex" : "size-10 hover:bg-ink/6")}>
+                <PlusIcon />{walking && <span className="hidden sm:inline">Rilievo</span>}
+              </button>
+              <Counter label="Conferma i rilievi degli altri" d={ICON.check} count={toValidate.length} onClick={() => setPanel("validate")} />
+              {drafts.length > 0 && <Counter label="Foto da completare" d={ICON.tray} count={drafts.length} onClick={() => setPanel("drafts")} />}
+              {walking
+                ? <Button variant="outline" className="h-10" onClick={end}>Rientra</Button>
+                : <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="grid size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6">?</button>}
             </>
           )}
         </div>
@@ -219,6 +361,16 @@ export default function Campo() {
         onClose={cancel} onMove={() => { setPanel(null); setPicking(true); }} onSubmit={submit}
       />
 
+      {/* ----------------------------------------------- foto da completare */}
+      <Sheet open={openPanel === "drafts"} onClose={() => setPanel(null)} kicker="Scatti rapidi" title="Da completare" wide>
+        {drafts.length === 0 ? <Empty title="Niente in sospeso.">Gli scatti rapidi presi durante un&apos;uscita aspettano qui la loro didascalia.</Empty> : (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {drafts.map((d) => <DraftCard key={d.id} draft={d} onOpen={() => complete(d)} onDiscard={() => discard(d)} />)}
+          </ul>
+        )}
+        <p className="soft mt-4 text-xs">Le foto restano su questo dispositivo finché non le completi e le invii.</p>
+      </Sheet>
+
       {/* ------------------------------------------------------- valida */}
       <Sheet open={openPanel === "validate"} onClose={() => setPanel(null)} kicker="Validazione tra team" title="Conferma i rilievi degli altri" wide>
         {actionError && <div className="mb-3"><Notice tone="error">{actionError}</Notice></div>}
@@ -227,9 +379,9 @@ export default function Campo() {
         ) : (
           <ul className="space-y-3">
             {toValidate.slice(0, 30).map((o) => {
-              const img = mediaUrl(o.media_path), team = teamOf(data, o.team_id), th = themeOf(data, o.theme_id);
+              const img = mediaUrl(o.media_path), team = teamOf(data, o.team_id), th = themeOf(data, o.theme_id), m = distance(o);
               return (
-                <li key={o.id} className="surface rounded-card border hairline p-4">
+                <li key={o.id} className={cx("surface rounded-card border p-4", m <= NEAR ? "border-ink" : "hairline")}>
                   <div className="flex gap-3">
                     {img && /* eslint-disable-next-line @next/next/no-img-element */ <img src={img} alt="" className="size-16 shrink-0 rounded-xl object-cover" loading="lazy" />}
                     <div className="min-w-0 flex-1">
@@ -237,7 +389,10 @@ export default function Campo() {
                       <h4 className="mt-1.5 text-[17px] tracking-[-0.02em]">{o.title}</h4>
                       {summary(o) && <p className="text-sm" style={{ color: formOf(o.form).color }}>{summary(o)}</p>}
                       {o.note && <p className="soft text-sm">{o.note}</p>}
-                      <p className="label soft mt-1.5 inline-flex items-center gap-1.5">{team && <Dot color={team.color} />}{team?.name ?? nameOf(data, o.author_id)} · {ago(o.created_at, now)}</p>
+                      <p className="label soft mt-1.5 inline-flex flex-wrap items-center gap-1.5">
+                        {team && <Dot color={team.color} />}{team?.name ?? nameOf(data, o.author_id)} · {ago(o.created_at, now)}
+                        {Number.isFinite(m) && <span className={cx(m <= NEAR && "text-ink")}> · {m <= NEAR ? "sei sul posto" : `a ${formatMeters(m)}`}</span>}
+                      </p>
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -264,6 +419,9 @@ export default function Campo() {
               <div key={l}><Ring value={v} color={col} size={56} /><div className="label soft mt-1.5 !text-[9px]">{l}</div></div>
             ))}
           </div>
+          <p className="soft mt-5 border-t border-white/10 pt-4 text-sm">
+            <b className="num font-medium text-paper">{formatMeters(ind.walkedMeters + (walk?.meters ?? 0))}</b> camminati insieme · <b className="num font-medium text-paper">{litNow.size}</b> zone accese
+          </p>
         </div>
         {myTeam && (
           <p className="soft mt-4 text-sm">
@@ -284,6 +442,10 @@ export default function Campo() {
             ))}
           </ul>
         )}
+        <div className="mt-6 flex flex-wrap gap-2 border-t hairline pt-4">
+          <Button variant="outline" size="sm" onClick={() => setPanel("team")}>{myTeam ? `Team ${myTeam.name}` : "Scegli il team"} e ruolo</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setPanel(null); setStory(true); }}>Come si gioca</Button>
+        </div>
       </Sheet>
 
       {/* --------------------------------------------------------- team */}
@@ -337,6 +499,29 @@ export default function Campo() {
           </div>
         )}
       </Sheet>
+
+      <Recap summary={recap} onClose={() => setRecap(null)} onDrafts={() => { setRecap(null); setPanel("drafts"); }} />
+      <Celebration cheer={cheer} onEnd={endCheer} />
+      {story && <Story campaign={c.name} onDone={closeStory} />}
     </main>
+  );
+}
+
+/** Miniatura di uno scatto rapido in attesa di didascalia. */
+function DraftCard({ draft, onOpen, onDiscard }: { draft: Draft; onOpen: () => void; onDiscard: () => void }) {
+  // L'indirizzo temporaneo dell'immagine nasce quando l'elemento compare e si libera a caricamento avvenuto.
+  const show = (el: HTMLImageElement | null) => { if (el && !el.dataset.set) { el.dataset.set = "1"; el.src = URL.createObjectURL(draft.blob); } };
+  return (
+    <li className="surface overflow-hidden rounded-card border hairline">
+      <button onClick={onOpen} className="relative block w-full">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img ref={show} alt="Scatto rapido" className="aspect-square w-full bg-paper-2 object-cover" onLoad={(e) => URL.revokeObjectURL(e.currentTarget.src)} />
+        <span className="label glass absolute top-2 left-2 rounded-full px-2 py-1">{new Date(draft.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</span>
+      </button>
+      <div className="flex gap-1.5 p-2">
+        <Button size="sm" variant="ghost" className="flex-1 !px-2" onClick={onDiscard}>Scarta</Button>
+        <Button size="sm" className="flex-1 !px-2" onClick={onOpen}>Completa</Button>
+      </div>
+    </li>
   );
 }

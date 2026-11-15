@@ -64,4 +64,11 @@ console.log("flusso:", flow.form, flow.data);
 await fails("forma non prevista", () => as(master, `insert into observations (campaign_id, author_id, kind, form, title, lng, lat) values ($1, $2, 'field', 'altro', 'x', 7.68, 45.07)`, [camp, master]));
 await as(master, `update areas set environment = 'verde', terrain = '{"8a1f9a5a0007fff":"acqua"}' where campaign_id = $1`, [camp]);
 await as(master, `update campaigns set basemap = 'satellite', basemap_opacity = 0.4 where id = $1`, [camp]);
+await as(master, `update campaigns set status = 'live', starts_at = now() - interval '1 day', ends_at = now() + interval '1 day' where id = $1`, [camp]);
+const walk = one(await as(anna, `insert into walks (campaign_id, user_id, team_id) values ($1, $2, $3) returning id`, [camp, anna, t1])).id;
+await as(anna, `update walks set distance_m = 420, cells = '["8a1f9a5a0007fff"]', ended_at = now() where id = $1`, [walk]);
+await fails("non si modifica l'uscita di un altro", async () => {
+  const r = await as(bruno, `update walks set distance_m = 9 where id = $1 returning id`, [walk]); if (!r.rows.length) throw new Error("0 righe"); });
+await fails("non si apre un'uscita a nome di un altro", () => as(bruno, `insert into walks (campaign_id, user_id) values ($1, $2)`, [camp, anna]));
+console.log("uscite visibili al team:", one(await as(bruno, `select count(*)::int n from walks where campaign_id = $1`, [camp])).n);
 console.log("SCHEMA OK");

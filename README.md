@@ -15,8 +15,20 @@ Architettura, modello dei dati e direzione di stile: [docs/ARCHITETTURA.md](docs
 | `/entra` | Ingresso dei giocatori con il codice della campagna |
 | `/studio` | Elenco delle campagne, creazione |
 | `/studio/[id]` | Pannello del master: regia dal vivo, tempi e missioni, editor 3D delle aree, team e giocatori, rilievi, export |
-| `/campo/[id]` | App di rilievo per telefono: sei forme di raccolta, validazione tra team, missioni |
+| `/campo/[id]` | App di rilievo per telefono e tablet: uscite a piedi, scatto rapido, sei forme di raccolta, conferma tra team |
 | `/design` | Design system: colori, tipografia, componenti |
+
+## Come si gioca: l'Uscita
+
+La mappa parte spenta. Un'uscita a piedi, con telefono o tablet, ha quattro gesti:
+
+1. **Parti** — l'app conta distanza e tempo e indica la zona spenta più vicina.
+2. **Cammina** — le celle attraversate si accendono per tutti i team.
+3. **Osserva** — sei forme di raccolta; lo *scatto rapido* salva foto e posizione, la didascalia si scrive dopo.
+4. **Conferma** — passando dove ha lavorato un altro team si confermano i suoi rilievi sul posto.
+
+Al rientro un riepilogo mostra che cosa l'uscita ha portato al punteggio comune.
+Delle uscite si salvano le celle attraversate e la distanza, non il tracciato GPS.
 
 ## Raccolta dei dati
 

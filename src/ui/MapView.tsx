@@ -58,6 +58,14 @@ interface Props {
   players?: MapPlayer[];
   /** Mostra la griglia di copertura sulle aree. */
   grid?: boolean;
+  /** Celle attraversate a piedi: risultano «accese». */
+  walked?: Iterable<string>;
+  /** Vela le celle mai attraversate né osservate. */
+  fog?: boolean;
+  /** Centra la mappa su questo punto quando cambia. */
+  focus?: [number, number] | null;
+  /** L'utente ha spostato la mappa con un gesto. */
+  onDrag?: () => void;
   mode?: MapMode;
   /** Nel modello, mostra ogni cella a colore pieno (editor) anziché solo quelle esplorate. */
   vivid?: boolean;
@@ -97,6 +105,12 @@ const point = (c: [number, number], properties: GeoJSON.GeoJsonProperties = {}):
   type: "Feature", geometry: { type: "Point", coordinates: c }, properties,
 });
 
+/** Colore a metà strada tra due esadecimali. */
+function blend(a: string, b: string): string {
+  const mix = (i: number) => Math.round((parseInt(a.slice(i, i + 2), 16) + parseInt(b.slice(i, i + 2), 16)) / 2).toString(16).padStart(2, "0");
+  return `#${mix(1)}${mix(3)}${mix(5)}`;
+}
+
 /** Propone un ambiente a partire dagli elementi della mappa vettoriale sotto un punto. */
 function environmentFrom(features: { sourceLayer?: string; properties: Record<string, unknown> | null }[]): Environment | null {
   const has = (layer: string, classes?: string[]) =>
@@ -117,7 +131,7 @@ export default function MapView(props: Props) {
   const ready = useRef(false);
   const latest = useRef(props);
   const fitted = useRef(false);
-  const applied = useRef({ mode: "" as string, raster: "", overlay: "" });
+  const applied = useRef({ mode: "" as string, raster: "", overlay: "", focus: "" });
 
   const sync = () => {
     const m = map.current;
@@ -136,6 +150,8 @@ export default function MapView(props: Props) {
     const counts = new Map<string, number>();
     for (const o of p.observations ?? []) if (o.cell && o.status !== "flagged") counts.set(o.cell, (counts.get(o.cell) ?? 0) + 1);
 
+    const walked = new Set(p.walked ?? []);
+
     if (mode === "model") {
       set("cells", fc([]));
       set("model", fc(modelCells(p.areas ?? []).map(({ cell, environment }) => {
@@ -143,7 +159,7 @@ export default function MapView(props: Props) {
         const n = counts.get(cell) ?? 0;
         return {
           type: "Feature", geometry: { type: "Polygon", coordinates: [cellRing(cell)] },
-          properties: { cell, h: cellHeight(env, cell), color: p.vivid || n > 0 ? env.color : env.tint },
+          properties: { cell, h: cellHeight(env, cell), color: p.vivid || n > 0 ? env.color : walked.has(cell) ? blend(env.tint, env.color) : env.tint },
         };
       })));
     } else {
@@ -151,9 +167,14 @@ export default function MapView(props: Props) {
       const cells = new Set<string>();
       if (p.grid) for (const a of p.areas ?? []) for (const c of cellsOf(a.geometry)) cells.add(c);
       for (const c of counts.keys()) cells.add(c);
-      set("cells", fc([...cells].map((c) => ({
-        type: "Feature", geometry: { type: "Polygon", coordinates: [cellRing(c)] }, properties: { n: counts.get(c) ?? 0 },
-      }))));
+      for (const c of walked) cells.add(c);
+      set("cells", fc([...cells].map((c) => {
+        const n = counts.get(c) ?? 0;
+        return {
+          type: "Feature", geometry: { type: "Polygon", coordinates: [cellRing(c)] },
+          properties: { n, dark: !!p.fog && n === 0 && !walked.has(c) },
+        };
+      })));
     }
 
     set("observations", fc((p.observations ?? []).map((o) => point([o.lng, o.lat], { id: o.id, color: KIND_COLOR[o.kind], status: o.status }))));
@@ -216,7 +237,7 @@ export default function MapView(props: Props) {
       const first = applied.current.mode === "";
       applied.current.mode = mode;
       const flat = mode !== "model";
-      for (const id of ["cells-fill", "cells-line", "areas-fill", "flows", "obs"]) show(id, flat);
+      for (const id of ["cells-fill", "cells-fog", "cells-line", "areas-fill", "flows", "obs"]) show(id, flat);
       show("model", !flat);
       show("tq-buildings", mode === "3d");
       try {
@@ -225,6 +246,15 @@ export default function MapView(props: Props) {
       const camera = mode === "2d" ? { pitch: 0, bearing: 0 } : { pitch: 58, bearing: -18 };
       if (first) m.jumpTo(camera);
       else m.easeTo({ ...camera, duration: 900 });
+    }
+
+    const focus = p.focus ? p.focus.map((v) => v.toFixed(5)).join(",") : "";
+    if (focus !== applied.current.focus) {
+      applied.current.focus = focus;
+      if (p.focus) {
+        fitted.current = true;
+        m.easeTo({ center: p.focus, zoom: Math.max(m.getZoom(), 16.4), duration: 900 });
+      }
     }
 
     if (p.fit && !fitted.current && p.areas?.length) {
@@ -240,7 +270,7 @@ export default function MapView(props: Props) {
     if (!el.current) return;
     let cancelled = false;
     const p = latest.current;
-    applied.current = { mode: "", raster: "", overlay: "" };
+    applied.current = { mode: "", raster: "", overlay: "", focus: "" };
     fitted.current = false;
 
     const start = (style: StyleSpecification | string) => {
@@ -266,6 +296,7 @@ export default function MapView(props: Props) {
           "fill-color": ["interpolate", ["linear"], ["get", "n"], 0, "#17804f", 1, "#2bbf74", 6, "#37e08b"],
           "fill-opacity": ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.38, 6, 0.7],
         } });
+        m.addLayer({ id: "cells-fog", type: "fill", source: "cells", paint: { "fill-color": "#0b0b0c", "fill-opacity": ["case", ["get", "dark"], 0.2, 0] } });
         m.addLayer({ id: "cells-line", type: "line", source: "cells", paint: { "line-color": "#0b0b0c", "line-opacity": 0.08, "line-width": 0.6 } });
         m.addLayer({ id: "areas-fill", type: "fill", source: "areas", paint: {
           "fill-color": ["get", "color"], "fill-opacity": ["case", ["get", "selected"], 0.16, 0.05],
@@ -413,6 +444,7 @@ export default function MapView(props: Props) {
         const a = hit(e, "areas-fill");
         if (a && cur.onAreaClick) cur.onAreaClick(String(a.properties.id));
       });
+      m.on("dragstart", () => latest.current.onDrag?.());
       m.on("moveend", () => {
         const c = m.getCenter();
         latest.current.onMove?.([c.lng, c.lat], m.getZoom());

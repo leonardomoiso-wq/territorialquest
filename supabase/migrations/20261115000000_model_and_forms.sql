@@ -1,4 +1,4 @@
--- Territorial Quest — modello 3D del territorio, sfondi della mappa e forme di raccolta.
+-- Territorial Quest — modello 3D del territorio, sfondi della mappa, forme di raccolta e uscite.
 -- Idempotente: si può rieseguire senza errori.
 
 -- Sfondo della mappa per campagna.
@@ -36,6 +36,42 @@ begin
 end $$;
 
 create index if not exists observations_form_idx on public.observations (campaign_id, form);
+
+-- Uscite: una camminata di rilievo. Si salvano le celle attraversate e la distanza,
+-- non il tracciato GPS preciso della persona.
+create table if not exists public.walks (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.campaigns (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  team_id uuid references public.teams (id) on delete set null,
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  distance_m integer not null default 0 check (distance_m >= 0),
+  cells jsonb not null default '[]'::jsonb -- celle H3 attraversate
+);
+create index if not exists walks_campaign_idx on public.walks (campaign_id, started_at desc);
+
+alter table public.walks enable row level security;
+drop policy if exists walks_read on public.walks;
+create policy walks_read on public.walks for select to authenticated using (public.is_member(campaign_id));
+drop policy if exists walks_insert on public.walks;
+create policy walks_insert on public.walks for insert to authenticated
+  with check (user_id = auth.uid() and public.can_collect(campaign_id));
+drop policy if exists walks_update on public.walks;
+create policy walks_update on public.walks for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists walks_delete on public.walks;
+create policy walks_delete on public.walks for delete to authenticated
+  using (user_id = auth.uid() or public.is_staff(campaign_id));
+grant select, insert, update, delete on public.walks to authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'walks') then
+    alter publication supabase_realtime add table public.walks;
+  end if;
+end $$;
 
 -- Aggiorna subito l'API dopo la modifica dello schema.
 notify pgrst, 'reload schema';

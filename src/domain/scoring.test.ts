@@ -4,6 +4,7 @@ import { indicators, missionProgress, novelty, scoreObservations } from "./scori
 import { phaseOf } from "./time";
 import { toCSV, toGeoJSON } from "./export";
 import { kindOf, pathLength, perHour, summary } from "./forms";
+import { bearing, metersBetween, nearestDark, stepMeters, windOf } from "./walk";
 import type { CampaignData, Observation } from "./types";
 
 const square = closeRing([[7.68, 45.06], [7.69, 45.06], [7.69, 45.07], [7.68, 45.07]]);
@@ -24,7 +25,7 @@ const base = (observations: Observation[]): CampaignData => ({
   ],
   areas: [{ id: "a1", campaign_id: "c", team_id: null, name: "Aurora", color: "#000", geometry: square, opens_at: null, closes_at: null }],
   themes: [{ id: "th1", campaign_id: "c", name: "Ambiente", color: "#000", sort: 1 }],
-  missions: [], observations, announcements: [],
+  missions: [], observations, announcements: [], walks: [],
 });
 
 describe("punteggio cooperativo", () => {
@@ -135,5 +136,29 @@ describe("geografia ed export", () => {
     const csv = toCSV(data).split("\n");
     expect(csv[0].startsWith("id,data,forma,tipo,lente,titolo")).toBe(true);
     expect(csv[1]).toContain('"Parco ""Dora"", nord"');
+  });
+});
+
+describe("uscite a piedi", () => {
+  it("misura distanza e direzione", () => {
+    const a: [number, number] = [7.68, 45.06], north: [number, number] = [7.68, 45.061], east: [number, number] = [7.6813, 45.06];
+    expect(Math.round(metersBetween(a, north))).toBe(111);
+    expect(Math.round(bearing(a, north))).toBe(0);
+    expect(windOf(bearing(a, east))).toBe("est");
+  });
+
+  it("scarta il rumore GPS e i salti", () => {
+    const a: [number, number] = [7.68, 45.06];
+    expect(stepMeters(a, [7.68001, 45.06])).toBe(0);
+    expect(stepMeters(a, [7.69, 45.07])).toBe(0);
+    expect(stepMeters(a, [7.68, 45.0603], 80)).toBe(0);
+    expect(Math.round(stepMeters(a, [7.68, 45.0603]))).toBe(33);
+  });
+
+  it("indica la cella spenta più vicina", () => {
+    const here = cellOf(7.685, 45.065), far = cellOf(7.689, 45.069), near = cellOf(7.686, 45.0655);
+    const t = nearestDark([7.685, 45.065], [here, far, near], new Set([here]));
+    expect(t?.cell).toBe(near);
+    expect(t!.meters).toBeLessThan(150);
   });
 });

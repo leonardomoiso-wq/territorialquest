@@ -9,6 +9,7 @@ import MapView, { type MapMode, type MapPlayer } from "@/ui/MapView";
 import { Area, Button, Card, Dot, Label, Meter, Notice, Ring, Segmented, Select } from "@/ui/kit";
 import { FormTag } from "@/campo/Collect";
 import { summary } from "@/domain/forms";
+import { formatMeters } from "@/domain/walk";
 import { backdrop, nameOf, teamOf, type Ctx } from "./shared";
 
 export default function Regia({ data, me, now }: Ctx) {
@@ -40,7 +41,7 @@ export default function Regia({ data, me, now }: Ctx) {
         <div className="relative h-[62dvh] min-h-[420px] overflow-hidden rounded-panel border hairline">
           <MapView
             className="size-full" center={[data.campaign.center_lng, data.campaign.center_lat]} zoom={data.campaign.zoom}
-            areas={data.areas} observations={data.observations} players={onMap} grid fit mode={mode} {...backdrop(data.campaign)}
+            areas={data.areas} observations={data.observations} players={onMap} grid fit mode={mode} walked={ind.walkedCells} {...backdrop(data.campaign)}
           />
           <div className="glass absolute top-16 left-4 rounded-full p-1">
             <Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "3d", label: "3D reale" }, { id: "model", label: "Modello" }]} />
@@ -55,6 +56,7 @@ export default function Regia({ data, me, now }: Ctx) {
             <span className="inline-flex items-center gap-1.5"><Dot color="var(--color-desk)" />Desk {ind.byKind.desk}</span>
             <span className="inline-flex items-center gap-1.5"><Dot color="var(--color-feel)" />Feel {ind.byKind.feel}</span>
             <span className="soft">{ind.cellsCovered}/{ind.cellsTotal} celle</span>
+            <span className="soft">{formatMeters(ind.walkedMeters)} a piedi</span>
           </div>
         </div>
 

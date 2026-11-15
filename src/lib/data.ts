@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { areaAt, cellOf } from "@/domain/geo";
 import type {
-  Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Observation, ObservationKind, Polygon, Team, Theme,
+  Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Observation, ObservationKind, Polygon, Team, Theme, Walk,
 } from "@/domain/types";
 import { createClient } from "@/utils/supabase/client";
 
@@ -98,7 +98,7 @@ export const deleteCampaign = (id: string) => unwrap(db().from("campaigns").dele
 
 export async function loadCampaign(id: string): Promise<CampaignData | null> {
   const s = db();
-  const [campaign, teams, members, areas, themes, missions, observations, announcements] = await Promise.all([
+  const [campaign, teams, members, areas, themes, missions, observations, announcements, walks] = await Promise.all([
     s.from("campaigns").select("*").eq("id", id).maybeSingle(),
     s.from("teams").select("*").eq("campaign_id", id).order("created_at"),
     s.from("memberships").select("*, profile:profiles(id, display_name)").eq("campaign_id", id).order("joined_at"),
@@ -107,6 +107,7 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     s.from("missions").select("*").eq("campaign_id", id).order("starts_at"),
     s.from("observations").select("*").eq("campaign_id", id).order("created_at", { ascending: false }).limit(5000),
     s.from("announcements").select("*").eq("campaign_id", id).order("created_at", { ascending: false }).limit(50),
+    s.from("walks").select("*").eq("campaign_id", id).order("started_at", { ascending: false }).limit(2000),
   ]);
   const failed = [campaign, teams, members, areas, themes, missions, observations, announcements].find((r) => r.error);
   if (failed?.error) throw new Error(explain(failed.error));
@@ -120,10 +121,12 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     missions: (missions.data ?? []) as Mission[],
     observations: (observations.data ?? []) as Observation[],
     announcements: (announcements.data ?? []) as Announcement[],
+    // Se la tabella delle uscite non esiste ancora, la campagna si apre comunque.
+    walks: (walks.data ?? []) as Walk[],
   };
 }
 
-const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements"];
+const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements", "walks"];
 
 /** Dati della campagna, aggiornati in tempo reale. */
 export function useCampaign(id: string | undefined) {
@@ -255,3 +258,9 @@ export const saveTheme = (t: { id?: string; campaign_id: string; name: string; c
   return id ? unwrap(db().from("themes").update(row).eq("id", id)) : unwrap(db().from("themes").insert(row));
 };
 export const deleteTheme = (id: string) => unwrap(db().from("themes").delete().eq("id", id));
+
+/* ----------------------------------------------------------------- uscite */
+export const startWalk = (campaign_id: string, user_id: string, team_id: string | null) =>
+  unwrap<Walk>(db().from("walks").insert({ campaign_id, user_id, team_id }).select().single());
+export const updateWalk = (id: string, patch: Partial<Pick<Walk, "distance_m" | "cells" | "ended_at">>) =>
+  unwrap(db().from("walks").update(patch).eq("id", id));

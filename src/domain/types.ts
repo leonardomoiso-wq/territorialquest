@@ -136,6 +136,18 @@ export interface Announcement {
   created_at: string;
 }
 
+/** Un'uscita a piedi: celle attraversate e distanza, senza tracciato preciso. */
+export interface Walk {
+  id: string;
+  campaign_id: string;
+  user_id: string;
+  team_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  distance_m: number;
+  cells: string[];
+}
+
 /** Tutto ciò che serve per mostrare una campagna. */
 export interface CampaignData {
   campaign: Campaign;
@@ -146,6 +158,7 @@ export interface CampaignData {
   missions: Mission[];
   observations: Observation[];
   announcements: Announcement[];
+  walks: Walk[];
 }
 
 export const KIND_LABEL: Record<ObservationKind, string> = {
