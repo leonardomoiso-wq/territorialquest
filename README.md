@@ -48,7 +48,7 @@ servizio di tessere XYZ a scelta oppure un'immagine caricata.
 
 ## Avvio
 
-1. **Database.** In Supabase → SQL Editor incolla ed esegui [`supabase/setup.sql`](supabase/setup.sql): contiene tutte le migrazioni in ordine e si può rieseguire senza danni. Poi apri `/stato` sul sito per verificare.
+1. **Database.** In Supabase → SQL Editor incolla ed esegui [`supabase/setup.sql`](supabase/setup.sql): contiene tutte le migrazioni in ordine e si può rieseguire senza danni. Poi apri `/stato` sul sito per verificare. L'ultima riga mostrata dall'SQL Editor deve dire «Territorial Quest installato». Se tra gli avvisi compare «Spazio per le foto non configurato», crea da Storage un bucket pubblico chiamato `media`.
 2. **Variabili.** Copia `.env.example` in `.env.local` e inserisci URL e chiave pubblica del progetto.
 3. **Avvio locale.**
 

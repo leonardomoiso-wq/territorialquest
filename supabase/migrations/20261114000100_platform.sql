@@ -8,18 +8,25 @@ from auth.users u
 on conflict (id) do nothing;
 
 -- Media delle osservazioni: lettura pubblica, caricamento per chi ha effettuato l'accesso.
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('media', 'media', true, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'audio/mpeg', 'audio/mp4', 'audio/webm'])
-on conflict (id) do nothing;
+-- In alcuni progetti le tabelle di Storage appartengono a un altro ruolo e queste istruzioni
+-- non sono permesse: in quel caso si prosegue e si crea lo spazio dal pannello (vedi README).
+do $$
+begin
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('media', 'media', true, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'audio/mpeg', 'audio/mp4', 'audio/webm'])
+  on conflict (id) do nothing;
 
-drop policy if exists media_read on storage.objects;
-create policy media_read on storage.objects for select using (bucket_id = 'media');
-drop policy if exists media_insert on storage.objects;
-create policy media_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'media' and owner = auth.uid());
-drop policy if exists media_delete on storage.objects;
-create policy media_delete on storage.objects for delete to authenticated
-  using (bucket_id = 'media' and owner = auth.uid());
+  drop policy if exists media_read on storage.objects;
+  create policy media_read on storage.objects for select using (bucket_id = 'media');
+  drop policy if exists media_insert on storage.objects;
+  create policy media_insert on storage.objects for insert to authenticated
+    with check (bucket_id = 'media' and owner = auth.uid());
+  drop policy if exists media_delete on storage.objects;
+  create policy media_delete on storage.objects for delete to authenticated
+    using (bucket_id = 'media' and owner = auth.uid());
+exception when others then
+  raise warning 'Spazio per le foto non configurato (%): crealo da Storage nel pannello Supabase.', sqlerrm;
+end $$;
 
 -- Aggiornamenti in tempo reale per pannello di controllo e app di rilievo.
 do $$
@@ -33,4 +40,6 @@ begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     end if;
   end loop;
+exception when others then
+  raise warning 'Tempo reale non attivato (%): l''app si aggiorna comunque ogni 20 secondi.', sqlerrm;
 end $$;

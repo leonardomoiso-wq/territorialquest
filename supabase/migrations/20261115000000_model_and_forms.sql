@@ -71,6 +71,8 @@ begin
      and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'walks') then
     alter publication supabase_realtime add table public.walks;
   end if;
+exception when others then
+  raise warning 'Tempo reale per le uscite non attivato (%).', sqlerrm;
 end $$;
 
 -- Aggiorna subito l'API dopo la modifica dello schema.
