@@ -17,6 +17,8 @@ const CHECKS: { label: string; file: string; table: string; select: string }[] =
   { label: "Modello 3D delle aree", file: "20261115000000_model_and_forms.sql", table: "areas", select: "environment, terrain" },
   { label: "Forme di raccolta", file: "20261115000000_model_and_forms.sql", table: "observations", select: "form, lens, path, data" },
   { label: "Uscite a piedi", file: "20261115000000_model_and_forms.sql", table: "walks", select: "id" },
+  { label: "Luoghi, indagini sul sito", file: "20261117000000_places_routes.sql", table: "places", select: "id, survey" },
+  { label: "Percorsi e arrivi", file: "20261117000000_places_routes.sql", table: "visits", select: "id" },
 ];
 
 export default function Stato() {
@@ -34,6 +36,8 @@ export default function Stato() {
         const { error } = await db.from(c.table).select(c.select).limit(1);
         out.push({ label: c.label, file: c.file, ok: !error, detail: error?.message });
       }
+      const { error: rec } = await db.rpc("recovery_question", { email: "controllo@esempio.it" });
+      out.push({ label: "Recupero password con domanda segreta", file: "20261117000100_recovery.sql", ok: !rec, detail: rec?.message });
       const { error: bucket } = await db.storage.from("media").list("", { limit: 1 });
       out.push({ label: "Spazio per le foto", file: "20261114000100_platform.sql", ok: !bucket, detail: bucket?.message });
       const { data } = await db.auth.getUser();
@@ -74,7 +78,7 @@ export default function Stato() {
           ? <p className="mt-6 rounded-2xl bg-leaf/10 p-4 text-[15px]">Tutto pronto: il database collegato ha tutte le tabelle che servono.</p>
           : (
             <div className="mt-6 rounded-2xl bg-alert/10 p-4 text-[15px]">
-              <p>Nel progetto <b className="num">{projectRef}</b>, da Supabase → SQL Editor, esegui in quest&apos;ordine:</p>
+              <p>Nel progetto <b className="num">{projectRef}</b>, da Supabase → SQL Editor, incolla ed esegui <b>supabase/setup.sql</b> (contiene tutto). In alternativa, solo i file mancanti:</p>
               <ol className="num mt-2 list-decimal pl-6">{missing.map((f) => <li key={f}>{f}</li>)}</ol>
               <p className="soft mt-3 text-sm">Il progetto è fissato in src/utils/supabase/env.ts; per un altro progetto imposta NEXT_PUBLIC_TQ_SUPABASE_URL e NEXT_PUBLIC_TQ_SUPABASE_KEY su Vercel e ripubblica.</p>
             </div>

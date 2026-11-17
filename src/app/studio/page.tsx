@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { phaseOf, PHASE_LABEL, formatDate, fromLocalInput, toLocalInput } from "@/domain/time";
 import { ROLE_LABEL } from "@/domain/types";
-import { createCampaign, explain, listCampaigns, signOut, useSession, type CampaignLink } from "@/lib/data";
+import { createCampaign, explain, hasRecovery, listCampaigns, signOut, useSession, type CampaignLink } from "@/lib/data";
+import { SecretSheet } from "@/ui/Recovery";
 import { useAction } from "@/lib/hooks";
 import { Area, ArrowIcon, Button, Empty, Field, Label, LinkButton, Logo, Notice, PlusIcon, Sheet, Spinner, Tag } from "@/ui/kit";
 
@@ -24,6 +25,12 @@ export default function Studio() {
     starts: toLocalInput(new Date().toISOString()),
     ends: toLocalInput(new Date(Date.now() + 14 * 86400000).toISOString()),
   }));
+
+  const [secretMissing, setSecretMissing] = useState(false);
+  const [secretOpen, setSecretOpen] = useState(false);
+  useEffect(() => {
+    if (user) hasRecovery().then((h) => setSecretMissing(!h), () => undefined);
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -48,6 +55,7 @@ export default function Studio() {
         <Link href="/"><Logo /></Link>
         <div className="flex items-center gap-2">
           <span className="soft hidden text-sm sm:inline">{name}</span>
+          <Button variant="ghost" size="sm" onClick={() => setSecretOpen(true)}>Domanda segreta</Button>
           <Button variant="ghost" size="sm" onClick={signOut}>Esci</Button>
         </div>
       </header>
@@ -64,6 +72,16 @@ export default function Studio() {
           </div>
         </div>
 
+        {secretMissing && (
+          <div className="on-ink mb-6 flex flex-wrap items-center justify-between gap-4 rounded-card p-5">
+            <div>
+              <p className="text-[17px] tracking-[-0.02em]">Imposta una domanda segreta</p>
+              <p className="soft text-sm">Ti permette di recuperare la password se la dimentichi, senza email.</p>
+            </div>
+            <Button variant="glow" onClick={() => setSecretOpen(true)}>Imposta ora</Button>
+          </div>
+        )}
+        <SecretSheet open={secretOpen} onClose={() => setSecretOpen(false)} onSaved={() => setSecretMissing(false)} />
         {loadError && <div className="mb-6"><Notice tone="error">{loadError}</Notice></div>}
 
         {items === null ? (

@@ -1,20 +1,22 @@
 // Valida lo schema e le regole di accesso su un Postgres in memoria (PGlite),
 // simulando auth.users e auth.uid() di Supabase.
 import { PGlite } from "@electric-sql/pglite";
+import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { readFileSync } from "node:fs";
 
-const db = new PGlite();
+const db = new PGlite({ extensions: { pgcrypto } });
 const sql = readFileSync("supabase/migrations/20261114000000_init.sql", "utf8");
 await db.exec(`
   create role authenticated nologin; create role anon nologin;
   create schema auth;
-  create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}');
+  create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}', encrypted_password text, updated_at timestamptz);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true), '')::uuid $$;
   grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;
 `);
 const forms = readFileSync("supabase/migrations/20261115000000_model_and_forms.sql", "utf8");
 const places = readFileSync("supabase/migrations/20261117000000_places_routes.sql", "utf8");
-for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); } // due passate: idempotenza
+const recovery = readFileSync("supabase/migrations/20261117000100_recovery.sql", "utf8");
+for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); } // due passate: idempotenza
 
 const as = async (uid, q, params) => {
   await db.exec(`set role authenticated; select set_config('app.uid', '${uid}', false);`);
@@ -87,4 +89,21 @@ console.log("altro team:", one(await as(bruno, `select check_in($1, 7.6860, 45.0
 await as(master, `update places set survey = '[{"id":"a1","type":"scala","label":"Stato"}]' where id = $1`, [place]);
 console.log("indagine sul sito:", one(await as(anna, `insert into observations (campaign_id, author_id, team_id, kind, form, title, lng, lat, place_id, data) values ($1, $2, $3, 'field', 'indagine', 'Indagine', 7.686, 45.078, $4, '{"answers":{"a1":4}}') returning form`, [camp, anna, t1, place])).form);
 console.log("rilievo sul luogo:", one(await as(anna, `insert into observations (campaign_id, author_id, team_id, kind, title, lng, lat, place_id) values ($1, $2, $3, 'field', 'Arcata', 7.686, 45.078, $4) returning place_id is not null ok`, [camp, anna, t1, place])).ok);
+// recupero con domanda segreta
+const asAnon = async (q, params) => { await db.exec(`set role anon; select set_config('app.uid', '', false);`); try { return await db.query(q, params); } finally { await db.exec("reset role"); } };
+await db.exec(`grant usage on schema auth to anon; grant execute on function auth.uid() to anon; grant usage on schema extensions to anon, authenticated;`);
+console.log("domanda prima:", one(await as(anna, `select has_recovery() h`)).h);
+await fails("risposta troppo corta", () => as(anna, `select set_recovery('Il nome del tuo primo animale', 'x')`));
+await as(anna, `select set_recovery('Il nome del tuo primo animale', '  Fuffì  Primo ')`);
+console.log("domanda dopo:", one(await as(anna, `select has_recovery() h`)).h);
+await fails("la tabella non si legge", async () => { await as(anna, `select * from recovery`); });
+console.log("domanda per email:", one(await asAnon(`select recovery_question('ANNA@x.it') q`)).q);
+console.log("email sconosciuta:", one(await asAnon(`select recovery_question('nessuno@x.it') q`)).q);
+console.log("risposta sbagliata:", one(await asAnon(`select reset_password('anna@x.it', 'Micio', 'nuovapassword') ok`)).ok);
+console.log("accenti, maiuscole e spazi non contano:", one(await asAnon(`select reset_password('anna@x.it', 'fuffi primo', 'nuovapassword') ok`)).ok);
+console.log("password cambiata:", one(await db.query(`select encrypted_password = extensions.crypt('nuovapassword', encrypted_password) ok from auth.users where email = 'anna@x.it'`)).ok);
+for (let k = 0; k < 5; k++) await asAnon(`select reset_password('anna@x.it', 'sbagliata', 'altrapassword')`);
+await fails("bloccato dopo 5 errori, anche con la risposta giusta", () => asAnon(`select reset_password('anna@x.it', 'fuffi primo', 'altrapassword')`));
+await fails("password troppo corta", async () => { await db.exec(`update recovery set locked_until = null, failures = 0`); await asAnon(`select reset_password('anna@x.it', 'fuffi primo', 'corta')`); });
+await fails("chi non ha effettuato l'accesso non imposta domande", () => asAnon(`select set_recovery('Domanda qualsiasi', 'risposta')`));
 console.log("SCHEMA OK");

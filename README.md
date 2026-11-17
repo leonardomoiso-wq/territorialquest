@@ -30,6 +30,26 @@ La mappa parte spenta. Un'uscita a piedi, con telefono o tablet, ha quattro gest
 Al rientro un riepilogo mostra che cosa l'uscita ha portato al punteggio comune.
 Delle uscite si salvano le celle attraversate e la distanza, non il tracciato GPS.
 
+## Luoghi, percorsi e indagini sul sito
+
+- **Luoghi** (sezione Luoghi della regia): punti di interesse storici, naturalistici, culturali,
+  sociali o di paesaggio, con racconto, immagini, raggio di arrivo, punti e domanda guida.
+- **Due scale di indagine.** Il territorio si racconta con i rilievi liberi (scala *macro*);
+  ogni luogo può avere una **scheda d'indagine sul sito** (scala *micro*): foto, conteggi, misure,
+  scale 1–5, scelte, sì/no e testo, compilata sul posto una domanda per schermata. Ci sono schede
+  modello per tipo di luogo.
+- **Punti**: ogni luogo vale i suoi punti una volta per team, metà all'arrivo (verificato dal
+  database sulla distanza) e metà all'indagine o al primo rilievo raccolto lì e confermato da un altro team.
+- **Percorsi**: sequenze ordinate di luoghi; sul campo la bussola guida da una tappa alla successiva
+  e, durante un'uscita, l'arrivo si registra da solo entrando nel raggio del luogo.
+
+## Accesso e recupero della password
+
+Accesso con email e password. Chi si registra sceglie una **domanda segreta**; chi ha già un
+profilo la imposta dal promemoria in Studio. Da «Password dimenticata?» si sceglie una nuova
+password rispondendo alla domanda. Le risposte sono salvate cifrate, maiuscole, spazi e accenti non
+contano, e dopo 5 errori il recupero si blocca per 15 minuti.
+
 ## Raccolta dei dati
 
 Ogni rilievo ha tre coordinate, pensate per la ricerca sul campo:

@@ -296,3 +296,11 @@ export const deleteRoute = (id: string) => unwrap(db().from("routes").delete().e
 /** Arrivo a un luogo: il database verifica la distanza. */
 export const checkIn = (place: string, lng: number, lat: number) =>
   unwrap<{ distance: number; first_for_team: boolean }>(db().rpc("check_in", { p: place, lng, lat }));
+
+/* ------------------------------------------------- recupero della password */
+export const setRecovery = (question: string, answer: string) => unwrap(db().rpc("set_recovery", { question, answer }));
+export const hasRecovery = () => unwrap<boolean>(db().rpc("has_recovery"));
+export const recoveryQuestion = (email: string) => unwrap<string | null>(db().rpc("recovery_question", { email }));
+/** true se la risposta era corretta e la password è stata cambiata. */
+export const resetPassword = (email: string, answer: string, newPassword: string) =>
+  unwrap<boolean>(db().rpc("reset_password", { email, answer, new_password: newPassword }));
