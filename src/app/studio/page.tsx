@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { phaseOf, PHASE_LABEL, formatDate, fromLocalInput, toLocalInput } from "@/domain/time";
 import { ROLE_LABEL } from "@/domain/types";
-import { createCampaign, explain, hasRecovery, listCampaigns, signOut, useSession, type CampaignLink } from "@/lib/data";
+import { createCampaign, explain, hasRecovery, isOrganizer, listCampaigns, signOut, useSession, type CampaignLink } from "@/lib/data";
 import { SecretSheet } from "@/ui/Recovery";
 import { useAction } from "@/lib/hooks";
 import { Area, ArrowIcon, Button, Empty, Field, Label, LinkButton, Logo, Notice, PlusIcon, Sheet, Spinner, Tag } from "@/ui/kit";
@@ -26,6 +26,8 @@ export default function Studio() {
     ends: toLocalInput(new Date(Date.now() + 14 * 86400000).toISOString()),
   }));
 
+  const [organizer, setOrganizer] = useState(false);
+  useEffect(() => { if (user) isOrganizer().then(setOrganizer, () => setOrganizer(false)); }, [user]);
   const [secretMissing, setSecretMissing] = useState(false);
   const [secretOpen, setSecretOpen] = useState(false);
   useEffect(() => {
@@ -63,12 +65,12 @@ export default function Studio() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4 pt-10 pb-10">
           <div>
-            <Label>Studio</Label>
+            <Label>{organizer ? "Studio · regia" : "Studio"}</Label>
             <h1 className="display mt-2 text-[clamp(2.5rem,6vw,4.5rem)]">Le tue campagne</h1>
           </div>
           <div className="flex gap-2">
-            <LinkButton href="/entra" variant="outline">Entra con un codice</LinkButton>
-            <Button onClick={() => setOpen(true)}><PlusIcon /> Nuova campagna</Button>
+            <LinkButton href="/entra" variant={organizer ? "outline" : "primary"}>Entra con un codice</LinkButton>
+            {organizer && <Button onClick={() => setOpen(true)}><PlusIcon /> Nuova campagna</Button>}
           </div>
         </div>
 
@@ -87,9 +89,15 @@ export default function Studio() {
         {items === null ? (
           <Spinner />
         ) : items.length === 0 ? (
-          <Empty title="Nessuna campagna, per ora." action={<Button onClick={() => setOpen(true)}><PlusIcon /> Crea la prima</Button>}>
-            Una campagna è un&apos;attività di esplorazione: ha un territorio, dei tempi e dei team.
-          </Empty>
+          organizer ? (
+            <Empty title="Nessuna campagna, per ora." action={<Button onClick={() => setOpen(true)}><PlusIcon /> Crea la prima</Button>}>
+              Una campagna è un&apos;attività di esplorazione: ha un territorio, dei tempi e dei team.
+            </Empty>
+          ) : (
+            <Empty title="Non partecipi ancora a nessuna campagna." action={<LinkButton href="/entra">Entra con un codice</LinkButton>}>
+              Il codice della campagna te lo dà chi la coordina. Se sei tu a coordinarla, entra dall&apos;<a className="underline underline-offset-2" href="/regia">accesso di regia</a>.
+            </Empty>
+          )
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map(({ campaign: c, role }) => {

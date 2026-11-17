@@ -337,3 +337,8 @@ export const myContributions = (campaignId: string, userId: string) =>
 export const reviewContribution = (id: string, reviewer: string, status: Contribution["status"], review_note: string | null) =>
   unwrap(db().from("contributions").update({ status, review_note, reviewed_by: reviewer, reviewed_at: new Date().toISOString() }).eq("id", id));
 export const deleteContribution = (id: string) => unwrap(db().from("contributions").delete().eq("id", id));
+
+/* --------------------------------------------------------- accesso di regia */
+export const isOrganizer = () => unwrap<boolean>(db().rpc("is_organizer"));
+/** true se il codice di regia è corretto. */
+export const claimOrganizer = (code: string) => unwrap<boolean>(db().rpc("claim_organizer", { code }));

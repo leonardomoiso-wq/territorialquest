@@ -17,7 +17,8 @@ const forms = readFileSync("supabase/migrations/20261115000000_model_and_forms.s
 const places = readFileSync("supabase/migrations/20261117000000_places_routes.sql", "utf8");
 const recovery = readFileSync("supabase/migrations/20261117000100_recovery.sql", "utf8");
 const pub = readFileSync("supabase/migrations/20261117000200_public.sql", "utf8");
-for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); await db.exec(pub); } // due passate: idempotenza
+const orgs = readFileSync("supabase/migrations/20261118000000_organizers.sql", "utf8");
+for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); await db.exec(pub); await db.exec(orgs); } // due passate: idempotenza
 
 const as = async (uid, q, params) => {
   await db.exec(`set role authenticated; select set_config('app.uid', '${uid}', false);`);
@@ -33,6 +34,15 @@ const [master, anna, bruno, outsider] = (await db.query(
   `insert into auth.users (email) values ('master@x.it'), ('anna@x.it'), ('bruno@x.it'), ('fuori@x.it') returning id`
 )).rows.map((r) => r.id);
 
+await fails("senza regia non si crea una campagna", () => as(master, `insert into campaigns (owner_id, name, join_code) values ($1, 'X', 'XXXXXX')`, [master]));
+await fails("codice di regia non ancora impostato", () => as(master, `select claim_organizer('qualsiasi')`));
+await fails("l'app non imposta il codice di regia", () => as(master, `select set_organizer_code('codice-segreto')`));
+console.log(one(await db.query(`select set_organizer_code('Aurora 2026!') r`)).r);
+console.log("codice sbagliato:", one(await as(master, `select claim_organizer('aurora') ok`)).ok);
+console.log("codice giusto:", one(await as(master, `select claim_organizer('Aurora 2026!') ok`)).ok, "· regia:", one(await as(master, `select is_organizer() r`)).r);
+console.log("giocatore regia:", one(await as(anna, `select is_organizer() r`)).r);
+for (let k = 0; k < 5; k++) await as(bruno, `select claim_organizer('tentativo')`);
+await fails("bloccato dopo 5 tentativi", () => as(bruno, `select claim_organizer('Aurora 2026!')`));
 const camp = one(await as(master, `insert into campaigns (owner_id, name, join_code, status) values ($1, 'Aurora', 'AURORA', 'live') returning id`, [master])).id;
 console.log("campagna creata; temi:", one(await as(master, `select count(*)::int n from themes where campaign_id = $1`, [camp])).n);
 const [t1, t2] = (await as(master, `insert into teams (campaign_id, name) values ($1, 'Uno'), ($1, 'Due') returning id`, [camp])).rows.map((r) => r.id);

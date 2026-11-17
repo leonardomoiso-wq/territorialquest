@@ -173,7 +173,7 @@ export default function Home() {
           <h2 className="serif text-[clamp(4rem,12vw,9rem)]">Pronti?</h2>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <LinkButton href="/entra" size="lg">Entra con un codice</LinkButton>
-            <LinkButton href="/studio" size="lg" variant="outline">Crea una campagna</LinkButton>
+            <LinkButton href="/regia" size="lg" variant="outline">Accesso di regia</LinkButton>
           </div>
           <p className="label soft mt-16">Territorial Quest · dalla ricerca «Learners, Players, Designers»</p>
         </div>
@@ -184,6 +184,7 @@ export default function Home() {
           Entra con un codice <ArrowIcon />
         </LinkButton>
         <LinkButton href="/accedi" variant="ghost">Accedi</LinkButton>
+        <LinkButton href="/regia" variant="ghost" className="hidden sm:inline-flex">Regia</LinkButton>
         <LinkButton href="/design" variant="ghost" className="!px-3.5" aria-label="Design system" title="Design system">
           <svg viewBox="0 0 16 16" className="size-4" aria-hidden><circle cx="5" cy="5" r="3" fill="var(--color-field)" /><circle cx="11" cy="5" r="3" fill="var(--color-desk)" /><circle cx="8" cy="11" r="3" fill="var(--color-feel)" /></svg>
         </LinkButton>

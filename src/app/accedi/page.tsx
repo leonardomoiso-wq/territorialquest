@@ -11,9 +11,10 @@ import { SecretFields, type Secret } from "@/ui/Recovery";
 type Mode = "in" | "up" | "lost";
 
 function Form() {
-  const next = useSearchParams().get("next") || "/studio";
+  const params = useSearchParams();
+  const next = params.get("next") || "/studio";
   const { user } = useSession();
-  const [mode, setMode] = useState<Mode>("in");
+  const [mode, setMode] = useState<Mode>(params.get("recupero") ? "lost" : "in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,7 +65,7 @@ function Form() {
 
   const title = { in: "Bentornati.", up: "Benvenuti.", lost: "Nessun problema." }[mode];
   const lead = {
-    in: "Accedi per riprendere l'esplorazione.",
+    in: "Accesso per chi partecipa alle campagne.",
     up: "Crea il tuo profilo: ti basta un'email.",
     lost: question ? "Rispondi alla tua domanda segreta e scegli una nuova password." : "Scrivi l'email del tuo profilo: ti chiediamo la domanda segreta.",
   }[mode];
@@ -110,6 +111,7 @@ function Form() {
           <button type="button" className="soft underline-offset-4 hover:underline" onClick={() => go(mode === "in" ? "up" : "in")}>
             {mode === "in" ? "Non hai un profilo? Crealo" : "Torna all'accesso"}
           </button>
+          <Link href="/regia" className="soft underline-offset-4 hover:underline">Coordini una campagna? Accesso di regia</Link>
         </div>
       </div>
     </main>

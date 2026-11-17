@@ -20,6 +20,7 @@ const CHECKS: { label: string; file: string; table: string; select: string }[] =
   { label: "Luoghi, indagini sul sito", file: "20261117000000_places_routes.sql", table: "places", select: "id, survey" },
   { label: "Percorsi e arrivi", file: "20261117000000_places_routes.sql", table: "visits", select: "id" },
   { label: "Mappa pubblica e contributi", file: "20261117000200_public.sql", table: "contributions", select: "id" },
+  { label: "Accesso di regia", file: "20261118000000_organizers.sql", table: "organizers", select: "user_id" },
 ];
 
 export default function Stato() {

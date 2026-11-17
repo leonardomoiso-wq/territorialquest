@@ -54,7 +54,23 @@ con il nome del team ma mai quello delle persone. Chiunque abbia un profilo può
 un contributo su un punto della mappa (licenza CC BY 4.0); la regia lo pubblica o no, con una nota.
 I contributi non entrano nel punteggio dei team.
 
-## Accesso e recupero della password
+## Accesso di regia e accesso giocatori
+
+Ci sono due ingressi separati:
+
+- **`/regia`** — per chi crea e coordina le campagne. Si accede con email e password personali;
+  per diventare regia serve il **codice di regia**, che il proprietario del progetto imposta una
+  volta dall'SQL Editor di Supabase:
+
+  ```sql
+  select public.set_organizer_code('la-tua-parola-segreta');
+  ```
+
+  Solo la regia crea campagne (lo impone il database). I tutor non hanno bisogno del codice:
+  li promuove il master dalla sezione Team della campagna.
+- **`/accedi`** — per chi partecipa. Si entra in una campagna con il codice campagna.
+
+## Recupero della password
 
 Accesso con email e password. Chi si registra sceglie una **domanda segreta**; chi ha già un
 profilo la imposta dal promemoria in Studio. Da «Password dimenticata?» si sceglie una nuova

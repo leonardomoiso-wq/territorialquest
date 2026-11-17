@@ -2,8 +2,8 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const dir = "supabase/migrations";
-// Aggiornamento: solo le migrazioni dal 17 novembre 2026 (luoghi, recupero password, mappa pubblica).
-const UPDATE_FROM = "20261117";
+// Aggiornamento: solo le migrazioni più recenti (dal 18 novembre 2026: accesso di regia).
+const UPDATE_FROM = "20261118";
 const parts = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()
   .map((f) => `\n-- ================================================================ ${f}\n${readFileSync(`${dir}/${f}`, "utf8")}`);
 writeFileSync("supabase/setup.sql", [
@@ -15,26 +15,28 @@ writeFileSync("supabase/setup.sql", [
   "-- ================================================================ esito",
   "-- L'ultima riga mostrata dall'SQL Editor dice se l'installazione è completa.",
   "select",
-  "  case when count(*) = 15 then 'Territorial Quest installato: apri /stato sul sito'",
-  "       else 'Installazione incompleta: mancano ' || (15 - count(*)) || ' tabelle' end as esito,",
+  "  case when count(*) = 18 then 'Territorial Quest installato: apri /stato sul sito'",
+  "       else 'Installazione incompleta: mancano ' || (18 - count(*)) || ' tabelle' end as esito,",
   "  string_agg(table_name, ', ' order by table_name) as tabelle",
   "from information_schema.tables",
   "where table_schema = 'public'",
-  "  and table_name in ('profiles', 'campaigns', 'teams', 'memberships', 'areas', 'themes', 'missions', 'observations', 'announcements', 'walks', 'places', 'routes', 'visits', 'recovery', 'contributions');",
+  "  and table_name in ('profiles', 'campaigns', 'teams', 'memberships', 'areas', 'themes', 'missions', 'observations', 'announcements', 'walks', 'places', 'routes', 'visits', 'recovery', 'contributions', 'organizers', 'settings', 'organizer_attempts');",
   "",
 ].join("\n"));
 
 const update = readdirSync(dir).filter((f) => f.endsWith(".sql") && f >= UPDATE_FROM).sort()
   .map((f) => `\n-- ================================================================ ${f}\n${readFileSync(`${dir}/${f}`, "utf8")}`);
 writeFileSync("supabase/update.sql", [
-  "-- Territorial Quest — aggiornamento: luoghi e percorsi, indagini sul sito, recupero password, mappa pubblica.",
+  "-- Territorial Quest — aggiornamento: accesso di regia separato.",
   "-- Per un database già installato. Supabase → SQL Editor → New query → incolla tutto → Run.",
+  "-- Poi, in una nuova query, scegli il codice di regia (almeno 8 caratteri):",
+  "--   select public.set_organizer_code('la-tua-parola-segreta');",
   "-- Generato da scripts/build-setup.mjs: non modificarlo a mano.",
   ...update,
   "",
   "-- ================================================================ esito",
-  "select case when count(*) = 4 then 'Aggiornamento completato: apri /stato sul sito'",
-  "            else 'Aggiornamento incompleto: mancano ' || (4 - count(*)) || ' tabelle' end as esito",
-  "from information_schema.tables where table_schema = 'public' and table_name in ('places', 'routes', 'visits', 'contributions');",
+  "select case when count(*) = 3 then 'Aggiornamento completato. Ora imposta il codice di regia (vedi sopra) e apri /stato'",
+  "            else 'Aggiornamento incompleto: mancano ' || (3 - count(*)) || ' tabelle' end as esito",
+  "from information_schema.tables where table_schema = 'public' and table_name in ('organizers', 'settings', 'organizer_attempts');",
   "",
 ].join("\n"));
