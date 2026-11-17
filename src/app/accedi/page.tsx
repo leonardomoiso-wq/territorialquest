@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { recoveryQuestion, resetPassword, setRecovery, signIn, signUp, useSession } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
 import { Button, Field, Label, Logo, Notice } from "@/ui/kit";
@@ -11,7 +11,6 @@ import { SecretFields, type Secret } from "@/ui/Recovery";
 type Mode = "in" | "up" | "lost";
 
 function Form() {
-  const router = useRouter();
   const next = useSearchParams().get("next") || "/studio";
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>("in");
@@ -27,10 +26,14 @@ function Form() {
   const [again, setAgain] = useState("");
   const { busy, error, run, setError } = useAction();
 
+  // Navigazione completa: il router potrebbe ricordare il reindirizzamento all'accesso
+  // di quando la sessione non c'era ancora.
+  const leave = useCallback(() => window.location.replace(next.startsWith("/") ? next : "/studio"), [next]);
+
   useEffect(() => {
     // dopo la registrazione la domanda segreta va salvata prima di lasciare la pagina
-    if (user && mode !== "up") router.replace(next);
-  }, [user, next, router, mode]);
+    if (user && mode !== "up") leave();
+  }, [user, mode, leave]);
 
   const go = (m: Mode) => { setMode(m); setSent(false); setQuestion(null); setError(null); };
 
@@ -43,7 +46,7 @@ function Form() {
         if (confirmEmail) return setSent(true);
         // se non riesce, il promemoria in Studio la richiede al primo accesso
         await setRecovery(secret.question.trim(), secret.answer).catch(() => undefined);
-        router.replace(next);
+        leave();
         return;
       }
       // recupero: prima la domanda, poi la risposta e la nuova password

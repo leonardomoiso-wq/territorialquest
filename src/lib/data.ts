@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { areaAt, cellOf } from "@/domain/geo";
 import type {
-  Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Observation, ObservationKind, Place, Polygon, Route, Team, Theme, Visit, Walk,
+  Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Contribution, Observation, ObservationKind, Place, Polygon, Route, Team, Theme, Visit, Walk,
 } from "@/domain/types";
 import { createClient } from "@/utils/supabase/client";
 import { projectRef } from "@/utils/supabase/env";
@@ -102,7 +102,7 @@ export const deleteCampaign = (id: string) => unwrap(db().from("campaigns").dele
 
 export async function loadCampaign(id: string): Promise<CampaignData | null> {
   const s = db();
-  const [campaign, teams, members, areas, themes, missions, observations, announcements, walks, places, routes, visits] = await Promise.all([
+  const [campaign, teams, members, areas, themes, missions, observations, announcements, walks, places, routes, visits, contributions] = await Promise.all([
     s.from("campaigns").select("*").eq("id", id).maybeSingle(),
     s.from("teams").select("*").eq("campaign_id", id).order("created_at"),
     s.from("memberships").select("*, profile:profiles(id, display_name)").eq("campaign_id", id).order("joined_at"),
@@ -115,6 +115,7 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     s.from("places").select("*").eq("campaign_id", id).order("created_at"),
     s.from("routes").select("*").eq("campaign_id", id).order("created_at"),
     s.from("visits").select("*").eq("campaign_id", id).limit(5000),
+    s.from("contributions").select("*").eq("campaign_id", id).order("created_at", { ascending: false }).limit(2000),
   ]);
   const failed = [campaign, teams, members, areas, themes, missions, observations, announcements].find((r) => r.error);
   if (failed?.error) throw new Error(explain(failed.error));
@@ -133,10 +134,11 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     places: (places.data ?? []) as Place[],
     routes: (routes.data ?? []) as Route[],
     visits: (visits.data ?? []) as Visit[],
+    contributions: (contributions.data ?? []) as Contribution[],
   };
 }
 
-const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements", "walks", "places", "routes", "visits"];
+const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements", "walks", "places", "routes", "visits", "contributions"];
 
 /** Dati della campagna, aggiornati in tempo reale. */
 export function useCampaign(id: string | undefined) {
@@ -304,3 +306,32 @@ export const recoveryQuestion = (email: string) => unwrap<string | null>(db().rp
 /** true se la risposta era corretta e la password è stata cambiata. */
 export const resetPassword = (email: string, answer: string, newPassword: string) =>
   unwrap<boolean>(db().rpc("reset_password", { email, answer, new_password: newPassword }));
+
+/* ------------------------------------------- mappa pubblica e contributi */
+/** Ciò che una campagna mostra al pubblico: solo contenuti validati, senza nomi. */
+export interface PublicMap {
+  campaign: Pick<Campaign, "id" | "name" | "description" | "starts_at" | "ends_at" | "center_lng" | "center_lat" | "zoom" | "basemap" | "basemap_url" | "basemap_opacity" | "overlay" | "public_map" | "contributions_open" | "public_intro">;
+  areas: Area[];
+  themes: Pick<Theme, "id" | "name" | "color">[];
+  teams: Pick<Team, "id" | "name" | "color">[];
+  places: Place[];
+  routes: Route[];
+  observations: Observation[];
+  contributions: Contribution[];
+  stats: { walked_m: number; visits: number; teams: number };
+}
+export const loadPublicMap = (id: string) => unwrap<PublicMap | null>(db().rpc("public_map", { c: id }));
+
+export async function addContribution(campaignId: string, userId: string, input: {
+  display_name: string; form: Contribution["form"]; title: string; note: string; feeling: string | null;
+  data: Record<string, unknown>; lng: number; lat: number; file: File | null;
+}) {
+  const { file, ...rest } = input;
+  const media_path = file ? await uploadMedia(campaignId, file) : null;
+  return unwrap(db().from("contributions").insert({ ...rest, media_path, campaign_id: campaignId, user_id: userId }));
+}
+export const myContributions = (campaignId: string, userId: string) =>
+  unwrap<Contribution[]>(db().from("contributions").select("*").eq("campaign_id", campaignId).eq("user_id", userId).order("created_at", { ascending: false }));
+export const reviewContribution = (id: string, reviewer: string, status: Contribution["status"], review_note: string | null) =>
+  unwrap(db().from("contributions").update({ status, review_note, reviewed_by: reviewer, reviewed_at: new Date().toISOString() }).eq("id", id));
+export const deleteContribution = (id: string) => unwrap(db().from("contributions").delete().eq("id", id));

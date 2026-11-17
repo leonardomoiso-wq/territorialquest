@@ -31,6 +31,12 @@ export interface Campaign {
   basemap_url?: string | null;
   basemap_opacity?: number;
   overlay?: Overlay | null;
+  /** Mappa pubblica visibile a chiunque. */
+  public_map?: boolean;
+  /** Contributi individuali aperti. */
+  contributions_open?: boolean;
+  /** Testo di presentazione della mappa pubblica. */
+  public_intro?: string;
   created_at: string;
 }
 
@@ -192,6 +198,28 @@ export const PLACE_CATEGORIES: { id: PlaceCategory; label: string; color: string
 ];
 export const categoryOf = (id: string | null | undefined) => PLACE_CATEGORIES.find((c) => c.id === id) ?? PLACE_CATEGORIES[5];
 
+export type ContributionStatus = "pending" | "approved" | "rejected";
+
+/** Contributo individuale, fuori dal gioco dei team, pubblicato solo se approvato. */
+export interface Contribution {
+  id: string;
+  campaign_id: string;
+  user_id?: string;
+  display_name: string;
+  form: "immagine" | "percezione" | "dato" | "informazione" | "idea";
+  title: string;
+  note: string;
+  feeling: string | null;
+  media_path: string | null;
+  data: Record<string, unknown>;
+  lng: number;
+  lat: number;
+  status?: ContributionStatus;
+  review_note?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+}
+
 /** Un'uscita a piedi: celle attraversate e distanza, senza tracciato preciso. */
 export interface Walk {
   id: string;
@@ -218,6 +246,7 @@ export interface CampaignData {
   places: Place[];
   routes: Route[];
   visits: Visit[];
+  contributions: Contribution[];
 }
 
 export const KIND_LABEL: Record<ObservationKind, string> = {

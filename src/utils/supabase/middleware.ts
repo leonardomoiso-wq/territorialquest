@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { supabaseConfigured, supabaseKey, supabaseUrl } from "./env";
 
-const PROTECTED = ["/studio", "/campo", "/entra"];
+const PROTECTED = ["/studio", "/campo", "/entra", "/contribuisci"];
 
 /** Aggiorna la sessione e protegge le aree riservate. */
 export async function updateSession(request: NextRequest) {

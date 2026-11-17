@@ -620,6 +620,7 @@ export default function Campo() {
         <div className="mt-6 flex flex-wrap gap-2 border-t hairline pt-4">
           <Button variant="outline" size="sm" onClick={() => setPanel("team")}>{myTeam ? `Team ${myTeam.name}` : "Scegli il team"} e ruolo</Button>
           <Button variant="ghost" size="sm" onClick={() => { setPanel(null); setStory(true); }}>Come si gioca</Button>
+          <LinkButton href={`/mappa/${id}`} variant="ghost" size="sm">Che cosa è emerso</LinkButton>
         </div>
       </Sheet>
 

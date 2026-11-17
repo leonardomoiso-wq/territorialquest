@@ -16,6 +16,9 @@ Architettura, modello dei dati e direzione di stile: [docs/ARCHITETTURA.md](docs
 | `/studio` | Elenco delle campagne, creazione |
 | `/studio/[id]` | Pannello del master: regia dal vivo, tempi e missioni, editor 3D delle aree, team e giocatori, rilievi, export |
 | `/campo/[id]` | App di rilievo per telefono e tablet: uscite a piedi, scatto rapido, sei forme di raccolta, conferma tra team |
+| `/mappa/[id]` | Mappa pubblica interattiva: solo contenuti validati, senza nomi; per i membri è anche l'archivio |
+| `/contribuisci/[id]` | Contributi individuali, fuori dal gioco dei team, pubblicati dopo la revisione della regia |
+| `/stato` | Diagnosi del collegamento al database |
 | `/design` | Design system: colori, tipografia, componenti |
 
 ## Come si gioca: l'Uscita
@@ -42,6 +45,14 @@ Delle uscite si salvano le celle attraversate e la distanza, non il tracciato GP
   database sulla distanza) e metà all'indagine o al primo rilievo raccolto lì e confermato da un altro team.
 - **Percorsi**: sequenze ordinate di luoghi; sul campo la bussola guida da una tappa alla successiva
   e, durante un'uscita, l'arrivo si registra da solo entrando nel raggio del luogo.
+
+## Mappa pubblica e contributi individuali
+
+Dalla sezione **Pubblico** della regia si accendono la mappa pubblica e i contributi.
+La mappa mostra rilievi validati, indagini sui siti, luoghi, percorsi e contributi approvati,
+con il nome del team ma mai quello delle persone. Chiunque abbia un profilo può proporre
+un contributo su un punto della mappa (licenza CC BY 4.0); la regia lo pubblica o no, con una nota.
+I contributi non entrano nel punteggio dei team.
 
 ## Accesso e recupero della password
 

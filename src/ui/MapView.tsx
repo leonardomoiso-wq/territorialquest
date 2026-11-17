@@ -27,6 +27,7 @@ const BLANK: StyleSpecification = {
 };
 
 const KIND_COLOR = { field: "#17804f", desk: "#2f6fe0", feel: "#e2578f" };
+const CONTRIB_COLOR: Record<string, string> = { immagine: "#17804f", percezione: "#e2578f", dato: "#2f6fe0", informazione: "#7a63d2", idea: "#e8a81c" };
 
 /** Piano, 3D reale (edifici e rilievo) oppure modello a celle. */
 export type MapMode = "2d" | "3d" | "model";
@@ -98,6 +99,9 @@ interface Props {
   activeRouteId?: string | null;
   selectedPlaceId?: string | null;
   onPlaceClick?: (id: string) => void;
+  /** Contributi individuali approvati (o in revisione, per la regia). */
+  contributions?: { id: string; lng: number; lat: number; form: string; status?: string }[];
+  onContributionClick?: (id: string) => void;
   onObservationClick?: (id: string) => void;
   onMove?: (center: [number, number], zoom: number) => void;
   onReady?: (api: MapApi) => void;
@@ -213,6 +217,10 @@ export default function MapView(props: Props) {
 
     set("pin", fc(p.pin ? [point(p.pin)] : []));
 
+    set("contribs", fc((p.contributions ?? []).map((x) => point([x.lng, x.lat], {
+      id: x.id, color: CONTRIB_COLOR[x.form] ?? "#7a63d2", pending: x.status === "pending",
+    }))));
+
     /* ------------------------------------------------------ luoghi e percorsi */
     const reached = new Set(p.reached ?? []);
     set("places", fc((p.places ?? []).map((pl) => {
@@ -317,7 +325,7 @@ export default function MapView(props: Props) {
 
       m.on("load", () => {
         const empty = fc([]);
-        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
+        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "contribs", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
 
         m.addLayer({ id: "tq-veil", type: "background", paint: { "background-color": PAPER, "background-opacity": 0 } });
         m.addLayer({ id: "cells-fill", type: "fill", source: "cells", paint: {
@@ -377,6 +385,12 @@ export default function MapView(props: Props) {
         m.addLayer({ id: "players", type: "circle", source: "players", paint: {
           "circle-radius": 6, "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "online"], 1, 0.4],
           "circle-stroke-color": "#0b0b0c", "circle-stroke-width": 2,
+        } });
+        // contributi individuali: anello bianco, nucleo colorato; in revisione tratteggiati dalla trasparenza
+        m.addLayer({ id: "contribs", type: "circle", source: "contribs", paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 4, 16, 8],
+          "circle-color": "#ffffff", "circle-stroke-color": ["get", "color"], "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 16, 3.5],
+          "circle-opacity": ["case", ["get", "pending"], 0.6, 1], "circle-stroke-opacity": ["case", ["get", "pending"], 0.5, 1],
         } });
         m.addLayer({ id: "places-halo", type: "circle", source: "places", paint: {
           "circle-radius": ["case", ["get", "selected"], 20, 15], "circle-color": "#ffffff", "circle-opacity": 0.92,
@@ -493,6 +507,8 @@ export default function MapView(props: Props) {
         if (cur.edit || cur.onPaint) return;
         // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick(lngLat(e));
+        const ct = hit(e, "contribs");
+        if (ct && cur.onContributionClick) return cur.onContributionClick(String(ct.properties.id));
         const pl = hit(e, "places-halo") ?? hit(e, "places");
         if (pl && cur.onPlaceClick) return cur.onPlaceClick(String(pl.properties.id));
         const o = hit(e, "obs") ?? hit(e, "flows");

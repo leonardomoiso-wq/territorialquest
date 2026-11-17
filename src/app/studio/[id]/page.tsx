@@ -8,6 +8,7 @@ import { updateCampaign, useCampaign, useSession } from "@/lib/data";
 import { useAction, useNow } from "@/lib/hooks";
 import Aree from "@/studio/Aree";
 import Luoghi from "@/studio/Luoghi";
+import Pubblico from "@/studio/Pubblico";
 import Regia from "@/studio/Regia";
 import { Dati, Rilievi } from "@/studio/Rilievi";
 import Team from "@/studio/Team";
@@ -21,6 +22,7 @@ const VIEWS = [
   { id: "luoghi", label: "Luoghi" },
   { id: "team", label: "Team" },
   { id: "rilievi", label: "Rilievi" },
+  { id: "pubblico", label: "Pubblico" },
   { id: "dati", label: "Dati" },
 ] as const;
 type View = (typeof VIEWS)[number]["id"];
@@ -58,6 +60,7 @@ function Panel() {
   const phase = phaseOf(c, now);
   const ctx = { data, me, now, refresh };
   const pending = data.observations.filter((o) => o.status === "pending").length;
+  const queue = data.contributions.filter((x) => (x.status ?? "pending") === "pending").length;
   const setStatus = (status: "live" | "paused") => run(async () => { await updateCampaign(c.id, { status }); await refresh(); });
   const phaseColor = phase === "live" ? "var(--color-leaf)" : phase === "paused" ? "var(--color-sun)" : "var(--color-mute)";
 
@@ -77,6 +80,7 @@ function Panel() {
           {c.status === "live"
             ? <Button variant="outline" size="sm" onClick={() => setStatus("paused")} disabled={busy}>Pausa</Button>
             : <Button variant="glow" size="sm" onClick={() => setStatus("live")} disabled={busy}>{c.status === "paused" ? "Riprendi" : "Avvia"}</Button>}
+          <LinkButton href={`/mappa/${id}`} size="sm" variant="outline" className="hidden sm:inline-flex">Mappa</LinkButton>
           <LinkButton href={`/campo/${id}`} size="sm">Campo</LinkButton>
         </div>
         <nav className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto px-4 sm:px-7" aria-label="Sezioni">
@@ -88,6 +92,7 @@ function Panel() {
             >
               {v.label}
               {v.id === "rilievi" && pending > 0 && <span className="num ml-1.5 rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-paper">{pending}</span>}
+              {v.id === "pubblico" && queue > 0 && <span className="num ml-1.5 rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-paper">{queue}</span>}
               {view === v.id && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-ink" />}
             </button>
           ))}
@@ -102,6 +107,7 @@ function Panel() {
         {view === "luoghi" && <Luoghi {...ctx} />}
         {view === "team" && <Team {...ctx} />}
         {view === "rilievi" && <Rilievi {...ctx} />}
+        {view === "pubblico" && <Pubblico {...ctx} />}
         {view === "dati" && <Dati {...ctx} />}
       </div>
     </main>

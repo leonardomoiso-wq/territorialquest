@@ -16,7 +16,8 @@ await db.exec(`
 const forms = readFileSync("supabase/migrations/20261115000000_model_and_forms.sql", "utf8");
 const places = readFileSync("supabase/migrations/20261117000000_places_routes.sql", "utf8");
 const recovery = readFileSync("supabase/migrations/20261117000100_recovery.sql", "utf8");
-for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); } // due passate: idempotenza
+const pub = readFileSync("supabase/migrations/20261117000200_public.sql", "utf8");
+for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); await db.exec(pub); } // due passate: idempotenza
 
 const as = async (uid, q, params) => {
   await db.exec(`set role authenticated; select set_config('app.uid', '${uid}', false);`);
@@ -106,4 +107,24 @@ for (let k = 0; k < 5; k++) await asAnon(`select reset_password('anna@x.it', 'sb
 await fails("bloccato dopo 5 errori, anche con la risposta giusta", () => asAnon(`select reset_password('anna@x.it', 'fuffi primo', 'altrapassword')`));
 await fails("password troppo corta", async () => { await db.exec(`update recovery set locked_until = null, failures = 0`); await asAnon(`select reset_password('anna@x.it', 'fuffi primo', 'corta')`); });
 await fails("chi non ha effettuato l'accesso non imposta domande", () => asAnon(`select set_recovery('Domanda qualsiasi', 'risposta')`));
+// mappa pubblica e contributi
+await db.exec(`grant execute on function public_map(uuid) to anon`);
+console.log("mappa privata, da fuori:", one(await asAnon(`select public_map($1) m`, [camp])).m);
+await as(master, `update campaigns set contributions_open = true where id = $1`, [camp]);
+const half = one(await asAnon(`select public_map($1) m`, [camp])).m;
+console.log("solo contributi aperti, da fuori:", !!half, "rilievi visibili:", half.observations.length, "luoghi:", half.places.length);
+await as(master, `update campaigns set contributions_open = false where id = $1`, [camp]);
+console.log("mappa privata, da membro:", !!one(await as(anna, `select public_map($1) m`, [camp])).m);
+const contrib = `insert into contributions (campaign_id, user_id, display_name, form, title, lng, lat) values ($1, $2, 'Una cittadina', 'idea', 'Panchine sul lungofiume', 7.69, 45.07) returning id`;
+await fails("contributi chiusi", () => as(outsider, contrib, [camp, outsider]));
+await as(master, `update campaigns set public_map = true, contributions_open = true where id = $1`, [camp]);
+const cid = one(await as(outsider, contrib, [camp, outsider])).id;
+await fails("il contributo non si auto-approva", () => as(outsider, `insert into contributions (campaign_id, user_id, form, title, lng, lat, status) values ($1, $2, 'idea', 'Ciao', 7, 45, 'approved')`, [camp, outsider]));
+await fails("un altro non legge il contributo in attesa", async () => { const r = await as(anna, `select id from contributions where id = $1`, [cid]); if (!r.rows.length) throw new Error("0 righe"); });
+let pm = one(await asAnon(`select public_map($1) m`, [camp])).m;
+console.log("pubblica, prima dell'approvazione:", pm.contributions.length, "contributi,", pm.observations.length, "rilievi validati; nomi presenti:", JSON.stringify(pm).includes("anna@x.it") || "author_id" in (pm.observations[0] ?? {}));
+await fails("un giocatore non approva", async () => { const r = await as(anna, `update contributions set status = 'approved' where id = $1 returning id`, [cid]); if (!r.rows.length) throw new Error("0 righe"); });
+await as(master, `update contributions set status = 'approved', reviewed_by = $2, reviewed_at = now() where id = $1`, [cid, master]);
+pm = one(await asAnon(`select public_map($1) m`, [camp])).m;
+console.log("dopo l'approvazione:", pm.contributions.map((x) => x.display_name + ": " + x.title));
 console.log("SCHEMA OK");
