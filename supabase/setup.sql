@@ -26,10 +26,16 @@ begin
   return new;
 end $$;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Senza «drop»: nei progetti Supabase recenti modificare auth.users può non essere permesso,
+-- e un errore qui annullerebbe tutta l'installazione.
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'on_auth_user_created' and tgrelid = 'auth.users'::regclass) then
+    create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+  end if;
+exception when others then
+  raise warning 'Collegamento ai nuovi utenti non creato (%): i profili vengono creati al primo accesso.', sqlerrm;
+end $$;
 
 -- --------------------------------------------------------------- campagne
 create table if not exists public.campaigns (
@@ -799,6 +805,19 @@ begin
 exception when others then
   raise warning 'Tempo reale per i contributi non attivato (%).', sqlerrm;
 end $$;
+
+-- Profilo garantito anche se il collegamento su auth.users non è stato possibile.
+create or replace function public.ensure_profile()
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return; end if;
+  insert into profiles (id, display_name)
+  select u.id, coalesce(nullif(u.raw_user_meta_data ->> 'display_name', ''), split_part(u.email, '@', 1), 'Senza nome')
+  from auth.users u where u.id = auth.uid()
+  on conflict (id) do nothing;
+end $$;
+revoke all on function public.ensure_profile() from public, anon;
+grant execute on function public.ensure_profile() to authenticated;
 
 notify pgrst, 'reload schema';
 

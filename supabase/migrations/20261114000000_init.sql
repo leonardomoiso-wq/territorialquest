@@ -21,10 +21,16 @@ begin
   return new;
 end $$;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Senza «drop»: nei progetti Supabase recenti modificare auth.users può non essere permesso,
+-- e un errore qui annullerebbe tutta l'installazione.
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'on_auth_user_created' and tgrelid = 'auth.users'::regclass) then
+    create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+  end if;
+exception when others then
+  raise warning 'Collegamento ai nuovi utenti non creato (%): i profili vengono creati al primo accesso.', sqlerrm;
+end $$;
 
 -- --------------------------------------------------------------- campagne
 create table if not exists public.campaigns (

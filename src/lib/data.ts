@@ -50,6 +50,7 @@ export function useSession() {
 export async function signIn(email: string, password: string) {
   const { error } = await db().auth.signInWithPassword({ email, password });
   if (error) throw new Error(explain(error));
+  await db().rpc("ensure_profile").then(() => undefined, () => undefined);
 }
 
 /** Restituisce true se serve confermare l'email prima di entrare. */
@@ -60,6 +61,7 @@ export async function signUp(email: string, password: string, displayName: strin
     options: { data: { display_name: displayName }, emailRedirectTo: `${location.origin}/accedi` },
   });
   if (error) throw new Error(explain(error));
+  if (data.session) await db().rpc("ensure_profile").then(() => undefined, () => undefined);
   return !data.session;
 }
 

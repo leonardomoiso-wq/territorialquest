@@ -101,4 +101,17 @@ exception when others then
   raise warning 'Tempo reale per i contributi non attivato (%).', sqlerrm;
 end $$;
 
+-- Profilo garantito anche se il collegamento su auth.users non è stato possibile.
+create or replace function public.ensure_profile()
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return; end if;
+  insert into profiles (id, display_name)
+  select u.id, coalesce(nullif(u.raw_user_meta_data ->> 'display_name', ''), split_part(u.email, '@', 1), 'Senza nome')
+  from auth.users u where u.id = auth.uid()
+  on conflict (id) do nothing;
+end $$;
+revoke all on function public.ensure_profile() from public, anon;
+grant execute on function public.ensure_profile() to authenticated;
+
 notify pgrst, 'reload schema';
