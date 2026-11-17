@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { areaAt, cellOf } from "@/domain/geo";
 import type {
-  Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Observation, ObservationKind, Polygon, Team, Theme, Walk,
+  Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Observation, ObservationKind, Place, Polygon, Route, Team, Theme, Visit, Walk,
 } from "@/domain/types";
 import { createClient } from "@/utils/supabase/client";
 import { projectRef } from "@/utils/supabase/env";
@@ -102,7 +102,7 @@ export const deleteCampaign = (id: string) => unwrap(db().from("campaigns").dele
 
 export async function loadCampaign(id: string): Promise<CampaignData | null> {
   const s = db();
-  const [campaign, teams, members, areas, themes, missions, observations, announcements, walks] = await Promise.all([
+  const [campaign, teams, members, areas, themes, missions, observations, announcements, walks, places, routes, visits] = await Promise.all([
     s.from("campaigns").select("*").eq("id", id).maybeSingle(),
     s.from("teams").select("*").eq("campaign_id", id).order("created_at"),
     s.from("memberships").select("*, profile:profiles(id, display_name)").eq("campaign_id", id).order("joined_at"),
@@ -112,6 +112,9 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     s.from("observations").select("*").eq("campaign_id", id).order("created_at", { ascending: false }).limit(5000),
     s.from("announcements").select("*").eq("campaign_id", id).order("created_at", { ascending: false }).limit(50),
     s.from("walks").select("*").eq("campaign_id", id).order("started_at", { ascending: false }).limit(2000),
+    s.from("places").select("*").eq("campaign_id", id).order("created_at"),
+    s.from("routes").select("*").eq("campaign_id", id).order("created_at"),
+    s.from("visits").select("*").eq("campaign_id", id).limit(5000),
   ]);
   const failed = [campaign, teams, members, areas, themes, missions, observations, announcements].find((r) => r.error);
   if (failed?.error) throw new Error(explain(failed.error));
@@ -127,10 +130,13 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     announcements: (announcements.data ?? []) as Announcement[],
     // Se la tabella delle uscite non esiste ancora, la campagna si apre comunque.
     walks: (walks.data ?? []) as Walk[],
+    places: (places.data ?? []) as Place[],
+    routes: (routes.data ?? []) as Route[],
+    visits: (visits.data ?? []) as Visit[],
   };
 }
 
-const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements", "walks"];
+const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements", "walks", "places", "routes", "visits"];
 
 /** Dati della campagna, aggiornati in tempo reale. */
 export function useCampaign(id: string | undefined) {
@@ -233,12 +239,15 @@ export async function addObservation(
   me: Membership,
   input: {
     kind: ObservationKind; form: string; lens: string | null; path: [number, number][] | null; data: Record<string, unknown>;
+    place_id?: string | null;
     title: string; note: string; feeling: string | null; theme_id: string | null;
     source_url: string | null; lng: number; lat: number; file: File | null;
+    /** Media già caricato (es. foto dell'indagine). */
+    media_path?: string | null;
   },
 ) {
-  const { file, ...rest } = input;
-  const media_path = file ? await uploadMedia(data.campaign.id, file) : null;
+  const { file, media_path: given, ...rest } = input;
+  const media_path = given ?? (file ? await uploadMedia(data.campaign.id, file) : null);
   return unwrap(
     db().from("observations").insert({
       ...rest,
@@ -268,3 +277,22 @@ export const startWalk = (campaign_id: string, user_id: string, team_id: string 
   unwrap<Walk>(db().from("walks").insert({ campaign_id, user_id, team_id }).select().single());
 export const updateWalk = (id: string, patch: Partial<Pick<Walk, "distance_m" | "cells" | "ended_at">>) =>
   unwrap(db().from("walks").update(patch).eq("id", id));
+
+/* ------------------------------------------------------- luoghi e percorsi */
+export const savePlace = (p: Partial<Place> & { campaign_id: string; name: string; lng: number; lat: number }) => {
+  const { id, created_at: _created, ...row } = p;
+  void _created;
+  return id ? unwrap(db().from("places").update(row).eq("id", id)) : unwrap(db().from("places").insert(row));
+};
+export const deletePlace = (id: string) => unwrap(db().from("places").delete().eq("id", id));
+
+export const saveRoute = (r: Partial<Route> & { campaign_id: string; name: string }) => {
+  const { id, created_at: _created, ...row } = r;
+  void _created;
+  return id ? unwrap(db().from("routes").update(row).eq("id", id)) : unwrap(db().from("routes").insert(row));
+};
+export const deleteRoute = (id: string) => unwrap(db().from("routes").delete().eq("id", id));
+
+/** Arrivo a un luogo: il database verifica la distanza. */
+export const checkIn = (place: string, lng: number, lat: number) =>
+  unwrap<{ distance: number; first_for_team: boolean }>(db().rpc("check_in", { p: place, lng, lat }));

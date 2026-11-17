@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { FormIcon, FormTag } from "@/campo/Collect";
+import { SurveyAnswers } from "@/campo/Survey";
 import { toCSV, toGeoJSON, download } from "@/domain/export";
 import { FORMS, formOf, lensLabel, summary } from "@/domain/forms";
 import { scoreObservations } from "@/domain/scoring";
@@ -37,6 +38,7 @@ export function Rilievi({ data, now, refresh }: Ctx) {
         <Select aria-label="Forma" value={form} onChange={(e) => setForm(e.target.value)} className="w-48">
           <option value="">Tutte le forme</option>
           {FORMS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+          <option value="indagine">Indagine sul sito</option>
         </Select>
         <Select aria-label="Tema" value={theme} onChange={(e) => setTheme(e.target.value)} className="w-56">
           <option value="">Tutti i temi</option>
@@ -68,6 +70,7 @@ export function Rilievi({ data, now, refresh }: Ctx) {
                   <h3 className="mt-2 truncate text-[17px] tracking-[-0.02em]">{o.title}</h3>
                   {summary(o) && <p className="mt-0.5 text-sm" style={{ color: formOf(o.form).color }}>{summary(o)}</p>}
                   {o.note && <p className="soft mt-0.5 line-clamp-2 text-sm">{o.note}</p>}
+                  {o.form === "indagine" && <details className="mt-2"><summary className="cursor-pointer text-sm">Vedi le risposte</summary><div className="mt-2"><SurveyAnswers data={o.data} mediaUrl={mediaUrl} /></div></details>}
                   <div className="soft mt-1.5 flex flex-wrap items-center gap-x-3 text-[13px]">
                     <span className="inline-flex items-center gap-1.5">{team && <Dot color={team.color} />}{nameOf(data, o.author_id)}{team ? ` · ${team.name}` : ""}</span>
                     <span>{ago(o.created_at, now)}</span>

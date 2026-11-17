@@ -1,5 +1,5 @@
 import { cellsOf } from "./geo";
-import type { CampaignData, Mission, Observation, ObservationKind } from "./types";
+import type { CampaignData, Mission, Observation, ObservationKind, Place, Visit } from "./types";
 
 /**
  * Punteggio cooperativo.
@@ -39,6 +39,31 @@ export function scoreObservations(observations: Observation[]): Scored[] {
     });
 }
 
+/** Chiave del gruppo che riceve il merito: il team, o la persona se è senza team. */
+const crew = (team: string | null | undefined, user: string) => team ?? `persona:${user}`;
+
+export interface PlaceProgress {
+  place: Place;
+  /** Gruppi (team) arrivati. */
+  reached: Set<string>;
+  /** Gruppi che hanno un rilievo confermato sul posto. */
+  detailed: Set<string>;
+  /** Punti portati al totale comune da questo luogo. */
+  value: number;
+}
+
+/**
+ * Luoghi: per ciascun team valgono metà dei punti all'arrivo e metà
+ * al primo rilievo raccolto lì e confermato da un altro team.
+ */
+export function placeProgress(places: Place[], visits: Visit[], observations: Observation[]): Map<string, PlaceProgress> {
+  const out = new Map<string, PlaceProgress>(places.map((p) => [p.id, { place: p, reached: new Set(), detailed: new Set(), value: 0 }]));
+  for (const v of visits) out.get(v.place_id)?.reached.add(crew(v.team_id, v.user_id));
+  for (const o of observations) if (o.place_id && o.status === "validated") out.get(o.place_id)?.detailed.add(crew(o.team_id, o.author_id));
+  for (const p of out.values()) p.value = (p.reached.size + p.detailed.size) * (p.place.points / 2);
+  return out;
+}
+
 export interface Indicators {
   /** Punteggio collettivo. */
   score: number;
@@ -65,9 +90,17 @@ export interface Indicators {
   walkedMeters: number;
   /** Celle del territorio. */
   territory: Set<string>;
+  /** Punti portati dai luoghi (già compresi in score). */
+  placeScore: number;
+  /** Luoghi raggiunti da almeno un team, sul totale. */
+  placesReached: number;
+  placesTotal: number;
+  places: Map<string, PlaceProgress>;
 }
 
-export function indicators(data: Pick<CampaignData, "areas" | "observations" | "members"> & { walks?: CampaignData["walks"] }): Indicators {
+export function indicators(
+  data: Pick<CampaignData, "areas" | "observations" | "members"> & Partial<Pick<CampaignData, "walks" | "places" | "visits">>,
+): Indicators {
   const active = data.observations.filter((o) => o.status !== "flagged");
   const scored = scoreObservations(data.observations);
   const byKind: Record<ObservationKind, number> = { field: 0, desk: 0, feel: 0 };
@@ -87,6 +120,15 @@ export function indicators(data: Pick<CampaignData, "areas" | "observations" | "
     const t = s.observation.team_id;
     if (t && s.value) byTeam[t] = (byTeam[t] ?? 0) + s.value;
   }
+
+  const places = placeProgress(data.places ?? [], data.visits ?? [], data.observations);
+  let placeScore = 0;
+  for (const p of places.values()) {
+    placeScore += p.value;
+    const half = p.place.points / 2;
+    for (const k of [...p.reached, ...p.detailed]) if (!k.startsWith("persona:")) byTeam[k] = (byTeam[k] ?? 0) + half;
+  }
+  score += placeScore;
 
   const territory = new Set<string>();
   for (const a of data.areas) for (const c of cellsOf(a.geometry)) territory.add(c);
@@ -120,6 +162,10 @@ export function indicators(data: Pick<CampaignData, "areas" | "observations" | "
     walkedCells: new Set((data.walks ?? []).flatMap((w) => w.cells ?? [])),
     walkedMeters: (data.walks ?? []).reduce((s, w) => s + (w.distance_m ?? 0), 0),
     territory,
+    placeScore: Math.round(placeScore),
+    placesReached: [...places.values()].filter((p) => p.reached.size > 0).length,
+    placesTotal: places.size,
+    places,
   };
 }
 

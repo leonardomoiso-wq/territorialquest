@@ -6,21 +6,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Details, emptyEntry, FormPicker, FormTag, type Entry } from "@/campo/Collect";
 import { Celebration, Recap, type Cheer, type WalkSummary } from "@/campo/Moments";
 import Story from "@/campo/Story";
+import Survey, { SurveyAnswers, type SurveyResult } from "@/campo/Survey";
 import { useWalk, vibrate } from "@/campo/useWalk";
 import { formOf, kindOf, lensLabel, pathLength, summary, type Form } from "@/domain/forms";
 import { areaAt, cellOf } from "@/domain/geo";
 import { BASE, indicators, MISSION_KIND, missionProgress, novelty, scoreObservations } from "@/domain/scoring";
 import { ago, areaOpen, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
-import { FIELD_ROLES, type FieldRole, type Observation } from "@/domain/types";
-import { formatDuration, formatMeters, metersBetween, nearestDark, windOf } from "@/domain/walk";
-import { addObservation, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
+import { categoryOf, FIELD_ROLES, type FieldRole, type Observation, type Place } from "@/domain/types";
+import { bearing, formatDuration, formatMeters, metersBetween, nearestDark, windOf } from "@/domain/walk";
+import { routeLength, routeMinutes } from "@/studio/Luoghi";
+import { addObservation, checkIn, uploadMedia, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
 import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
 import { useAction, useNow } from "@/lib/hooks";
 import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
 
-type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey";
 type LngLat = [number, number];
 
 const NEAR = 80; // metri: «sei sul posto»
@@ -34,6 +36,7 @@ const ICON = {
   tray: "M4 13l2.500-7h11L20 13v5H4zM4 13h5l1 2h4l1-2h5",
   walk: "M13 4.500a1.500 1.500 0 1 0 0-.010M9 21l2-6-2.500-2.500L10 8l3 1 2 3h3M11 15l3 2 1 4",
   target: "M12 3v3M12 18v3M3 12h3M18 12h3M12 15.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
+  route: "M6 19a2 2 0 1 0 0-.010M18 7a2 2 0 1 0 0-.010M6 17V11a4 4 0 0 1 4-4h6",
 };
 
 /** Pulsante a icona con contatore, per il dock in cammino. */
@@ -69,6 +72,11 @@ export default function Campo() {
   const [role, setRole] = useState<FieldRole | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [placeId, setPlaceId] = useState<string | null>(null);
+  /** Luogo presso cui si sta raccogliendo il rilievo. */
+  const [atPlace, setAtPlace] = useState<string | null>(null);
+  const [routeId, setRouteId] = useState<string | null>(() => (typeof window !== "undefined" ? window.localStorage.getItem(`tq-route-${id}`) : null));
+  const checking = useRef(new Set<string>());
   const [story, setStory] = useState(() => typeof window !== "undefined" && !window.localStorage.getItem(`tq-story-${id}`));
   const lastBeat = useRef(0);
 
@@ -115,6 +123,26 @@ export default function Campo() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  /** Luoghi già raggiunti dal mio team (o da me, se sono senza team). */
+  const reached = useMemo(() => new Set((data?.visits ?? []).filter((v) => (me?.team_id ? v.team_id === me.team_id : v.user_id === me?.user_id)).map((v) => v.place_id)), [data?.visits, me?.team_id, me?.user_id]);
+
+  // camminando, entrare nel raggio di un luogo registra l'arrivo da solo
+  useEffect(() => {
+    if (!walk || !position || !data || !me) return;
+    const pl = data.places.find((x) => !reached.has(x.id) && !checking.current.has(x.id) && metersBetween(position, [x.lng, x.lat]) <= x.radius_m);
+    if (!pl) return;
+    checking.current.add(pl.id);
+    checkIn(pl.id, position[0], position[1]).then(
+      async (r) => {
+        await refresh();
+        vibrate([30, 50, 30, 50, 60]);
+        celebrate(r.first_for_team ? `+${Math.round(pl.points / 2)}` : "Arrivato", `${pl.name}${pl.prompt ? `: ${pl.prompt}` : ". Raccogli qui un rilievo per completarlo."}`, categoryOf(pl.category).color);
+        setPlaceId(pl.id);
+      },
+      () => checking.current.delete(pl.id),
+    );
+  }, [walk, position, data, me, reached, refresh, celebrate]);
+
   const walked = useMemo(() => [...(ind?.walkedCells ?? []), ...(walk?.cells ?? [])], [ind, walk]);
   const endCheer = useCallback(() => setCheer(null), []);
 
@@ -150,7 +178,38 @@ export default function Campo() {
 
   // la prossima zona spenta dà una direzione a chi cammina
   const litNow = new Set([...lit, ...(walk?.cells ?? [])]);
-  const target = walking && position ? nearestDark(position, ind.territory, litNow) : null;
+  const activeRoute = data.routes.find((r) => r.id === routeId) ?? null;
+  const stops = (activeRoute?.stops ?? []).map((sid) => data.places.find((p) => p.id === sid)).filter((p): p is Place => !!p);
+  const nextStop = stops.find((p) => !reached.has(p.id)) ?? null;
+  const stopTarget = nextStop && position ? { meters: metersBetween(position, [nextStop.lng, nextStop.lat]), bearing: bearing(position, [nextStop.lng, nextStop.lat]) } : null;
+  const target = walking && position && !activeRoute ? nearestDark(position, ind.territory, litNow) : null;
+  const currentPlace = data.places.find((p) => p.id === placeId) ?? null;
+  const placeDistance = (p: Place) => (position ? metersBetween(position, [p.lng, p.lat]) : null);
+  const followRoute = (rid: string | null) => {
+    setRouteId(rid);
+    try { if (rid) localStorage.setItem(`tq-route-${id}`, rid); else localStorage.removeItem(`tq-route-${id}`); } catch { /* memoria non disponibile */ }
+  };
+  const arrive = (p: Place) => position && run(async () => {
+    const r = await checkIn(p.id, position[0], position[1]);
+    await refresh();
+    vibrate([30, 50, 30, 50, 60]);
+    celebrate(r.first_for_team ? `+${Math.round(p.points / 2)}` : "Arrivato", r.first_for_team ? `Hai raggiunto ${p.name}. L'altra metà arriva con un rilievo confermato.` : `${p.name}: il tuo team era già passato.`, categoryOf(p.category).color);
+  });
+  const sendSurvey = (p: Place, r: SurveyResult) => run(async () => {
+    const answers = { ...r.answers };
+    for (const [qid, file] of Object.entries(r.photos)) answers[qid] = await uploadMedia(c.id, file);
+    const firstPhoto = (p.survey ?? []).find((q) => q.type === "foto" && typeof answers[q.id] === "string");
+    await addObservation(data, me, {
+      kind: "field", form: "indagine", lens: null, path: null, place_id: p.id, theme_id: null, feeling: null, source_url: null,
+      title: `Indagine · ${p.name}`, note: r.note.trim(), data: { survey: p.survey ?? [], answers },
+      lng: p.lng, lat: p.lat, file: null, media_path: firstPhoto ? (answers[firstPhoto.id] as string) : null,
+    });
+    await refresh();
+    vibrate([20, 40, 20, 40, 60]);
+    celebrate("Indagine", `Inviata. Quando un altro team la conferma, ${p.name} vale altri ${Math.round(p.points / 2)} pt per tutti.`, categoryOf(p.category).color);
+    setPanel(null);
+  });
+  const collectHere = (p: Place) => { setAtPlace(p.id); setPin([p.lng, p.lat]); setPanel("form"); setError(null); };
 
   // anteprima del valore: scoraggia i doppioni prima che vengano inseriti
   const tracing = entry.form === "flusso";
@@ -169,13 +228,14 @@ export default function Campo() {
     setEntry(emptyEntry(f, entry));
     setDraftId(null);
     setPath([]);
-    setPin(f === "flusso" ? null : position);
+    setPin(f === "flusso" ? null : atPlace ? pin : position);
     setPanel(null);
+    if (atPlace && f !== "flusso") { setPanel("new"); return; }
     setPicking(true);
     setFollow(false);
     setError(null);
   };
-  const cancel = () => { setPicking(false); setPanel(null); setPin(null); setPath([]); setDraftId(null); };
+  const cancel = () => { setPicking(false); setPanel(null); setPin(null); setPath([]); setDraftId(null); setAtPlace(null); };
   const submit = () => {
     if (!here) return;
     run(async () => {
@@ -184,7 +244,7 @@ export default function Campo() {
         kind, form, lens, title: title.trim(), note: note.trim(), theme_id: theme_id || null,
         feeling: form === "percezione" ? feeling || null : null,
         source_url: extra.onSite === false ? source_url.trim() || null : null,
-        path: tracing ? path : null, data: extra as Record<string, unknown>,
+        path: tracing ? path : null, data: extra as Record<string, unknown>, place_id: atPlace,
         lng: here[0], lat: here[1], file,
       });
       if (draftId) { await removeDraft(draftId); setDrafts((d) => d.filter((x) => x.id !== draftId)); }
@@ -229,6 +289,7 @@ export default function Campo() {
     setRecap({
       ms: Date.now() - new Date(w.startedAt).getTime(), meters: w.meters, cells: w.cells.length, fresh: w.fresh.length,
       observations: mine.length, potential: Math.round(potential), drafts: drafts.length,
+      places: data.visits.filter((v) => v.user_id === me.user_id && v.created_at >= w.startedAt).length,
       confirms: data.observations.filter((o) => o.validated_by === me.user_id && (o.validated_at ?? "") >= w.startedAt).length,
     });
     refresh();
@@ -239,6 +300,8 @@ export default function Campo() {
       <MapView
         className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations}
         grid fog fit controls={false} walked={walked} {...backdrop(c)}
+        places={data.places} routes={data.routes} reached={reached} activeRouteId={routeId} selectedPlaceId={placeId}
+        onPlaceClick={(pid) => { setPlaceId(pid); setPanel("place"); }}
         focus={walking && follow && !picking ? position : null} onDrag={() => setFollow(false)}
         pin={(picking || panel === "new") && !tracing ? pin : null}
         draft={(picking || panel === "new") && tracing ? path : undefined} draftLine
@@ -280,6 +343,19 @@ export default function Campo() {
           <button onClick={() => setPanel("validate")} className="glass pointer-events-auto flex max-w-md animate-rise items-center gap-3 rounded-3xl px-4 py-2.5 text-left">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-paper"><Icon d={ICON.check} /></span>
             <span className="min-w-0"><span className="label soft block">Sei sul posto · conferma</span><span className="block truncate text-sm">{nearby[0].title}{nearby.length > 1 ? ` e altri ${nearby.length - 1}` : ""}</span></span>
+          </button>
+        )}
+        {!picking && activeRoute && (
+          <button onClick={() => { if (nextStop) { setPlaceId(nextStop.id); setPanel("place"); } else setPanel("routes"); }}
+            className="glass pointer-events-auto flex max-w-[calc(100vw-1.5rem)] items-center gap-3 rounded-full py-2 pr-4 pl-2.5 text-left text-sm">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full text-white" style={{ background: activeRoute.color, transform: stopTarget ? `rotate(${stopTarget.bearing}deg)` : undefined }} aria-hidden>
+              {nextStop ? <svg viewBox="0 0 16 16" className="size-4"><path d="M8 2 13 13 8 10.500 3 13z" fill="currentColor" /></svg> : <Icon d={ICON.check} className="!size-4" />}
+            </span>
+            <span className="min-w-0 truncate">
+              {nextStop
+                ? <>Tappa {stops.indexOf(nextStop) + 1}/{stops.length} · <b className="font-medium">{nextStop.name}</b>{stopTarget && <> · {formatMeters(stopTarget.meters)} verso {windOf(stopTarget.bearing)}</>}</>
+                : <>Percorso completato · <b className="font-medium">{activeRoute.name}</b></>}
+            </span>
           </button>
         )}
         {walking && !picking && nearby.length === 0 && target && target.meters > 25 && (
@@ -345,6 +421,7 @@ export default function Campo() {
               </button>
               <Counter label="Conferma i rilievi degli altri" d={ICON.check} count={toValidate.length} onClick={() => setPanel("validate")} />
               {drafts.length > 0 && <Counter label="Foto da completare" d={ICON.tray} count={drafts.length} onClick={() => setPanel("drafts")} />}
+              {data.places.length > 0 && <Counter label="Luoghi e percorsi" d={ICON.route} count={0} onClick={() => setPanel("routes")} />}
               {walking
                 ? <Button variant="outline" className="h-10" onClick={end}>Rientra</Button>
                 : <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="grid size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6">?</button>}
@@ -353,11 +430,108 @@ export default function Campo() {
         </div>
       </div>
 
+      {/* ---------------------------------------------------------- luogo */}
+      <Sheet open={openPanel === "place" && !!currentPlace} onClose={() => setPanel(null)}
+        kicker={currentPlace ? `${categoryOf(currentPlace.category).label} · ${currentPlace.points} pt per team` : ""} title={currentPlace?.name ?? ""} wide>
+        {currentPlace && (() => {
+          const p = currentPlace, d = placeDistance(p), prog = ind.places.get(p.id);
+          const arrived = reached.has(p.id);
+          const detailed = !!prog && [...prog.detailed].some((k) => k === me.team_id || k === `persona:${me.user_id}`);
+          const close = d != null && d <= p.radius_m + 25;
+          return (
+            <div className="space-y-4">
+              {p.images.length > 0 && (
+                <div className="-mx-6 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 sm:-mx-8 sm:px-8">
+                  {p.images.map((path) => /* eslint-disable-next-line @next/next/no-img-element */ <img key={path} src={mediaUrl(path) ?? ""} alt="" className="h-52 w-[85%] shrink-0 snap-center rounded-card object-cover sm:w-[70%]" />)}
+                </div>
+              )}
+              {p.description && <p className="text-[15px] leading-snug">{p.description}</p>}
+              {p.prompt && (
+                <div className="rounded-2xl border-l-4 bg-paper-2 py-3 pr-4 pl-4" style={{ borderColor: categoryOf(p.category).color }}>
+                  <span className="label soft">Che cosa raccogliere qui</span>
+                  <p className="serif mt-1 text-[22px] leading-tight italic">{p.prompt}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <div className={cx("rounded-2xl border p-3", arrived ? "border-leaf bg-leaf/8" : "hairline")}>
+                  <span className="label soft">1 · Arrivo</span>
+                  <p className="mt-1 text-[15px]">{arrived ? "Raggiunto ✓" : d != null ? `A ${formatMeters(d)}` : "Posizione sconosciuta"}</p>
+                  <p className="num soft text-xs">+{Math.round(p.points / 2)} pt</p>
+                </div>
+                <div className={cx("rounded-2xl border p-3", detailed ? "border-leaf bg-leaf/8" : "hairline")}>
+                  <span className="label soft">2 · {(p.survey?.length ?? 0) > 0 ? "Indagine confermata" : "Rilievo confermato"}</span>
+                  <p className="mt-1 text-[15px]">{detailed ? "Completato ✓" : "Da raccogliere"}</p>
+                  <p className="num soft text-xs">+{Math.round(p.points / 2)} pt</p>
+                </div>
+              </div>
+              <p className="soft text-xs">Arrivo entro {p.radius_m} m. {prog ? `${prog.reached.size} ${prog.reached.size === 1 ? "team è passato" : "team sono passati"} di qui.` : ""}</p>
+              {actionError && <Notice tone="error">{actionError}</Notice>}
+              <div className="flex flex-wrap gap-2">
+                {!arrived && <Button size="lg" variant={close ? "glow" : "outline"} className="flex-1" disabled={busy || !canCollect || d == null} onClick={() => arrive(p)}>{close ? "Sono arrivato" : "Registra l'arrivo"}</Button>}
+                {(p.survey?.length ?? 0) > 0 && (
+                  <Button size="lg" className="flex-1" disabled={!canCollect || !(arrived || close)} onClick={() => { setError(null); setPanel("survey"); }}>
+                    Avvia l&apos;indagine · {p.survey!.length} domande
+                  </Button>
+                )}
+                <Button size="lg" variant={(p.survey?.length ?? 0) > 0 ? "outline" : "primary"} className="flex-1" disabled={!canCollect} onClick={() => collectHere(p)}><PlusIcon /> Rilievo libero</Button>
+              </div>
+              {(p.survey?.length ?? 0) > 0 && !(arrived || close) && <p className="soft text-xs">L&apos;indagine sul sito si apre quando sei entro {p.radius_m} m dal luogo.</p>}
+            </div>
+          );
+        })()}
+      </Sheet>
+
+      <Sheet open={openPanel === "routes"} onClose={() => setPanel(null)} kicker="Esplorazione" title="Luoghi e percorsi" wide>
+        <div className="on-ink rounded-card p-5">
+          <div className="flex items-baseline gap-2">
+            <span className="display num text-[44px] leading-none text-glow">{reached.size}/{data.places.length}</span>
+            <span className="label soft">luoghi raggiunti dal tuo team</span>
+          </div>
+          <Meter value={data.places.length ? reached.size / data.places.length : 0} className="mt-4" color="var(--color-glow)" />
+        </div>
+        {data.routes.length > 0 && <Label className="mt-6 mb-2 block">Percorsi</Label>}
+        <ul className="space-y-2">
+          {data.routes.map((r) => {
+            const done = r.stops.filter((sid) => reached.has(sid)).length, m = routeLength(r.stops, data.places), on = r.id === routeId;
+            return (
+              <li key={r.id} className={cx("rounded-card border p-4", on ? "border-ink" : "hairline")}>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-1.5 w-6 rounded-full" style={{ background: r.color }} />
+                  <span className="min-w-0 flex-1 truncate text-[17px] tracking-[-0.02em]">{r.name}</span>
+                  <span className="num soft text-sm">{done}/{r.stops.length}</span>
+                </div>
+                {r.description && <p className="soft mt-1 text-sm">{r.description}</p>}
+                <p className="soft mt-1 text-xs">{formatMeters(m)} · ≈ {routeMinutes(m, r.stops.length)} min</p>
+                <Meter value={r.stops.length ? done / r.stops.length : 0} className="mt-3" color={r.color} />
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" variant={on ? "outline" : "primary"} onClick={() => { followRoute(on ? null : r.id); if (!on) { setPanel(null); if (!walking) { setFollow(true); start(); } } }}>{on ? "Smetti di seguirlo" : walking ? "Segui questo percorso" : "Parti con questo percorso"}</Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <Label className="mt-6 mb-2 block">Tutti i luoghi</Label>
+        <ul className="divide-y divide-line">
+          {[...data.places].sort((a, b) => (placeDistance(a) ?? 0) - (placeDistance(b) ?? 0)).map((p) => (
+            <li key={p.id}>
+              <button className="flex w-full items-center gap-3 py-3 text-left" onClick={() => { setPlaceId(p.id); setPanel("place"); }}>
+                <span className="size-3 shrink-0 rounded-full" style={{ background: categoryOf(p.category).color, boxShadow: reached.has(p.id) ? "0 0 0 3px var(--color-glow)" : undefined }} />
+                <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                <span className="soft text-sm">{reached.has(p.id) ? "raggiunto" : placeDistance(p) != null ? formatMeters(placeDistance(p)!) : ""}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
+
+      <Survey place={currentPlace} open={openPanel === "survey"} busy={busy} error={actionError} onClose={() => setPanel("place")}
+        onSubmit={(r) => currentPlace && sendSurvey(currentPlace, r)} />
+
       {/* ------------------------------------------------- nuovo rilievo */}
       <FormPicker open={openPanel === "form"} onClose={() => setPanel(null)} onPick={pick} />
       <Details
         open={openPanel === "new"} entry={entry} setEntry={setEntry} themes={data.themes} worth={worth} previous={previous}
-        placeNote={placeNote} areaClosed={areaClosed} busy={busy} error={actionError}
+        placeNote={placeNote} areaClosed={areaClosed} busy={busy} error={actionError} placeName={data.places.find((p) => p.id === atPlace)?.name}
         onClose={cancel} onMove={() => { setPanel(null); setPicking(true); }} onSubmit={submit}
       />
 
@@ -389,6 +563,7 @@ export default function Campo() {
                       <h4 className="mt-1.5 text-[17px] tracking-[-0.02em]">{o.title}</h4>
                       {summary(o) && <p className="text-sm" style={{ color: formOf(o.form).color }}>{summary(o)}</p>}
                       {o.note && <p className="soft text-sm">{o.note}</p>}
+                      {o.form === "indagine" && <div className="mt-2"><SurveyAnswers data={o.data} mediaUrl={mediaUrl} /></div>}
                       <p className="label soft mt-1.5 inline-flex flex-wrap items-center gap-1.5">
                         {team && <Dot color={team.color} />}{team?.name ?? nameOf(data, o.author_id)} · {ago(o.created_at, now)}
                         {Number.isFinite(m) && <span className={cx(m <= NEAR && "text-ink")}> · {m <= NEAR ? "sei sul posto" : `a ${formatMeters(m)}`}</span>}
@@ -494,6 +669,7 @@ export default function Campo() {
               ? <p className="serif text-2xl italic">«{detail.feeling}»</p>
               : summary(detail) && <p className="display text-2xl" style={{ color: formOf(detail.form).color }}>{summary(detail)}</p>}
             {detail.form === "percezione" && summary(detail) && <p className="soft text-sm">{summary(detail)}</p>}
+            {detail.form === "indagine" && <SurveyAnswers data={detail.data} mediaUrl={mediaUrl} />}
             {detail.note && <p className="text-[15px]">{detail.note}</p>}
             {detail.source_url && <a className="text-sm underline underline-offset-2" href={detail.source_url} target="_blank" rel="noreferrer">Apri la fonte</a>}
           </div>

@@ -112,6 +112,7 @@ export interface Observation {
   /** Tracciato di un flusso: [[lng, lat], …] */
   path?: [number, number][] | null;
   data?: Record<string, unknown>;
+  place_id?: string | null;
   title: string;
   note: string;
   feeling: string | null;
@@ -136,6 +137,61 @@ export interface Announcement {
   created_at: string;
 }
 
+export type PlaceCategory = "storico" | "naturalistico" | "culturale" | "sociale" | "paesaggio" | "altro";
+
+/** Luogo di interesse da raggiungere, creato dalla regia. */
+export interface Place {
+  id: string;
+  campaign_id: string;
+  name: string;
+  description: string;
+  /** Che cosa raccogliere una volta arrivati. */
+  prompt: string;
+  category: PlaceCategory;
+  lng: number;
+  lat: number;
+  radius_m: number;
+  /** Punti per team: metà all'arrivo, metà al primo rilievo confermato sul posto. */
+  points: number;
+  /** Percorsi delle immagini nello Storage; la prima è la copertina. */
+  images: string[];
+  /** Scheda d'indagine sul sito (scala micro). */
+  survey?: import("./survey").Question[];
+  created_at: string;
+}
+
+/** Percorso di esplorazione: luoghi in ordine. */
+export interface Route {
+  id: string;
+  campaign_id: string;
+  name: string;
+  description: string;
+  color: string;
+  stops: string[];
+  created_at: string;
+}
+
+/** Arrivo di una persona a un luogo. */
+export interface Visit {
+  id: string;
+  campaign_id: string;
+  place_id: string;
+  user_id: string;
+  team_id: string | null;
+  distance_m: number;
+  created_at: string;
+}
+
+export const PLACE_CATEGORIES: { id: PlaceCategory; label: string; color: string }[] = [
+  { id: "storico", label: "Storico", color: "#b5643c" },
+  { id: "naturalistico", label: "Naturalistico", color: "#2e9e6b" },
+  { id: "culturale", label: "Culturale", color: "#7a63d2" },
+  { id: "sociale", label: "Sociale", color: "#d9608f" },
+  { id: "paesaggio", label: "Paesaggio", color: "#3b8fd8" },
+  { id: "altro", label: "Altro", color: "#3d4046" },
+];
+export const categoryOf = (id: string | null | undefined) => PLACE_CATEGORIES.find((c) => c.id === id) ?? PLACE_CATEGORIES[5];
+
 /** Un'uscita a piedi: celle attraversate e distanza, senza tracciato preciso. */
 export interface Walk {
   id: string;
@@ -159,6 +215,9 @@ export interface CampaignData {
   observations: Observation[];
   announcements: Announcement[];
   walks: Walk[];
+  places: Place[];
+  routes: Route[];
+  visits: Visit[];
 }
 
 export const KIND_LABEL: Record<ObservationKind, string> = {

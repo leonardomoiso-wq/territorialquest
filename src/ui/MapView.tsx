@@ -9,7 +9,7 @@ import { cellToLatLng } from "h3-js";
 import { useEffect, useRef } from "react";
 import { cellHeight, environmentOf, modelCells, type Environment } from "@/domain/environment";
 import { boundsOf, cellOf, cellRing, cellsOf } from "@/domain/geo";
-import type { Area, Basemap, Observation, Overlay } from "@/domain/types";
+import { categoryOf, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
 
 setWorkerUrl("/maplibre-gl-worker.mjs");
 
@@ -88,6 +88,16 @@ interface Props {
   /** Pennello: riceve le celle toccate o attraversate trascinando. */
   onPaint?: (cell: string) => void;
   onAreaClick?: (id: string) => void;
+  /** Luoghi di interesse da raggiungere. */
+  places?: Place[];
+  /** Percorsi di esplorazione: linee che uniscono i luoghi in ordine. */
+  routes?: Route[];
+  /** Luoghi già raggiunti (dal team o da chi guarda). */
+  reached?: Iterable<string>;
+  /** Percorso in evidenza: gli altri si attenuano. */
+  activeRouteId?: string | null;
+  selectedPlaceId?: string | null;
+  onPlaceClick?: (id: string) => void;
   onObservationClick?: (id: string) => void;
   onMove?: (center: [number, number], zoom: number) => void;
   onReady?: (api: MapApi) => void;
@@ -203,6 +213,24 @@ export default function MapView(props: Props) {
 
     set("pin", fc(p.pin ? [point(p.pin)] : []));
 
+    /* ------------------------------------------------------ luoghi e percorsi */
+    const reached = new Set(p.reached ?? []);
+    set("places", fc((p.places ?? []).map((pl) => {
+      // raggio in pixel a zoom 0: si scala con lo zoom nella regola del livello
+      const r0 = pl.radius_m / (156543.03 * Math.cos((pl.lat * Math.PI) / 180));
+      return point([pl.lng, pl.lat], {
+        id: pl.id, name: pl.name, color: categoryOf(pl.category).color, reached: reached.has(pl.id),
+        selected: pl.id === p.selectedPlaceId, r0, r22: r0 * 4194304,
+      });
+    })));
+    const byId = new Map((p.places ?? []).map((pl) => [pl.id, pl]));
+    set("routes", fc((p.routes ?? []).flatMap((r) => {
+      const coords = r.stops.map((id) => byId.get(id)).filter((x): x is Place => !!x).map((x) => [x.lng, x.lat]);
+      if (coords.length < 2) return [];
+      const active = p.activeRouteId ? r.id === p.activeRouteId : true;
+      return [{ type: "Feature" as const, geometry: { type: "LineString" as const, coordinates: coords }, properties: { id: r.id, color: r.color, active } }];
+    })));
+
     /* -------------------------------------------------------------- sfondo */
     const raster = p.basemap === "satellite" ? SATELLITE_URL : p.basemap === "custom" && p.basemapUrl ? p.basemapUrl : "";
     if (raster !== applied.current.raster) {
@@ -289,7 +317,7 @@ export default function MapView(props: Props) {
 
       m.on("load", () => {
         const empty = fc([]);
-        for (const id of ["areas", "cells", "model", "observations", "flows", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
+        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
 
         m.addLayer({ id: "tq-veil", type: "background", paint: { "background-color": PAPER, "background-opacity": 0 } });
         m.addLayer({ id: "cells-fill", type: "fill", source: "cells", paint: {
@@ -326,6 +354,17 @@ export default function MapView(props: Props) {
           "line-color": "#0f9aa8", "line-width": ["interpolate", ["linear"], ["get", "intensity"], 1, 2, 5, 8],
           "line-opacity": ["case", ["==", ["get", "status"], "validated"], 0.9, 0.5],
         } });
+        m.addLayer({ id: "routes-casing", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: {
+          "line-color": "#ffffff", "line-width": 7, "line-opacity": ["case", ["get", "active"], 0.85, 0.25],
+        } });
+        m.addLayer({ id: "routes", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: {
+          "line-color": ["get", "color"], "line-width": 3.5, "line-dasharray": [1.2, 1.4], "line-opacity": ["case", ["get", "active"], 1, 0.3],
+        } });
+        m.addLayer({ id: "places-radius", type: "circle", source: "places", paint: {
+          "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 0, ["get", "r0"], 22, ["get", "r22"]],
+          "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "selected"], 0.16, 0.07],
+          "circle-stroke-color": ["get", "color"], "circle-stroke-width": 1, "circle-stroke-opacity": 0.5,
+        } });
         m.addLayer({ id: "obs", type: "circle", source: "observations", paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 16, 7],
           "circle-color": ["case", ["==", ["get", "status"], "flagged"], "#8b8f98", ["get", "color"]],
@@ -339,6 +378,21 @@ export default function MapView(props: Props) {
           "circle-radius": 6, "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "online"], 1, 0.4],
           "circle-stroke-color": "#0b0b0c", "circle-stroke-width": 2,
         } });
+        m.addLayer({ id: "places-halo", type: "circle", source: "places", paint: {
+          "circle-radius": ["case", ["get", "selected"], 20, 15], "circle-color": "#ffffff", "circle-opacity": 0.92,
+          "circle-stroke-color": ["case", ["get", "reached"], "#37e08b", "#0b0b0c"], "circle-stroke-width": ["case", ["get", "reached"], 3, 1.5],
+        } });
+        m.addLayer({ id: "places", type: "circle", source: "places", paint: {
+          "circle-radius": ["case", ["get", "selected"], 12, 9], "circle-color": ["get", "color"],
+          "circle-stroke-color": "#ffffff", "circle-stroke-width": ["case", ["get", "reached"], 3, 0],
+        } });
+        if (m.getStyle().glyphs) {
+          try {
+            m.addLayer({ id: "places-label", type: "symbol", source: "places", minzoom: 13.5, layout: {
+              "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-offset": [0, 1.7], "text-anchor": "top", "text-max-width": 9,
+            }, paint: { "text-color": "#0b0b0c", "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
+          } catch { /* caratteri non disponibili: restano i simboli */ }
+        }
         m.addLayer({ id: "draft-fill", type: "fill", source: "draft", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#0b0b0c", "fill-opacity": 0.1 } });
         m.addLayer({ id: "draft-line", type: "line", source: "draft", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#0b0b0c", "line-width": 2 } });
         m.addLayer({ id: "draft-points", type: "circle", source: "draft", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": "#0b0b0c", "circle-stroke-width": 2 } });
@@ -439,6 +493,8 @@ export default function MapView(props: Props) {
         if (cur.edit || cur.onPaint) return;
         // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick(lngLat(e));
+        const pl = hit(e, "places-halo") ?? hit(e, "places");
+        if (pl && cur.onPlaceClick) return cur.onPlaceClick(String(pl.properties.id));
         const o = hit(e, "obs") ?? hit(e, "flows");
         if (o && cur.onObservationClick) return cur.onObservationClick(String(o.properties.id));
         const a = hit(e, "areas-fill");

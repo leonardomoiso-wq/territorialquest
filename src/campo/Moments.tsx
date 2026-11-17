@@ -45,12 +45,13 @@ export interface WalkSummary {
   confirms: number;
   potential: number;
   drafts: number;
+  places: number;
 }
 
 /** Riepilogo al rientro: che cosa ha portato questa uscita al territorio di tutti. */
 export function Recap({ summary, onClose, onDrafts }: { summary: WalkSummary | null; onClose: () => void; onDrafts: () => void }) {
   const s = summary;
-  const title = !s ? "" : s.fresh > 0 ? "Hai acceso la mappa." : s.observations + s.confirms > 0 ? "Bel giro." : "Rientro.";
+  const title = !s ? "" : s.places > 0 ? "Meta raggiunta." : s.fresh > 0 ? "Hai acceso la mappa." : s.observations + s.confirms > 0 ? "Bel giro." : "Rientro.";
   return (
     <Sheet open={!!s} onClose={onClose} kicker="Fine dell'uscita" title={<span className="serif text-[40px] italic">{title}</span>}>
       {s && (
@@ -63,6 +64,7 @@ export function Recap({ summary, onClose, onDrafts }: { summary: WalkSummary | n
             </div>
           </div>
           <ul className="mt-4 divide-y divide-line text-[15px]">
+            {s.places > 0 && <li className="flex justify-between py-3"><span>Luoghi raggiunti</span><span className="num">{s.places}</span></li>}
             <li className="flex justify-between py-3"><span>Rilievi raccolti</span><span className="num">{s.observations}</span></li>
             <li className="flex justify-between py-3"><span>Rilievi degli altri confermati</span><span className="num">{s.confirms}</span></li>
             <li className="flex justify-between py-3"><span>Zone attraversate</span><span className="num">{s.cells}</span></li>

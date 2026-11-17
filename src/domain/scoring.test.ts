@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { cellOf, cellsOf, closeRing, pointInPolygon } from "./geo";
-import { indicators, missionProgress, novelty, scoreObservations } from "./scoring";
+import { indicators, missionProgress, novelty, placeProgress, scoreObservations } from "./scoring";
 import { phaseOf } from "./time";
 import { toCSV, toGeoJSON } from "./export";
 import { kindOf, pathLength, perHour, summary } from "./forms";
+import { formatAnswer, surveyLine, SURVEY_TEMPLATES, withIds } from "./survey";
 import { bearing, metersBetween, nearestDark, stepMeters, windOf } from "./walk";
 import type { CampaignData, Observation } from "./types";
 
@@ -25,7 +26,7 @@ const base = (observations: Observation[]): CampaignData => ({
   ],
   areas: [{ id: "a1", campaign_id: "c", team_id: null, name: "Aurora", color: "#000", geometry: square, opens_at: null, closes_at: null }],
   themes: [{ id: "th1", campaign_id: "c", name: "Ambiente", color: "#000", sort: 1 }],
-  missions: [], observations, announcements: [], walks: [],
+  missions: [], observations, announcements: [], walks: [], places: [], routes: [], visits: [],
 });
 
 describe("punteggio cooperativo", () => {
@@ -134,7 +135,7 @@ describe("geografia ed export", () => {
     expect(g.features).toHaveLength(2);
     expect(g.features[0].geometry).toEqual({ type: "Point", coordinates: [7.685, 45.065] });
     const csv = toCSV(data).split("\n");
-    expect(csv[0].startsWith("id,data,forma,tipo,lente,titolo")).toBe(true);
+    expect(csv[0].startsWith("id,data,forma,tipo,lente,titolo,luogo")).toBe(true);
     expect(csv[1]).toContain('"Parco ""Dora"", nord"');
   });
 });
@@ -160,5 +161,42 @@ describe("uscite a piedi", () => {
     const t = nearestDark([7.685, 45.065], [here, far, near], new Set([here]));
     expect(t?.cell).toBe(near);
     expect(t!.meters).toBeLessThan(150);
+  });
+});
+
+describe("luoghi", () => {
+  const place = { id: "p1", campaign_id: "c", name: "Ponte", description: "", prompt: "", category: "storico" as const,
+    lng: 7.685, lat: 45.065, radius_m: 40, points: 30, images: [], created_at: "" };
+  const visit = (user: string, team: string | null) => ({ id: `v-${user}`, campaign_id: "c", place_id: "p1", user_id: user, team_id: team, distance_m: 5, created_at: "" });
+
+  it("vale metà all'arrivo e metà al rilievo confermato, una volta per team", () => {
+    const data = { ...base([obs({ place_id: "p1", status: "validated", quality: 2 })]), places: [place],
+      visits: [visit("anna", "t1"), visit("carla", "t1"), visit("bruno", "t2")] };
+    const p = placeProgress(data.places, data.visits, data.observations).get("p1")!;
+    expect(p.reached.size).toBe(2);
+    expect(p.detailed.size).toBe(1);
+    expect(p.value).toBe(45);
+    const i = indicators(data);
+    expect(i.placeScore).toBe(45);
+    expect(i.placesReached).toBe(1);
+    expect(i.byTeam).toEqual({ t1: 10 + 30, t2: 15 });
+    expect(i.score).toBe(10 + 45);
+  });
+
+  it("un rilievo non confermato non completa il luogo", () => {
+    const p = placeProgress([place], [], [obs({ place_id: "p1" })]).get("p1")!;
+    expect(p.value).toBe(0);
+  });
+});
+
+describe("indagine sul sito", () => {
+  it("riassume completezza e risposte", () => {
+    const survey = withIds(SURVEY_TEMPLATES.storico);
+    const answers = { [survey[1].id]: 4, [survey[2].id]: ["Pietra", "Ferro"], [survey[3].id]: false };
+    const o = obs({ form: "indagine", data: { survey, answers } });
+    expect(summary(o)).toBe("3/6 risposte");
+    expect(surveyLine({ survey, answers })).toContain("Stato di conservazione: 4/5 · Materiali prevalenti: Pietra, Ferro");
+    expect(formatAnswer(survey[3], false)).toBe("no");
+    expect(toCSV(base([o])).split("\n")[1]).toContain("Stato di conservazione: 4/5");
   });
 });

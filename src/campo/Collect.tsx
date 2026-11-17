@@ -139,12 +139,14 @@ interface DetailsProps {
   areaClosed: boolean;
   busy: boolean;
   error: string | null;
+  /** Nome del luogo presso cui si raccoglie. */
+  placeName?: string | null;
   onClose: () => void;
   onMove: () => void;
   onSubmit: () => void;
 }
 
-export function Details({ open, entry, setEntry, themes, worth, previous, placeNote, areaClosed, busy, error, onClose, onMove, onSubmit }: DetailsProps) {
+export function Details({ open, entry, setEntry, themes, worth, previous, placeNote, areaClosed, busy, error, placeName, onClose, onMove, onSubmit }: DetailsProps) {
   const f = formOf(entry.form);
   const set = (patch: Partial<Entry>) => setEntry({ ...entry, ...patch });
   const setData = (patch: FormData) => set({ data: { ...entry.data, ...patch } });
@@ -153,7 +155,7 @@ export function Details({ open, entry, setEntry, themes, worth, previous, placeN
   const fromSource = (entry.form === "dato" || entry.form === "informazione") && entry.data.onSite === false;
 
   return (
-    <Sheet open={open} onClose={onClose} kicker={f.label} title={f.prompt} wide>
+    <Sheet open={open} onClose={onClose} kicker={placeName ? `${f.label} · ${placeName}` : f.label} title={f.prompt} wide>
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-5">
         {entry.form === "immagine" && <Photo file={entry.file} onChange={(file) => set({ file })} required />}
 

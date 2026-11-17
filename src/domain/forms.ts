@@ -1,3 +1,4 @@
+import { completeness, type SurveyData } from "./survey";
 import type { Observation, ObservationKind } from "./types";
 
 /**
@@ -6,7 +7,7 @@ import type { Observation, ObservationKind } from "./types";
  * - Lente AEIOU: di che cosa parla l'osservazione (facoltativa).
  * - Field / Desk / Feel: da dove viene la conoscenza, ricavato dalla forma.
  */
-export type Form = "immagine" | "flusso" | "percezione" | "dato" | "informazione" | "idea";
+export type Form = "immagine" | "flusso" | "percezione" | "dato" | "informazione" | "idea" | "indagine";
 export type Lens = "attivita" | "ambiente" | "interazioni" | "oggetti" | "persone";
 
 export interface FormSpec {
@@ -43,7 +44,13 @@ export const FORMS: FormSpec[] = [
     icon: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.500 10.900V15h7v-1.100A6 6 0 0 0 12 3z" },
 ];
 
-export const formOf = (id: string | null | undefined): FormSpec => FORMS.find((f) => f.id === id) ?? FORMS[4];
+/** L'indagine sul sito non si sceglie tra le forme: nasce da un luogo. */
+export const SURVEY_FORM: FormSpec = {
+  id: "indagine", label: "Indagine sul sito", prompt: "Che cosa dice questo luogo, da vicino?", hint: "Scheda di domande preparata dalla regia", color: "#b5643c",
+  titleLabel: "Titolo", titlePlaceholder: "Indagine", icon: "M9 4h6v3H9zM7 5.500H5.500V20h13V5.500H17M8.500 11h7M8.500 14.500h7M8.500 18h4",
+};
+
+export const formOf = (id: string | null | undefined): FormSpec => (id === "indagine" ? SURVEY_FORM : FORMS.find((f) => f.id === id) ?? FORMS[4]);
 
 export const LENSES: { id: Lens; label: string; hint: string }[] = [
   { id: "attivita", label: "Attività", hint: "Che cosa fanno le persone" },
@@ -122,6 +129,9 @@ export function summary(o: Pick<Observation, "form" | "data" | "path" | "feeling
   } else if (o.form === "dato") {
     if (d.value != null) parts.push(`${d.value.toLocaleString("it-IT")}${d.unit ? ` ${d.unit}` : ""}`);
     if (d.onSite === false) parts.push("da fonte");
+  } else if (o.form === "indagine") {
+    const { answered, total } = completeness(o.data as Partial<SurveyData>);
+    parts.push(`${answered}/${total} risposte`);
   } else if (o.form === "informazione") {
     if (d.who) parts.push(d.who);
     if (d.onSite === false) parts.push("da fonte");

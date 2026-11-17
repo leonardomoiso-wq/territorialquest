@@ -1,4 +1,5 @@
 import { type FormData, lensLabel, pathLength, perHour } from "./forms";
+import { surveyLine, type SurveyData } from "./survey";
 import type { CampaignData } from "./types";
 
 const name = <T extends { id: string; name: string }>(list: T[], id: string | null) =>
@@ -15,6 +16,7 @@ function rows(data: CampaignData) {
     tipo: o.kind,
     lente: lensLabel(o.lens) ?? "",
     titolo: o.title,
+    luogo: name(data.places ?? [], o.place_id ?? null),
     nota: o.note,
     percezione: o.feeling ?? "",
     tema: name(data.themes, o.theme_id),
@@ -33,6 +35,7 @@ function rows(data: CampaignData) {
     passaggi_ora: perHour(d) ?? "",
     lunghezza_m: pathLength(o.path) || "",
     interlocutore: d.who ?? "",
+    indagine: o.form === "indagine" ? surveyLine(o.data as Partial<SurveyData>) : "",
     lng: o.lng,
     lat: o.lat,
     cella_h3: o.cell,
@@ -54,6 +57,24 @@ export function toGeoJSON(data: CampaignData) {
         geometry: path && path.length > 1 ? { type: "LineString", coordinates: path } : { type: "Point", coordinates: [lng, lat] },
         properties: { layer: path && path.length > 1 ? "flussi" : "osservazioni", ...properties },
       })),
+      ...(data.places ?? []).map((p) => ({
+        type: "Feature",
+        id: p.id,
+        geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+        properties: {
+          layer: "luoghi", nome: p.name, categoria: p.category, descrizione: p.description, da_raccogliere: p.prompt,
+          raggio_m: p.radius_m, punti: p.points, arrivi: (data.visits ?? []).filter((v) => v.place_id === p.id).length, immagini: p.images.join(" "),
+        },
+      })),
+      ...(data.routes ?? []).map((r) => {
+        const pts = r.stops.map((id) => (data.places ?? []).find((p) => p.id === id)).filter((p) => !!p);
+        return {
+          type: "Feature",
+          id: r.id,
+          geometry: { type: "LineString", coordinates: pts.map((p) => [p!.lng, p!.lat]) },
+          properties: { layer: "percorsi", nome: r.name, descrizione: r.description, tappe: pts.map((p) => p!.name).join(" → ") },
+        };
+      }),
       ...data.areas.map((a) => ({
         type: "Feature",
         id: a.id,
@@ -64,7 +85,7 @@ export function toGeoJSON(data: CampaignData) {
   };
 }
 
-const CSV_HEAD = ["id", "data", "forma", "tipo", "lente", "titolo", "nota", "percezione", "tema", "area", "team", "autore", "stato", "qualita", "fonte", "media", "valore", "unita", "intensita", "sensi", "modo", "passaggi_ora", "lunghezza_m", "interlocutore", "lng", "lat", "cella_h3", "tracciato"];
+const CSV_HEAD = ["id", "data", "forma", "tipo", "lente", "titolo", "luogo", "nota", "percezione", "tema", "area", "team", "autore", "stato", "qualita", "fonte", "media", "valore", "unita", "intensita", "sensi", "modo", "passaggi_ora", "lunghezza_m", "interlocutore", "indagine", "lng", "lat", "cella_h3", "tracciato"];
 
 const esc = (v: unknown) => {
   const s = String(v ?? "");

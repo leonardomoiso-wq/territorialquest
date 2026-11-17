@@ -7,6 +7,7 @@ import { phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
 import { updateCampaign, useCampaign, useSession } from "@/lib/data";
 import { useAction, useNow } from "@/lib/hooks";
 import Aree from "@/studio/Aree";
+import Luoghi from "@/studio/Luoghi";
 import Regia from "@/studio/Regia";
 import { Dati, Rilievi } from "@/studio/Rilievi";
 import Team from "@/studio/Team";
@@ -17,6 +18,7 @@ const VIEWS = [
   { id: "regia", label: "Regia" },
   { id: "tempi", label: "Tempi" },
   { id: "aree", label: "Aree" },
+  { id: "luoghi", label: "Luoghi" },
   { id: "team", label: "Team" },
   { id: "rilievi", label: "Rilievi" },
   { id: "dati", label: "Dati" },
@@ -97,6 +99,7 @@ function Panel() {
         {view === "regia" && <Regia {...ctx} />}
         {view === "tempi" && <Tempi {...ctx} />}
         {view === "aree" && <Aree {...ctx} />}
+        {view === "luoghi" && <Luoghi {...ctx} />}
         {view === "team" && <Team {...ctx} />}
         {view === "rilievi" && <Rilievi {...ctx} />}
         {view === "dati" && <Dati {...ctx} />}

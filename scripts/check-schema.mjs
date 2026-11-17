@@ -13,7 +13,8 @@ await db.exec(`
   grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;
 `);
 const forms = readFileSync("supabase/migrations/20261115000000_model_and_forms.sql", "utf8");
-for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); } // due passate: idempotenza
+const places = readFileSync("supabase/migrations/20261117000000_places_routes.sql", "utf8");
+for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); } // due passate: idempotenza
 
 const as = async (uid, q, params) => {
   await db.exec(`set role authenticated; select set_config('app.uid', '${uid}', false);`);
@@ -71,4 +72,19 @@ await fails("non si modifica l'uscita di un altro", async () => {
   const r = await as(bruno, `update walks set distance_m = 9 where id = $1 returning id`, [walk]); if (!r.rows.length) throw new Error("0 righe"); });
 await fails("non si apre un'uscita a nome di un altro", () => as(bruno, `insert into walks (campaign_id, user_id) values ($1, $2)`, [camp, anna]));
 console.log("uscite visibili al team:", one(await as(bruno, `select count(*)::int n from walks where campaign_id = $1`, [camp])).n);
+// luoghi, percorsi, arrivi
+const place = one(await as(master, `insert into places (campaign_id, name, lng, lat, radius_m, points) values ($1, 'Ponte Mosca', 7.6860, 45.0780, 40, 30) returning id`, [camp])).id;
+await fails("un giocatore non crea luoghi", () => as(anna, `insert into places (campaign_id, name, lng, lat) values ($1, 'X', 7, 45)`, [camp]));
+await as(master, `insert into routes (campaign_id, name, stops) values ($1, 'Lungo Dora', $2)`, [camp, JSON.stringify([place])]);
+await fails("arrivo da lontano", () => as(anna, `select check_in($1, 7.6900, 45.0780)`, [place]));
+console.log("arrivo:", one(await as(anna, `select check_in($1, 7.6862, 45.0781) r`, [place])).r);
+console.log("stesso team, secondo arrivo:", one(await as(anna, `select check_in($1, 7.6862, 45.0781) r`, [place])).r);
+await fails("arrivo inserito a mano", () => as(anna, `insert into visits (campaign_id, place_id, user_id) values ($1, $2, $3)`, [camp, place, anna]));
+await as(master, `update campaigns set status = 'paused' where id = $1`, [camp]);
+await fails("arrivo a campagna in pausa", () => as(bruno, `select check_in($1, 7.6862, 45.0781)`, [place]));
+await as(master, `update campaigns set status = 'live' where id = $1`, [camp]);
+console.log("altro team:", one(await as(bruno, `select check_in($1, 7.6860, 45.0780) r`, [place])).r);
+await as(master, `update places set survey = '[{"id":"a1","type":"scala","label":"Stato"}]' where id = $1`, [place]);
+console.log("indagine sul sito:", one(await as(anna, `insert into observations (campaign_id, author_id, team_id, kind, form, title, lng, lat, place_id, data) values ($1, $2, $3, 'field', 'indagine', 'Indagine', 7.686, 45.078, $4, '{"answers":{"a1":4}}') returning form`, [camp, anna, t1, place])).form);
+console.log("rilievo sul luogo:", one(await as(anna, `insert into observations (campaign_id, author_id, team_id, kind, title, lng, lat, place_id) values ($1, $2, $3, 'field', 'Arcata', 7.686, 45.078, $4) returning place_id is not null ok`, [camp, anna, t1, place])).ok);
 console.log("SCHEMA OK");
