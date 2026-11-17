@@ -7,8 +7,8 @@
  * NEXT_PUBLIC_SUPABASE_* verso un altro progetto. Per puntare altrove senza toccare il
  * codice si usano NEXT_PUBLIC_TQ_SUPABASE_URL e NEXT_PUBLIC_TQ_SUPABASE_KEY.
  */
-const PROJECT_URL = "https://btmkmvcrzknuoklyukut.supabase.co";
-const PROJECT_KEY = "sb_publishable_kKJEVRCbx48gQ4ifRIsa2A_Dz2J3-Sg";
+const PROJECT_URL = "https://xhqisgmygaqcnhytdwao.supabase.co";
+const PROJECT_KEY = "sb_publishable_0dynFZvv1pg_BxaDtnjBZQ_gm3h9xra";
 
 const overrideUrl = process.env.NEXT_PUBLIC_TQ_SUPABASE_URL;
 const overrideKey = process.env.NEXT_PUBLIC_TQ_SUPABASE_KEY;
