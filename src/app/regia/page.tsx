@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { claimOrganizer, isOrganizer, signIn, signOut, signUp, useSession } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
-import HexField from "@/ui/HexField";
+import Topo from "@/ui/Topo";
 import { Button, Field, Label, Logo, Notice, Spinner } from "@/ui/kit";
 
 /**
@@ -51,10 +51,10 @@ export default function Regia() {
 
   return (
     <main className="on-ink relative grid min-h-dvh grid-rows-[auto_1fr] overflow-hidden p-5 sm:p-7">
-      <HexField dark density={22} className="pointer-events-none absolute inset-0 size-full opacity-35 [mask-image:radial-gradient(60%_60%_at_85%_100%,black,transparent)]" />
+      <Topo seed={1.2} cx={0.9} cy={0.95} n={16} className="pointer-events-none absolute inset-0 size-full" opacity={0.15} />
       <div className="relative flex items-center justify-between">
         <Link href="/"><Logo /></Link>
-        <Label className="rounded-full border border-white/20 px-3 py-1.5">Regia</Label>
+        <span className="cartello text-glow">Regia</span>
       </div>
 
       <div className="relative mx-auto w-full max-w-sm self-center py-12">

@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Territorial Quest", template: "%s · Territorial Quest" },
+  title: { default: "Territorial Quest", template: "%s – Territorial Quest" },
   description:
     "Ricerca sul campo cooperativa: si esplora un territorio insieme, i dati raccolti diventano una mappa viva.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0c",
+  themeColor: "#2b2118",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

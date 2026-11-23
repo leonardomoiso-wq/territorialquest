@@ -18,7 +18,7 @@ const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 const SATELLITE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const SATELLITE_CREDIT = "Immagini © Esri, Maxar, Earthstar Geographics";
 const DEM_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
-const PAPER = "#e7e6df";
+const PAPER = "#ebe6d8";
 
 /** Stile di riserva se le tessere non sono raggiungibili: restano visibili i dati. */
 const BLANK: StyleSpecification = {
@@ -27,8 +27,8 @@ const BLANK: StyleSpecification = {
   layers: [{ id: "bg", type: "background", paint: { "background-color": PAPER } }],
 };
 
-const KIND_COLOR = { field: "#17804f", desk: "#2f6fe0", feel: "#e2578f" };
-const CONTRIB_COLOR: Record<string, string> = { immagine: "#17804f", percezione: "#e2578f", dato: "#2f6fe0", informazione: "#7a63d2", idea: "#e8a81c" };
+const KIND_COLOR = { field: "#4a6b43", desk: "#3d6f99", feel: "#b8573f" };
+const CONTRIB_COLOR: Record<string, string> = { immagine: "#4a6b43", percezione: "#b8573f", dato: "#3d6f99", informazione: "#7a5c9a", idea: "#d6993e" };
 
 /** Piano, 3D reale (edifici e rilievo) oppure modello a celle. */
 export type MapMode = "2d" | "3d" | "model";
@@ -285,7 +285,9 @@ export default function MapView(props: Props) {
     if (p.overlay && m.getLayer("tq-overlay")) m.setPaintProperty("tq-overlay", "raster-opacity", p.overlay.opacity);
 
     // Il velo color carta regola la trasparenza di qualunque sfondo.
-    m.setPaintProperty("tq-veil", "background-opacity", p.basemap === "nessuno" ? 1 : 1 - Math.max(0, Math.min(1, p.basemapOpacity ?? 1)));
+    // il velo color carta dà il tono a ogni sfondo; sulla mappa di base resta un velo leggero
+    const veil = 1 - Math.max(0, Math.min(1, p.basemapOpacity ?? 1));
+    m.setPaintProperty("tq-veil", "background-opacity", p.basemap === "nessuno" ? 1 : (p.basemap ?? "mappa") === "mappa" ? Math.max(0.22, veil) : veil);
 
     /* ---------------------------------------------------------------- vista */
     if (mode !== applied.current.mode) {
@@ -348,11 +350,11 @@ export default function MapView(props: Props) {
 
         m.addLayer({ id: "tq-veil", type: "background", paint: { "background-color": PAPER, "background-opacity": 0 } });
         m.addLayer({ id: "cells-fill", type: "fill", source: "cells", paint: {
-          "fill-color": ["interpolate", ["linear"], ["get", "n"], 0, "#17804f", 1, "#2bbf74", 6, "#37e08b"],
-          "fill-opacity": ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.38, 6, 0.7],
+          "fill-color": ["interpolate", ["linear"], ["get", "n"], 0, "#b4c49c", 1, "#9fb98a", 6, "#4a6b43"],
+          "fill-opacity": ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.5, 6, 0.78],
         } });
-        m.addLayer({ id: "cells-fog", type: "fill", source: "cells", paint: { "fill-color": "#0b0b0c", "fill-opacity": ["case", ["get", "dark"], 0.2, 0] } });
-        m.addLayer({ id: "cells-line", type: "line", source: "cells", paint: { "line-color": "#0b0b0c", "line-opacity": 0.08, "line-width": 0.6 } });
+        m.addLayer({ id: "cells-fog", type: "fill", source: "cells", paint: { "fill-color": "#3a2a1c", "fill-opacity": ["case", ["get", "dark"], 0.16, 0] } });
+        m.addLayer({ id: "cells-line", type: "line", source: "cells", paint: { "line-color": "#2b2118", "line-opacity": 0.1, "line-width": 0.6 } });
         m.addLayer({ id: "areas-fill", type: "fill", source: "areas", paint: {
           "fill-color": ["get", "color"], "fill-opacity": ["case", ["get", "selected"], 0.16, 0.05],
         } });
@@ -378,7 +380,7 @@ export default function MapView(props: Props) {
         } });
 
         m.addLayer({ id: "flows", type: "line", source: "flows", layout: { "line-cap": "round", "line-join": "round" }, paint: {
-          "line-color": "#0f9aa8", "line-width": ["interpolate", ["linear"], ["get", "intensity"], 1, 2, 5, 8],
+          "line-color": "#3d6f99", "line-width": ["interpolate", ["linear"], ["get", "intensity"], 1, 2, 5, 8],
           "line-opacity": ["case", ["==", ["get", "status"], "validated"], 0.9, 0.5],
         } });
         m.addLayer({ id: "layer-lines-casing", type: "line", source: "layer-lines", layout: { "line-cap": "round", "line-join": "round" }, paint: {
@@ -405,9 +407,9 @@ export default function MapView(props: Props) {
         } });
         m.addLayer({ id: "obs", type: "circle", source: "observations", paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 16, 7],
-          "circle-color": ["case", ["==", ["get", "status"], "flagged"], "#8b8f98", ["get", "color"]],
+          "circle-color": ["case", ["==", ["get", "status"], "flagged"], "#8a7d68", ["get", "color"]],
           "circle-opacity": ["case", ["==", ["get", "status"], "validated"], 1, 0.45],
-          "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5,
+          "circle-stroke-color": "#fbf8f0", "circle-stroke-width": 1.5,
         } });
         // raggio d'azione: entro questo cerchio luoghi e rilievi si possono toccare
         m.addLayer({ id: "reach", type: "circle", source: "reach", paint: {
@@ -419,7 +421,7 @@ export default function MapView(props: Props) {
         } });
         m.addLayer({ id: "players", type: "circle", source: "players", paint: {
           "circle-radius": 6, "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "online"], 1, 0.4],
-          "circle-stroke-color": "#0b0b0c", "circle-stroke-width": 2,
+          "circle-stroke-color": "#2b2118", "circle-stroke-width": 2,
         } });
         // contributi individuali: anello bianco, nucleo colorato; in revisione tratteggiati dalla trasparenza
         m.addLayer({ id: "contribs", type: "circle", source: "contribs", paint: {
@@ -441,18 +443,18 @@ export default function MapView(props: Props) {
           try {
             m.addLayer({ id: "places-label", type: "symbol", source: "places", minzoom: 13.5, layout: {
               "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-offset": [0, 1.7], "text-anchor": "top", "text-max-width": 9,
-            }, paint: { "text-color": "#0b0b0c", "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
+            }, paint: { "text-color": "#2b2118", "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
           } catch { /* caratteri non disponibili: restano i simboli */ }
         }
-        m.addLayer({ id: "draft-fill", type: "fill", source: "draft", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#0b0b0c", "fill-opacity": 0.1 } });
-        m.addLayer({ id: "draft-line", type: "line", source: "draft", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#0b0b0c", "line-width": 2 } });
-        m.addLayer({ id: "draft-points", type: "circle", source: "draft", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": "#0b0b0c", "circle-stroke-width": 2 } });
-        m.addLayer({ id: "edit-fill", type: "fill", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#0b0b0c", "fill-opacity": 0.1 } });
-        m.addLayer({ id: "edit-line", type: "line", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": "#0b0b0c", "line-width": 2 } });
-        m.addLayer({ id: "edit-mid", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "mid"], paint: { "circle-radius": 4, "circle-color": "#0b0b0c", "circle-opacity": 0.35 } });
-        m.addLayer({ id: "edit-vertex", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "vertex"], paint: { "circle-radius": 7, "circle-color": "#ffffff", "circle-stroke-color": "#0b0b0c", "circle-stroke-width": 2.5 } });
-        m.addLayer({ id: "pin-halo", type: "circle", source: "pin", paint: { "circle-radius": 18, "circle-color": "#0b0b0c", "circle-opacity": 0.14 } });
-        m.addLayer({ id: "pin", type: "circle", source: "pin", paint: { "circle-radius": 7, "circle-color": "#0b0b0c", "circle-stroke-color": "#37e08b", "circle-stroke-width": 3 } });
+        m.addLayer({ id: "draft-fill", type: "fill", source: "draft", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#2b2118", "fill-opacity": 0.1 } });
+        m.addLayer({ id: "draft-line", type: "line", source: "draft", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#2b2118", "line-width": 2 } });
+        m.addLayer({ id: "draft-points", type: "circle", source: "draft", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": "#2b2118", "circle-stroke-width": 2 } });
+        m.addLayer({ id: "edit-fill", type: "fill", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#2b2118", "fill-opacity": 0.1 } });
+        m.addLayer({ id: "edit-line", type: "line", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": "#2b2118", "line-width": 2 } });
+        m.addLayer({ id: "edit-mid", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "mid"], paint: { "circle-radius": 4, "circle-color": "#2b2118", "circle-opacity": 0.35 } });
+        m.addLayer({ id: "edit-vertex", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "vertex"], paint: { "circle-radius": 7, "circle-color": "#ffffff", "circle-stroke-color": "#2b2118", "circle-stroke-width": 2.5 } });
+        m.addLayer({ id: "pin-halo", type: "circle", source: "pin", paint: { "circle-radius": 18, "circle-color": "#2b2118", "circle-opacity": 0.14 } });
+        m.addLayer({ id: "pin", type: "circle", source: "pin", paint: { "circle-radius": 7, "circle-color": "#2b2118", "circle-stroke-color": "#d6993e", "circle-stroke-width": 3 } });
 
         ready.current = true;
         sync();

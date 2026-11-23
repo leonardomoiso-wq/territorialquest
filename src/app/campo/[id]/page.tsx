@@ -217,7 +217,7 @@ export default function Campo() {
     const firstPhoto = (p.survey ?? []).find((q) => q.type === "foto" && typeof answers[q.id] === "string");
     await addObservation(data, me, {
       kind: "field", form: "indagine", lens: null, path: null, place_id: p.id, theme_id: null, feeling: null, source_url: null,
-      title: `Indagine · ${p.name}`, note: r.note.trim(), data: { survey: p.survey ?? [], answers },
+      title: `Indagine – ${p.name}`, note: r.note.trim(), data: { survey: p.survey ?? [], answers },
       lng: p.lng, lat: p.lat, file: null, media_path: firstPhoto ? (answers[firstPhoto.id] as string) : null,
     });
     await refresh();
@@ -338,7 +338,7 @@ export default function Campo() {
           <Dot color={phase === "live" ? "var(--color-leaf)" : phase === "paused" ? "var(--color-sun)" : "var(--color-mute)"} live={phase === "live"} />
           <span className="min-w-0">
             <span className="block truncate text-sm leading-tight">{c.name}</span>
-            <span className="label soft block !text-[9px]">{PHASE_LABEL[phase]}{phase === "live" ? ` · ${remaining(c.ends_at, now)}` : ""}</span>
+            <span className="label soft block !text-[9px]">{PHASE_LABEL[phase]}{phase === "live" ? ` – ${remaining(c.ends_at, now)}` : ""}</span>
           </span>
         </Link>
         <div className="hidden flex-col items-center gap-1 pt-2 md:flex">
@@ -364,7 +364,7 @@ export default function Campo() {
         {walking && !picking && nearby.length > 0 && (
           <button onClick={() => setPanel("validate")} className="glass pointer-events-auto flex max-w-md animate-rise items-center gap-3 rounded-3xl px-4 py-2.5 text-left">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-paper"><Icon d={ICON.check} /></span>
-            <span className="min-w-0"><span className="label soft block">Sei sul posto · conferma</span><span className="block truncate text-sm">{nearby[0].title}{nearby.length > 1 ? ` e altri ${nearby.length - 1}` : ""}</span></span>
+            <span className="min-w-0"><span className="label soft block">Sei sul posto – conferma</span><span className="block truncate text-sm">{nearby[0].title}{nearby.length > 1 ? ` e altri ${nearby.length - 1}` : ""}</span></span>
           </button>
         )}
         {!picking && activeRoute && (
@@ -375,8 +375,8 @@ export default function Campo() {
             </span>
             <span className="min-w-0 truncate">
               {nextStop
-                ? <>Tappa {stops.indexOf(nextStop) + 1}/{stops.length} · <b className="font-medium">{nextStop.name}</b>{stopTarget && <> · {formatMeters(stopTarget.meters)} verso {windOf(stopTarget.bearing)}</>}</>
-                : <>Percorso completato · <b className="font-medium">{activeRoute.name}</b></>}
+                ? <>Tappa {stops.indexOf(nextStop) + 1}/{stops.length} – <b className="font-medium">{nextStop.name}</b>{stopTarget && <> – {formatMeters(stopTarget.meters)} verso {windOf(stopTarget.bearing)}</>}</>
+                : <>Percorso completato – <b className="font-medium">{activeRoute.name}</b></>}
             </span>
           </button>
         )}
@@ -396,7 +396,7 @@ export default function Campo() {
         {showNotice && !picking && (
           <button onClick={() => setSeenNotice(notice.id)} title="Tocca per chiudere"
             className={cx("glass pointer-events-auto max-w-md animate-rise text-left", walking ? "flex !max-w-[min(28rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full px-4 py-2" : "rounded-3xl px-4 py-3")}>
-            <span className="label soft shrink-0">{walking ? "Regia" : `Dalla regia · ${ago(notice.created_at, now)}`}</span>
+            <span className="label soft shrink-0">{walking ? "Regia" : `Dalla regia – ${ago(notice.created_at, now)}`}</span>
             <span className={cx("text-sm", walking ? "min-w-0 truncate" : "mt-0.5 block")}>{notice.body}</span>
           </button>
         )}
@@ -447,7 +447,7 @@ export default function Campo() {
               {data.places.length > 0 && <Counter label="Luoghi e percorsi" d={ICON.route} count={0} onClick={() => setPanel("routes")} />}
               {walking
                 ? <Button variant="outline" className="h-10" onClick={end}>Rientra</Button>
-                : <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="grid size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6">?</button>}
+                : <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="hidden size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6 sm:grid">?</button>}
             </>
           )}
         </div>
@@ -478,7 +478,7 @@ export default function Campo() {
               </section>
             )}
             <section>
-              <Label className="mb-2 block">Luoghi · {placesAround.length}</Label>
+              <Label className="mb-2 block">Luoghi – {placesAround.length}</Label>
               {placesAround.length === 0 ? <p className="soft text-sm">Nessun luogo da raggiungere qui intorno.</p> : (
                 <ul className="divide-y divide-line">
                   {placesAround.map(({ p, m }) => (
@@ -492,14 +492,14 @@ export default function Campo() {
               )}
             </section>
             <section>
-              <Label className="mb-2 block">Da confermare · {toValidateAround.length}</Label>
+              <Label className="mb-2 block">Da confermare – {toValidateAround.length}</Label>
               {toValidateAround.length === 0 ? <p className="soft text-sm">Nessun rilievo di altri team qui intorno.</p> : (
                 <Button variant="outline" onClick={() => setPanel("validate")}>Conferma i {toValidateAround.length} rilievi vicini</Button>
               )}
             </section>
             {layerAround.length > 0 && (
               <section>
-                <Label className="mb-2 block">Servizi e punti utili · {layerAround.length}</Label>
+                <Label className="mb-2 block">Servizi e punti utili – {layerAround.length}</Label>
                 <ul className="divide-y divide-line">
                   {layerAround.slice(0, 12).map((x, i) => (
                     <li key={i} className="flex items-center gap-3 py-2 text-sm">
@@ -518,7 +518,7 @@ export default function Campo() {
 
       {/* ---------------------------------------------------------- luogo */}
       <Sheet open={openPanel === "place" && !!currentPlace} onClose={() => setPanel(null)}
-        kicker={currentPlace ? `${categoryOf(currentPlace.category).label} · ${currentPlace.points} pt per team` : ""} title={currentPlace?.name ?? ""} wide>
+        kicker={currentPlace ? `${categoryOf(currentPlace.category).label} – ${currentPlace.points} pt per team` : ""} title={currentPlace?.name ?? ""} wide>
         {currentPlace && (() => {
           const p = currentPlace, d = placeDistance(p), prog = ind.places.get(p.id);
           const arrived = reached.has(p.id);
@@ -548,12 +548,12 @@ export default function Campo() {
               )}
               <div className="grid grid-cols-2 gap-2">
                 <div className={cx("rounded-2xl border p-3", arrived ? "border-leaf bg-leaf/8" : "hairline")}>
-                  <span className="label soft">1 · Arrivo</span>
+                  <span className="label soft">1 – Arrivo</span>
                   <p className="mt-1 text-[15px]">{arrived ? "Raggiunto ✓" : d != null ? `A ${formatMeters(d)}` : "Posizione sconosciuta"}</p>
                   <p className="num soft text-xs">+{Math.round(p.points / 2)} pt</p>
                 </div>
                 <div className={cx("rounded-2xl border p-3", detailed ? "border-leaf bg-leaf/8" : "hairline")}>
-                  <span className="label soft">2 · {(p.survey?.length ?? 0) > 0 ? "Indagine confermata" : "Rilievo confermato"}</span>
+                  <span className="label soft">2 – {(p.survey?.length ?? 0) > 0 ? "Indagine confermata" : "Rilievo confermato"}</span>
                   <p className="mt-1 text-[15px]">{detailed ? "Completato ✓" : "Da raccogliere"}</p>
                   <p className="num soft text-xs">+{Math.round(p.points / 2)} pt</p>
                 </div>
@@ -564,7 +564,7 @@ export default function Campo() {
                 {!arrived && <Button size="lg" variant={close ? "glow" : "outline"} className="flex-1" disabled={busy || !canCollect || d == null} onClick={() => arrive(p)}>{close ? "Sono arrivato" : "Registra l'arrivo"}</Button>}
                 {(p.survey?.length ?? 0) > 0 && (
                   <Button size="lg" className="flex-1" disabled={!canCollect || !(arrived || close)} onClick={() => { setError(null); setPanel("survey"); }}>
-                    Avvia l&apos;indagine · {p.survey!.length} domande
+                    Avvia l&apos;indagine – {p.survey!.length} domande
                   </Button>
                 )}
                 <Button size="lg" variant={(p.survey?.length ?? 0) > 0 ? "outline" : "primary"} className="flex-1" disabled={!canCollect} onClick={() => collectHere(p)}><PlusIcon /> Rilievo libero</Button>
@@ -595,7 +595,7 @@ export default function Campo() {
                   <span className="num soft text-sm">{done}/{r.stops.length}</span>
                 </div>
                 {r.description && <p className="soft mt-1 text-sm">{r.description}</p>}
-                <p className="soft mt-1 text-xs">{formatMeters(m)} · ≈ {routeMinutes(m, r.stops.length)} min</p>
+                <p className="soft mt-1 text-xs">{formatMeters(m)} – ≈ {routeMinutes(m, r.stops.length)} min</p>
                 <Meter value={r.stops.length ? done / r.stops.length : 0} className="mt-3" color={r.color} />
                 <div className="mt-3 flex gap-2">
                   <Button size="sm" variant={on ? "outline" : "primary"} onClick={() => { followRoute(on ? null : r.id); if (!on) { setPanel(null); if (!walking) { setFollow(true); start(); } } }}>{on ? "Smetti di seguirlo" : walking ? "Segui questo percorso" : "Parti con questo percorso"}</Button>
@@ -659,8 +659,8 @@ export default function Campo() {
                       {o.note && <p className="soft text-sm">{o.note}</p>}
                       {o.form === "indagine" && <div className="mt-2"><SurveyAnswers data={o.data} mediaUrl={mediaUrl} /></div>}
                       <p className="label soft mt-1.5 inline-flex flex-wrap items-center gap-1.5">
-                        {team && <Dot color={team.color} />}{team?.name ?? nameOf(data, o.author_id)} · {ago(o.created_at, now)}
-                        {Number.isFinite(m) && <span className={cx(m <= NEAR && "text-ink")}> · {m <= NEAR ? "sei sul posto" : `a ${formatMeters(m)}`}</span>}
+                        {team && <Dot color={team.color} />}{team?.name ?? nameOf(data, o.author_id)} – {ago(o.created_at, now)}
+                        {Number.isFinite(m) && <span className={cx(m <= NEAR && "text-ink")}> – {m <= NEAR ? "sei sul posto" : `a ${formatMeters(m)}`}</span>}
                       </p>
                     </div>
                   </div>
@@ -681,15 +681,15 @@ export default function Campo() {
         <div className="on-ink rounded-card p-5">
           <div className="flex items-baseline gap-2">
             <span className="display num text-[52px] leading-none text-glow">{ind.score.toLocaleString("it-IT")}</span>
-            <span className="label soft">pt di tutti · +{ind.potential} in attesa</span>
+            <span className="label soft">pt di tutti – +{ind.potential} in attesa</span>
           </div>
           <div className="mt-5 grid grid-cols-4 gap-2 text-center">
-            {([["Copertura", ind.coverage, "var(--color-glow)"], ["Equilibrio", ind.balance, "#7fb0ff"], ["Affidabilità", ind.reliability, "#ff9cc2"], ["Scambio", ind.exchange, "#f5c75a"]] as const).map(([l, v, col]) => (
+            {([["Copertura", ind.coverage, "var(--color-glow)"], ["Equilibrio", ind.balance, "#8fb3d1"], ["Affidabilità", ind.reliability, "#e08a6e"], ["Scambio", ind.exchange, "#e8c07a"]] as const).map(([l, v, col]) => (
               <div key={l}><Ring value={v} color={col} size={56} /><div className="label soft mt-1.5 !text-[9px]">{l}</div></div>
             ))}
           </div>
           <p className="soft mt-5 border-t border-white/10 pt-4 text-sm">
-            <b className="num font-medium text-paper">{formatMeters(ind.walkedMeters + (walk?.meters ?? 0))}</b> camminati insieme · <b className="num font-medium text-paper">{litNow.size}</b> zone accese
+            <b className="num font-medium text-paper">{formatMeters(ind.walkedMeters + (walk?.meters ?? 0))}</b> camminati insieme – <b className="num font-medium text-paper">{litNow.size}</b> zone accese
           </p>
         </div>
         {myTeam && (
@@ -706,7 +706,7 @@ export default function Campo() {
                 <div className="flex items-baseline justify-between gap-3"><span>{mission.title}</span><span className="num soft text-sm">{current}/{mission.target}</span></div>
                 {mission.description && <p className="soft text-sm">{mission.description}</p>}
                 <Meter value={ratio} className="mt-2" color={state === "done" ? "var(--color-glow)" : undefined} />
-                <span className="label soft mt-1.5 block">{MISSION_KIND[mission.kind].label} · {state === "done" ? "raggiunta da tutti" : `ancora ${remaining(mission.ends_at, now)}`}</span>
+                <span className="label soft mt-1.5 block">{MISSION_KIND[mission.kind].label} – {state === "done" ? "raggiunta da tutti" : `ancora ${remaining(mission.ends_at, now)}`}</span>
               </li>
             ))}
           </ul>
@@ -749,7 +749,7 @@ export default function Campo() {
       </Sheet>
 
       {/* ----------------------------------------------------- dettaglio */}
-      <Sheet open={openPanel === "detail" && !!detail} onClose={() => setPanel(null)} kicker={detail ? `${nameOf(data, detail.author_id)} · ${ago(detail.created_at, now)}` : ""} title={detail?.title ?? ""}>
+      <Sheet open={openPanel === "detail" && !!detail} onClose={() => setPanel(null)} kicker={detail ? `${nameOf(data, detail.author_id)} – ${ago(detail.created_at, now)}` : ""} title={detail?.title ?? ""}>
         {detail && (
           <div className="space-y-3">
             {mediaUrl(detail.media_path) && /* eslint-disable-next-line @next/next/no-img-element */ <img src={mediaUrl(detail.media_path)!} alt="" className="max-h-72 w-full rounded-2xl object-cover" />}
@@ -758,7 +758,7 @@ export default function Campo() {
               <KindTag o={detail} />
               {lensLabel(detail.lens) && <Tag>{lensLabel(detail.lens)}</Tag>}
               {themeOf(data, detail.theme_id) && <Tag color={themeOf(data, detail.theme_id)!.color}>{themeOf(data, detail.theme_id)!.name}</Tag>}
-              <Tag>{detail.status === "validated" ? `validato · qualità ${["", "bassa", "media", "alta"][detail.quality ?? 2]}` : detail.status === "pending" ? "in attesa di conferma" : "segnalato"}</Tag>
+              <Tag>{detail.status === "validated" ? `validato – qualità ${["", "bassa", "media", "alta"][detail.quality ?? 2]}` : detail.status === "pending" ? "in attesa di conferma" : "segnalato"}</Tag>
             </div>
             {detail.form === "percezione" && detail.feeling
               ? <p className="serif text-2xl italic">«{detail.feeling}»</p>

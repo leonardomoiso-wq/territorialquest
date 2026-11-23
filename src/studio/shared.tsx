@@ -12,7 +12,7 @@ export interface Ctx {
   refresh: () => Promise<void>;
 }
 
-export const PALETTE = ["#17804f", "#2f6fe0", "#e2578f", "#e8a81c", "#7a63d2", "#d8693b", "#0f9aa8", "#3d4046"];
+export const PALETTE = ["#4a6b43", "#3d6f99", "#b8573f", "#d6993e", "#7a5c9a", "#a8651c", "#3d8a8a", "#5c4a36"];
 export const KIND_COLOR = { field: "var(--color-field)", desk: "var(--color-desk)", feel: "var(--color-feel)" } as const;
 
 export const nameOf = (data: CampaignData, userId: string) =>

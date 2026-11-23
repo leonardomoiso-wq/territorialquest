@@ -65,7 +65,7 @@ export default function Studio() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4 pt-10 pb-10">
           <div>
-            <Label>{organizer ? "Studio · regia" : "Studio"}</Label>
+            <Label>{organizer ? "Studio – regia" : "Studio"}</Label>
             <h1 className="display mt-2 text-[clamp(2.5rem,6vw,4.5rem)]">Le tue campagne</h1>
           </div>
           <div className="flex gap-2">
@@ -106,7 +106,7 @@ export default function Studio() {
               return (
                 <Link
                   key={c.id} href={staff ? `/studio/${c.id}` : `/campo/${c.id}`}
-                  className="surface group flex min-h-56 flex-col rounded-panel border hairline p-6 transition duration-500 hover:-translate-y-1 hover:shadow-float"
+                  className="ritaglio group flex min-h-56 flex-col p-6 transition duration-300 hover:-translate-y-1 hover:bg-leaf hover:text-paper"
                 >
                   <div className="flex items-center justify-between">
                     <Tag color={PHASE_COLOR[phase]}>{PHASE_LABEL[phase]}</Tag>

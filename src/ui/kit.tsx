@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, type ComponentProps, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -9,12 +10,13 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={cx("inline-flex items-center gap-2", className)}>
-      <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
+      <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
         <path d="M12 1.6 21 6.8v10.4l-9 5.2-9-5.2V6.8z" fill="none" stroke="currentColor" strokeWidth="1.5" />
         <path d="M12 7.2 16.2 9.6v4.8L12 16.8l-4.2-2.4V9.6z" className="fill-glow" />
+        <path d="M5 17.5c3-2 4.500-.5 7-2s3.500-1 6.500-.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="0 3" />
       </svg>
-      <span className="text-[15px] tracking-[-0.03em]">
-        Territorial <span className="serif text-[18px] italic">Quest</span>
+      <span className="display text-[17px] tracking-[-0.03em]">
+        Territorial <span className="text-glow">Quest</span>
       </span>
     </span>
   );
@@ -96,16 +98,27 @@ export function Dot({ color, live, className }: { color: string; live?: boolean;
 }
 
 /* --------------------------------------------------------------- pannelli */
+/** Scheda come ritaglio di carta: bordo bianco e ombra morbida. */
 export function Card({ className, ...p }: ComponentProps<"div">) {
-  return <div className={cx("surface rounded-card border hairline p-5", className)} {...p} />;
+  return <div className={cx("surface rounded-[2px] p-5 shadow-[0_0_0_5px_var(--color-edge),0_12px_26px_-12px_rgb(43_33_24/0.22)] [.on-ink_&]:shadow-none [.on-ink_&]:border [.on-ink_&]:hairline", className)} {...p} />;
+}
+
+/** Cartello di sezione: riquadro con bordo e testo mono maiuscolo, numero in un quadratino ocra. */
+export function Kick({ children, n, className }: { children: ReactNode; n?: number | string; className?: string }) {
+  return (
+    <span className={cx("cartello", className)}>
+      {n !== undefined && <b className="grid min-w-5 place-items-center bg-glow px-1 text-ink">{n}</b>}
+      {children}
+    </span>
+  );
 }
 
 export function SectionTitle({ kicker, title, action }: { kicker?: string; title: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-4 flex items-end justify-between gap-4">
       <div>
-        {kicker && <Label>{kicker}</Label>}
-        <h2 className="display mt-1 text-[26px]">{title}</h2>
+        {kicker && <Kick className="soft">{kicker}</Kick>}
+        <h2 className="display mt-2 text-[28px]">{title}</h2>
       </div>
       {action}
     </div>
@@ -231,15 +244,16 @@ export function Sheet({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal>
+  if (!open || typeof document === "undefined") return null;
+  // in un portale: fuori da contenitori animati o con z-index propri (es. l'intestazione fissa della regia)
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end justify-center text-ink sm:items-center sm:p-6" role="dialog" aria-modal>
       <button aria-label="Chiudi" className="absolute inset-0 animate-fade bg-ink/45 backdrop-blur-sm" onClick={onClose} />
-      <div className={cx("on-paper relative max-h-[92dvh] w-full animate-rise overflow-y-auto rounded-t-panel p-6 shadow-float sm:rounded-panel sm:p-8", wide ? "sm:max-w-2xl" : "sm:max-w-md")}>
+      <div className={cx("on-paper relative max-h-[92dvh] w-full animate-rise overflow-y-auto rounded-t-[6px] border-t-4 border-glow p-6 shadow-float sm:rounded-[3px] sm:border-t-0 sm:p-8", wide ? "sm:max-w-2xl" : "sm:max-w-md")}>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             {kicker && <Label>{kicker}</Label>}
-            <h3 className="display mt-1 text-[28px]">{title}</h3>
+            <h3 className="display mt-1.5 text-[28px]">{title}</h3>
           </div>
           <IconButton label="Chiudi" onClick={onClose} className="-mt-1 -mr-1 !size-9 !shadow-none">
             <svg viewBox="0 0 14 14" className="size-3.5"><path d="M1 1l12 12M13 1 1 13" stroke="currentColor" strokeWidth="1.6" /></svg>
@@ -247,14 +261,16 @@ export function Sheet({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
 export function Empty({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="rounded-card border border-dashed hairline px-6 py-12 text-center">
-      <p className="serif text-[28px] italic">{title}</p>
+    <div className="rounded-[2px] border-[1.5px] border-dashed hairline px-6 py-12 text-center">
+      <p className="display text-[26px]">{title}</p>
+      <span className="sentiero mx-auto mt-3 block w-24" aria-hidden />
       {children && <p className="soft mx-auto mt-2 max-w-sm text-sm">{children}</p>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>

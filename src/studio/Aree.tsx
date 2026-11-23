@@ -152,7 +152,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
           </div>
           <button onClick={() => setSheet(true)} className="glass pointer-events-auto inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-medium">
             <svg viewBox="0 0 16 16" className="size-4" aria-hidden><path d="M8 1.5 14.5 5 8 8.5 1.5 5zM1.5 8 8 11.5 14.5 8M1.5 11 8 14.5 14.5 11" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
-            Sfondo · {BASEMAPS.find((b) => b.id === bg.basemap)?.label}{bg.overlay ? " + immagine" : ""}
+            Sfondo – {BASEMAPS.find((b) => b.id === bg.basemap)?.label}{bg.overlay ? " + immagine" : ""}
           </button>
           <label className="glass pointer-events-auto hidden h-10 items-center gap-3 rounded-full px-4 text-[13px] sm:inline-flex">
             Trasparenza
@@ -179,14 +179,14 @@ export default function Aree({ data, now, refresh }: Ctx) {
             )}
             {tool === "shape" && (
               <>
-                <span className="px-3 text-sm">Trascina i vertici · doppio clic per toglierne uno</span>
+                <span className="px-3 text-sm">Trascina i vertici – doppio clic per toglierne uno</span>
                 <Button size="sm" variant="ghost" onClick={stop}>Annulla</Button>
                 <Button size="sm" variant="glow" onClick={saveShape} disabled={busy || ring.length < 3}>Salva la forma</Button>
               </>
             )}
             {tool === "paint" && (
               <>
-                <span className="px-3 text-sm">Trascina sulle celle per dipingere{paintedCount ? ` · ${paintedCount} modificate` : ""}</span>
+                <span className="px-3 text-sm">Trascina sulle celle per dipingere{paintedCount ? ` – ${paintedCount} modificate` : ""}</span>
                 <Button size="sm" variant="ghost" onClick={recognise}>Riconosci dalla mappa</Button>
                 <Button size="sm" variant="ghost" onClick={stop}>Annulla</Button>
                 <Button size="sm" variant="glow" onClick={savePaint} disabled={busy || !paintedCount}>Salva il modello</Button>
@@ -304,7 +304,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
           )}
 
           <label className="block">
-            <Label className="mb-2 block">Trasparenza dello sfondo · {Math.round((1 - bg.basemap_opacity) * 100)}%</Label>
+            <Label className="mb-2 block">Trasparenza dello sfondo – {Math.round((1 - bg.basemap_opacity) * 100)}%</Label>
             <input type="range" min={0} max={1} step={0.05} value={1 - bg.basemap_opacity} className="w-full accent-ink"
               onChange={(e) => setBg({ ...bg, basemap_opacity: 1 - Number(e.target.value) })} onPointerUp={() => saveBg(bg)} onKeyUp={() => saveBg(bg)} />
           </label>
@@ -315,7 +315,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
             {bg.overlay ? (
               <div className="mt-4 space-y-3">
                 <label className="block">
-                  <Label className="mb-2 block">Opacità dell&apos;immagine · {Math.round(bg.overlay.opacity * 100)}%</Label>
+                  <Label className="mb-2 block">Opacità dell&apos;immagine – {Math.round(bg.overlay.opacity * 100)}%</Label>
                   <input type="range" min={0.05} max={1} step={0.05} value={bg.overlay.opacity} className="w-full accent-ink"
                     onChange={(e) => setBg({ ...bg, overlay: { ...bg.overlay!, opacity: Number(e.target.value) } })} onPointerUp={() => saveBg(bg)} onKeyUp={() => saveBg(bg)} />
                 </label>
@@ -327,7 +327,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
             ) : (
               <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed hairline p-3.5 transition hover:bg-ink/5">
                 <span className="grid size-10 place-items-center rounded-full bg-paper-2"><PlusIcon /></span>
-                <span className="text-sm">{busy ? "Carico…" : <>Carica un&apos;immagine <span className="soft">· JPG, PNG o WebP fino a 10 MB</span></>}</span>
+                <span className="text-sm">{busy ? "Carico…" : <>Carica un&apos;immagine <span className="soft">JPG, PNG o WebP fino a 10 MB</span></>}</span>
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(e) => upload(e.target.files?.[0])} />
               </label>
             )}

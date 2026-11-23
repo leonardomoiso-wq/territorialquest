@@ -37,3 +37,10 @@ Segui le convenzioni in `data-model.md`. Poi: tipi in `src/domain/types.ts`, car
 ## Nuovo contenuto sulla mappa pubblica
 
 Aggiungi il campo a `public_map()` (mai `author_id`, email o nomi di persone), al tipo `PublicMap` in `src/lib/data.ts` e alla pagina `src/app/mappa/[id]/page.tsx`. Verifica con `check-schema.mjs` che un utente non autenticato non veda nulla se la mappa non è pubblica.
+
+## Nuovo tipo di file o di colonna nei dati del territorio
+
+1. Classificazione e etichette stanno in `src/domain/datasets.ts`: liste `LAT`, `LNG`, `KEY`, `TIME`, `CATEGORY`, `LABEL`, `CODES` (numeri che sono codici) e dizionario `DICT` (nome colonna → etichetta e unità). Aggiungi lì, con un test in `datasets.test.ts`.
+2. Le schede usano `figuresFor()` (indicatori senza categoria), i confronti `compare()` e `series()`, gli strati `pointsOf()`.
+3. Un indicatore si collega a un'area per nome (`normalizeKey`): per collegare i dati, le aree devono chiamarsi come i valori della chiave (es. i Comuni). I confini da GeoJSON creano le aree già con il nome giusto.
+4. Cita sempre fonte e licenza (ODbL per OpenStreetMap, CC0 per Wikidata, CC BY per Istat): la mappa pubblica le mostra in «Fonti».

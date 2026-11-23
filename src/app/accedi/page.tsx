@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { recoveryQuestion, resetPassword, setRecovery, signIn, signUp, useSession } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
+import Topo from "@/ui/Topo";
 import { Button, Field, Label, Logo, Notice } from "@/ui/kit";
 import { SecretFields, type Secret } from "@/ui/Recovery";
 
@@ -71,9 +72,10 @@ function Form() {
   }[mode];
 
   return (
-    <main className="on-ink grid min-h-dvh grid-rows-[auto_1fr] p-5 sm:p-7">
-      <Link href="/"><Logo /></Link>
-      <div className="mx-auto w-full max-w-sm self-center py-12">
+    <main className="on-ink relative grid min-h-dvh grid-rows-[auto_1fr] overflow-hidden p-5 sm:p-7">
+      <Topo seed={3.3} cx={0.95} cy={0.85} n={15} className="pointer-events-none absolute inset-0 size-full" opacity={0.13} />
+      <Link href="/" className="relative"><Logo /></Link>
+      <div className="relative mx-auto w-full max-w-sm self-center py-12">
         <h1 className="serif animate-rise text-[64px]" key={mode}>{title}</h1>
         <p className="soft mt-3 animate-rise [animation-delay:60ms]">{lead}</p>
 

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { joinCampaign } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
+import Topo from "@/ui/Topo";
 import { Button, Label, Logo, Notice } from "@/ui/kit";
 
 function Join() {
@@ -21,9 +22,10 @@ function Join() {
   };
 
   return (
-    <main className="on-ink grid min-h-dvh grid-rows-[auto_1fr] p-5 sm:p-7">
-      <Link href="/"><Logo /></Link>
-      <form onSubmit={submit} className="mx-auto w-full max-w-md self-center pb-16 text-center">
+    <main className="on-ink relative grid min-h-dvh grid-rows-[auto_1fr] overflow-hidden p-5 sm:p-7">
+      <Topo seed={5.2} cx={0.95} cy={0.85} n={15} className="pointer-events-none absolute inset-0 size-full" opacity={0.13} />
+      <Link href="/" className="relative"><Logo /></Link>
+      <form onSubmit={submit} className="relative mx-auto w-full max-w-md self-center pb-16 text-center">
         <Label>Codice campagna</Label>
         <h1 className="serif mt-3 animate-rise text-[64px]">Dove si esplora?</h1>
         <input

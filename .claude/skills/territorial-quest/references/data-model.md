@@ -18,10 +18,11 @@ Tutto in `public`, regole di accesso con RLS. Funzioni di ruolo: `is_member(c)`,
 | `observations` | rilievo: `kind` field/desk/feel, `form`, `lens`, titolo, nota, `feeling`, `source_url`, `media_path`, `lng/lat`, `cell` H3, `path` (flussi), `data` jsonb, `place_id`, `status` pending/validated/flagged, `quality` 1–3, `validated_by` | autore se `can_collect`; validazione solo via `validate_observation` |
 | `announcements` | messaggi della regia, a tutti o a un team | staff |
 | `walks` | uscita: `distance_m`, `cells` attraversate, inizio e fine | la persona stessa |
-| `places` | luogo: categoria, racconto, `prompt`, `radius_m`, `points`, `images`, `survey` (domande) | staff |
+| `places` | luogo: categoria (anche `ospitalita`), racconto, `prompt`, `radius_m`, `points`, `images`, `survey` (domande), `source`, `attributes` (colonne del file d'origine), `placed` (false = da posizionare, invisibile e non raggiungibile) | staff |
 | `routes` | percorso: `stops` (id dei luoghi in ordine), colore | staff |
 | `visits` | arrivo a un luogo, unico per persona | solo `check_in()` |
 | `recovery` | domanda segreta e risposta cifrata, tentativi | solo funzioni |
+| `datasets` | dati del territorio: `kind` indicatori/punti/linee/tabella, colonne chiave/tempo/categoria/etichetta, `columns` [{key,label,type,unit}], `rows` jsonb (per le linee una FeatureCollection), fonte, licenza, `public` | staff; pubblico tramite `public_datasets(c)` |
 | `contributions` | contributo individuale: forma, testo, foto, posizione, `display_name`, `status` pending/approved/rejected, nota di revisione | autore (pending), staff (revisione) |
 
 Storage: bucket pubblico `media` (foto di rilievi, luoghi, indagini, contributi, sfondi).

@@ -34,6 +34,7 @@ const db = {
     { id: randomUUID(), campaign_id: C, title: "Le voci del quartiere", description: "Raccogliamo percezioni: come si sta qui?", kind: "observations", target: 25, theme_id: null, area_id: null, starts_at: iso(2 * D), ends_at: iso(8 * D), created_at: iso(-1 * D) },
   ],
   announcements: [{ id: randomUUID(), campaign_id: C, author_id: uid, team_id: null, body: "La zona nord è ancora scoperta: chi può passarci oggi pomeriggio?", created_at: iso(-0.4 * H) }],
+  datasets: [],
   memberships: [], observations: [], walks: [], visits: [], contributions: [
     { id: randomUUID(), campaign_id: C, user_id: 'u0000009-0000-4000-8000-000000000000', display_name: 'Una residente', form: 'idea', title: 'Panchine all\'ombra sul lungofiume', note: 'D\'estate non c\'è un posto per sedersi tra i due ponti.', feeling: null, media_path: null, data: {}, lng: 7.6885, lat: 45.0815, status: 'pending', review_note: null, created_at: iso(-3 * H) },
     { id: randomUUID(), campaign_id: C, user_id: 'u0000008-0000-4000-8000-000000000000', display_name: 'Anonimo', form: 'informazione', title: 'Il mercato del sabato nasce negli anni Settanta', note: 'Lo racconta mia nonna: all\'inizio erano dieci banchi.', feeling: null, media_path: null, data: {}, lng: 7.6858, lat: 45.0832, status: 'approved', review_note: null, created_at: iso(-30 * H) },
@@ -89,6 +90,7 @@ http.createServer(async (req, res) => {
         contributions: db.contributions.filter((x) => x.status === "approved").map(({ user_id, status, ...x }) => x),
         stats: { walked_m: 4280, visits: db.visits.length, teams: db.teams.length } });
     }
+    if (fn === "public_datasets") return send(res, 200, db.datasets.filter((d) => d.public !== false));
     if (fn === "is_organizer") return send(res, 200, !!db.organizer);
     if (fn === "claim_organizer") { if (body.code === "Aurora 2026!") { db.organizer = true; return send(res, 200, true); } return send(res, 200, false); }
     if (fn === "has_recovery") return send(res, 200, !!db.recovery);

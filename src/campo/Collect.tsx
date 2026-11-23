@@ -103,7 +103,7 @@ function Photo({ file, onChange, required }: { file: File | null; onChange: (f: 
     <label className={cx("flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed p-3.5 transition hover:bg-ink/5", required && !file ? "border-leaf" : "hairline")}>
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-paper-2"><PlusIcon /></span>
       <span className="min-w-0 flex-1 text-sm">
-        {file ? <span className="block truncate">{file.name}</span> : <>{required ? "Scatta o scegli la foto" : "Aggiungi una foto"} <span className="soft">· fotocamera o galleria</span></>}
+        {file ? <span className="block truncate">{file.name}</span> : <>{required ? "Scatta o scegli la foto" : "Aggiungi una foto"} <span className="soft">dalla fotocamera o dalla galleria</span></>}
       </span>
       <input type="file" accept="image/*" className="sr-only" required={required && !file} onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
     </label>
@@ -155,7 +155,7 @@ export function Details({ open, entry, setEntry, themes, worth, previous, placeN
   const fromSource = (entry.form === "dato" || entry.form === "informazione") && entry.data.onSite === false;
 
   return (
-    <Sheet open={open} onClose={onClose} kicker={placeName ? `${f.label} · ${placeName}` : f.label} title={f.prompt} wide>
+    <Sheet open={open} onClose={onClose} kicker={placeName ? `${f.label} – ${placeName}` : f.label} title={f.prompt} wide>
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-5">
         {entry.form === "immagine" && <Photo file={entry.file} onChange={(file) => set({ file })} required />}
 
@@ -165,7 +165,7 @@ export function Details({ open, entry, setEntry, themes, worth, previous, placeN
               <Chips label="Che cosa si muove" options={FLOW_MODES} value={entry.data.mode ?? ""} color={f.color} onChange={(mode) => setData({ mode: mode || undefined })} /></div>
             <Scale label="Quanto è intenso" value={entry.data.intensity} color={f.color} onChange={(intensity) => setData({ intensity })} />
             <div>
-              <Label className="mb-2 block">Conteggio · facoltativo</Label>
+              <Label className="mb-2 block">Conteggio – facoltativo</Label>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span>Ho contato</span>
                 <input type="number" min={0} inputMode="numeric" aria-label="Passaggi contati" value={entry.data.count ?? ""} onChange={(e) => setData({ count: num(e.target.value) })}
@@ -220,7 +220,7 @@ export function Details({ open, entry, setEntry, themes, worth, previous, placeN
 
         <div><Label className="mb-2 block">Tema</Label>
           <Chips label="Tema" options={themes.map((t) => ({ id: t.id, label: t.name, color: t.color }))} value={entry.theme_id} onChange={(theme_id) => set({ theme_id })} /></div>
-        <div><Label className="mb-2 block">Di che cosa parla · facoltativo</Label>
+        <div><Label className="mb-2 block">Di che cosa parla – facoltativo</Label>
           <Chips label="Lente" options={LENSES} value={entry.lens} onChange={(lens) => set({ lens: lens || null })} /></div>
 
         <div className="rounded-2xl bg-paper-2 p-4">

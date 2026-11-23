@@ -195,13 +195,13 @@ export interface Visit {
 }
 
 export const PLACE_CATEGORIES: { id: PlaceCategory; label: string; color: string }[] = [
-  { id: "storico", label: "Storico", color: "#b5643c" },
-  { id: "naturalistico", label: "Naturalistico", color: "#2e9e6b" },
-  { id: "culturale", label: "Culturale", color: "#7a63d2" },
-  { id: "sociale", label: "Sociale", color: "#d9608f" },
-  { id: "paesaggio", label: "Paesaggio", color: "#3b8fd8" },
+  { id: "storico", label: "Storico", color: "#a8473a" },
+  { id: "naturalistico", label: "Naturalistico", color: "#4a6b43" },
+  { id: "culturale", label: "Culturale", color: "#7a5c9a" },
+  { id: "sociale", label: "Sociale", color: "#b8573f" },
+  { id: "paesaggio", label: "Paesaggio", color: "#3d6f99" },
   { id: "ospitalita", label: "Ospitalità", color: "#a8651c" },
-  { id: "altro", label: "Altro", color: "#3d4046" },
+  { id: "altro", label: "Altro", color: "#5c4a36" },
 ];
 export const categoryOf = (id: string | null | undefined) => PLACE_CATEGORIES.find((c) => c.id === id) ?? PLACE_CATEGORIES[PLACE_CATEGORIES.length - 1];
 

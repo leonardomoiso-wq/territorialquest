@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const COLORS = ["#17804f", "#2bbf74", "#37e08b", "#2f6fe0", "#e2578f", "#e8a81c"];
+const COLORS = ["#4a6b43", "#9fb98a", "#d6993e", "#3d6f99", "#b8573f", "#a8651c"];
 
 /**
  * Territorio astratto: una griglia esagonale in scala di grigi che prende
@@ -76,13 +76,14 @@ export default function HexField({ className, density = 26, dark = false }: { cl
         c.life += (goal - c.life) * Math.min(1, dt * (near ? 0.012 : 0.0025));
         const lift = c.h * (0.35 + c.life * 0.65);
         const top = c.y - lift;
-        const base = dark ? 34 + c.seed * 14 : 226 - c.seed * 16;
-        const grey = `rgb(${base},${base},${base - 2})`;
+        // carta (chiaro) o marrone su lino (scuro)
+        const base = dark ? 52 + c.seed * 14 : 228 - c.seed * 16;
+        const grey = dark ? `rgb(${base},${base - 12},${base - 24})` : `rgb(${base},${base - 6},${base - 22})`;
 
         // lato in ombra: dà spessore al volume
         ctx.globalAlpha = dark ? 0.9 : 1;
         hex(c.x, c.y, r - 1.5);
-        ctx.fillStyle = dark ? "#0e0e10" : "rgba(11,11,12,0.10)";
+        ctx.fillStyle = dark ? "#21170f" : "rgba(43,33,24,0.12)";
         ctx.fill();
         // faccia superiore
         hex(c.x, top, r - 1.5);

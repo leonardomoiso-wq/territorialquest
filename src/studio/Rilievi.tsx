@@ -72,7 +72,7 @@ export function Rilievi({ data, now, refresh }: Ctx) {
                   {o.note && <p className="soft mt-0.5 line-clamp-2 text-sm">{o.note}</p>}
                   {o.form === "indagine" && <details className="mt-2"><summary className="cursor-pointer text-sm">Vedi le risposte</summary><div className="mt-2"><SurveyAnswers data={o.data} mediaUrl={mediaUrl} /></div></details>}
                   <div className="soft mt-1.5 flex flex-wrap items-center gap-x-3 text-[13px]">
-                    <span className="inline-flex items-center gap-1.5">{team && <Dot color={team.color} />}{nameOf(data, o.author_id)}{team ? ` · ${team.name}` : ""}</span>
+                    <span className="inline-flex items-center gap-1.5">{team && <Dot color={team.color} />}{nameOf(data, o.author_id)}{team ? ` – ${team.name}` : ""}</span>
                     <span>{ago(o.created_at, now)}</span>
                     <span className="num">{o.lat.toFixed(5)}, {o.lng.toFixed(5)}</span>
                     {o.source_url && <a href={o.source_url} target="_blank" rel="noreferrer" className="underline underline-offset-2">fonte</a>}
@@ -114,19 +114,19 @@ export function Dati({ data, refresh }: Ctx) {
         <SectionTitle kicker="Interoperabilità" title="Esporta i dati" />
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="!p-6">
-            <Tag>GeoJSON · EPSG:4326</Tag>
+            <Tag>GeoJSON – EPSG:4326</Tag>
             <h3 className="display mt-5 text-[22px]">Per QGIS e strumenti GIS</h3>
             <p className="soft mt-1 text-sm">Osservazioni come punti e aree come poligoni, con tutti gli attributi.</p>
             <Button className="mt-5" onClick={() => download(`${slug}.geojson`, JSON.stringify(toGeoJSON(data), null, 2), "application/geo+json")}>Scarica GeoJSON</Button>
           </Card>
           <Card className="!p-6">
-            <Tag>CSV · UTF-8</Tag>
+            <Tag>CSV – UTF-8</Tag>
             <h3 className="display mt-5 text-[22px]">Per fogli di calcolo, R, Python</h3>
             <p className="soft mt-1 text-sm">Una riga per osservazione, coordinate in colonne lng/lat, cella H3 inclusa.</p>
             <Button className="mt-5" onClick={() => download(`${slug}.csv`, "﻿" + toCSV(data), "text/csv;charset=utf-8")}>Scarica CSV</Button>
           </Card>
         </div>
-        <p className="soft mt-3 text-[13px]">{data.observations.length} osservazioni · {data.areas.length} aree · le foto restano scaricabili dal link nella colonna «media».</p>
+        <p className="soft mt-3 text-[13px]">{data.observations.length} osservazioni – {data.areas.length} aree – le foto restano scaricabili dal link nella colonna «media».</p>
       </section>
 
       <section>

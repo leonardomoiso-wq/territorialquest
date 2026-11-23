@@ -19,7 +19,7 @@ type Layer = "territorio" | "siti" | "luoghi" | "contributi" | "dati";
 type Item = { kind: "obs"; o: Observation } | { kind: "contrib"; c: Contribution } | { kind: "place"; p: Place } | { kind: "area"; name: string };
 
 const LAYERS: { id: Layer; label: string; color: string }[] = [
-  { id: "territorio", label: "Territorio", color: "#17804f" },
+  { id: "territorio", label: "Territorio", color: "#4a6b43" },
   { id: "siti", label: "Indagini sui siti", color: "#b5643c" },
   { id: "luoghi", label: "Luoghi e percorsi", color: "#e8a81c" },
   { id: "contributi", label: "Contributi", color: "#7a63d2" },
@@ -123,7 +123,7 @@ export default function Mappa() {
       {/* ---------------------------------------------------------------- dock */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="glass pointer-events-auto flex items-center gap-1.5 rounded-full p-1.5">
-          <Button variant="ghost" onClick={() => setList(true)}>Elenco · {entries.length}</Button>
+          <Button variant="ghost" onClick={() => setList(true)}>Elenco – {entries.length}</Button>
           {map.datasets.length > 0 && <Button variant="ghost" onClick={() => setItem({ kind: "area", name: "" })}>Fonti</Button>}
           {c.contributions_open && <LinkButton href={`/contribuisci/${id}`} prefetch={false} variant="glow">Contribuisci</LinkButton>}
         </div>
@@ -157,7 +157,7 @@ export default function Mappa() {
 
       {/* ------------------------------------------------------------ dettaglio */}
       <Sheet open={!!item} onClose={() => setItem(null)} wide
-        kicker={!item ? "" : item.kind === "area" ? (item.name ? "Scheda del territorio" : "Dati del territorio") : item.kind === "obs" ? `${team(item.o.team_id)?.name ?? "Regia"} · ${date(item.o.created_at)}` : item.kind === "contrib" ? `Contributo di ${item.c.display_name} · ${date(item.c.created_at)}` : `${categoryOf(item.p.category).label} · luogo`}
+        kicker={!item ? "" : item.kind === "area" ? (item.name ? "Scheda del territorio" : "Dati del territorio") : item.kind === "obs" ? `${team(item.o.team_id)?.name ?? "Regia"} – ${date(item.o.created_at)}` : item.kind === "contrib" ? `Contributo di ${item.c.display_name} – ${date(item.c.created_at)}` : `${categoryOf(item.p.category).label} – luogo`}
         title={!item ? "" : item.kind === "area" ? item.name || "Fonti" : item.kind === "obs" ? item.o.title : item.kind === "contrib" ? item.c.title : item.p.name}>
         {item?.kind === "area" && (() => {
           const figs = item.name ? figuresFor(map.datasets, item.name) : [];
@@ -200,7 +200,7 @@ export default function Mappa() {
               const found = map.observations.filter((o) => o.place_id === item.p.id);
               return found.length > 0 && (
                 <div>
-                  <Label className="mb-2 block">Raccolto qui · {found.length}</Label>
+                  <Label className="mb-2 block">Raccolto qui – {found.length}</Label>
                   <ul className="divide-y divide-line">{found.map((o) => <li key={o.id}><button className="flex w-full items-center gap-2 py-2.5 text-left text-sm" onClick={() => setItem({ kind: "obs", o })}><FormTag form={o.form} /><span className="truncate">{o.title}</span></button></li>)}</ul>
                 </div>
               );

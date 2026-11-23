@@ -116,7 +116,7 @@ export default function Fonti({ data, refresh }: Ctx) {
         <Empty title="Ancora nessuna fonte.">I dati desk danno contesto ai rilievi: popolazione, età, redditi, servizi, rischi. I giocatori li ritrovano nella scheda del Comune in cui camminano.</Empty>
       ) : (KINDS.map((k) => byKind(k.id).length > 0 && (
         <section key={k.id}>
-          <SectionTitle kicker={k.hint} title={`${k.label} · ${byKind(k.id).length}`} />
+          <SectionTitle kicker={k.hint} title={`${k.label} – ${byKind(k.id).length}`} />
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {byKind(k.id).map((d) => (
               <Card key={d.id} className="cursor-pointer !p-4 transition hover:shadow-soft" onClick={() => setOpen(d)}>
@@ -257,7 +257,7 @@ function Viewer({ d, ctx, onClose }: { d: Dataset | null; ctx: Ctx; onClose: () 
       rows.filter((r) => !cats.length || (d.category_column && cats.includes(String(r[d.category_column])))).map((r) => ({ lng: data.campaign.center_lng, lat: data.campaign.center_lat, row: r, label: String((d.label_column && r[d.label_column]) ?? "Luogo") }));
     if (!list.length) throw new Error("Nessuna riga selezionata.");
     const describe = (r: Row) => d.columns.filter((c) => c.key !== d.label_column && r[c.key] !== null && !/^(lat|lon|lng|cod)$/i.test(c.key))
-      .map((c) => `${c.label}: ${formatValue(r[c.key], c.unit)}`).join(" · ");
+      .map((c) => `${c.label}: ${formatValue(r[c.key], c.unit)}`).join(" – ");
     await insertPlaces(list.map((p) => ({
       campaign_id: data.campaign.id, name: p.label, category, description: describe(p.row), prompt: "", lng: p.lng, lat: p.lat,
       radius_m: 40, points, images: [], survey: [], source: d.name, attributes: p.row, placed,
@@ -267,7 +267,7 @@ function Viewer({ d, ctx, onClose }: { d: Dataset | null; ctx: Ctx; onClose: () 
   });
 
   return (
-    <Sheet open={!!d} onClose={() => { setDone(null); setCats([]); onClose(); }} kicker={`${kindLabel(d.kind)}${d.source ? ` · ${d.source}` : ""}`} title={d.name} wide>
+    <Sheet open={!!d} onClose={() => { setDone(null); setCats([]); onClose(); }} kicker={`${kindLabel(d.kind)}${d.source ? ` – ${d.source}` : ""}`} title={d.name} wide>
       <div className="space-y-5">
         {d.kind === "indicatori" && numeric.length > 0 && (
           <>

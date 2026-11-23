@@ -98,7 +98,7 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
                       {img ? /* eslint-disable-next-line @next/next/no-img-element */ <a href={img} target="_blank" rel="noreferrer"><img src={img} alt="" className="size-24 shrink-0 rounded-2xl object-cover" /></a>
                         : <span className="size-24 shrink-0 rounded-2xl" style={{ background: `color-mix(in srgb, ${formOf(x.form).color} 16%, transparent)` }} />}
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5"><FormTag form={x.form} /><span className="soft text-[13px]">{x.display_name} · {ago(x.created_at, now)}</span></div>
+                        <div className="flex flex-wrap items-center gap-1.5"><FormTag form={x.form} /><span className="soft text-[13px]">{x.display_name} – {ago(x.created_at, now)}</span></div>
                         <h3 className="mt-1.5 text-[17px] tracking-[-0.02em]">{x.title}</h3>
                         {x.feeling && <p className="serif text-lg italic">«{x.feeling}»</p>}
                         {typeof x.data?.value === "number" && <p className="num text-sm">{String(x.data.value)} {String(x.data.unit ?? "")}</p>}

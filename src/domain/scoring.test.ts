@@ -116,7 +116,7 @@ describe("forme di raccolta", () => {
     const flow = obs({ form: "flusso", data: { mode: "piedi", intensity: 4, count: 30, minutes: 10 }, path: [[7.68, 45.06], [7.681, 45.06]] });
     expect(perHour(flow.data!)).toBe(180);
     expect(pathLength(flow.path)).toBeGreaterThan(70);
-    expect(summary(flow)).toContain("A piedi · intensità 4/5 · 180 passaggi/ora");
+    expect(summary(flow)).toContain("A piedi – intensità 4/5 – 180 passaggi/ora");
     const g = toGeoJSON(base([flow]));
     expect(g.features[0].geometry.type).toBe("LineString");
     expect(g.features[0].properties).toMatchObject({ layer: "flussi", forma: "flusso", modo: "piedi" });
@@ -195,7 +195,7 @@ describe("indagine sul sito", () => {
     const answers = { [survey[1].id]: 4, [survey[2].id]: ["Pietra", "Ferro"], [survey[3].id]: false };
     const o = obs({ form: "indagine", data: { survey, answers } });
     expect(summary(o)).toBe("3/6 risposte");
-    expect(surveyLine({ survey, answers })).toContain("Stato di conservazione: 4/5 · Materiali prevalenti: Pietra, Ferro");
+    expect(surveyLine({ survey, answers })).toContain("Stato di conservazione: 4/5 – Materiali prevalenti: Pietra, Ferro");
     expect(formatAnswer(survey[3], false)).toBe("no");
     expect(toCSV(base([o])).split("\n")[1]).toContain("Stato di conservazione: 4/5");
   });

@@ -89,7 +89,7 @@ export default function Contribuisci() {
         <div className="glass pointer-events-auto flex items-center gap-1.5 rounded-full p-1.5">
           <Button variant="ghost" onClick={locate}>Dove sono</Button>
           <Button variant="glow" disabled={!pin} onClick={() => setStep("modulo")}>Continua</Button>
-          {mine.length > 0 && <Button variant="ghost" onClick={() => setStep("miei")}>I miei · {mine.length}</Button>}
+          {mine.length > 0 && <Button variant="ghost" onClick={() => setStep("miei")}>I miei – {mine.length}</Button>}
         </div>
       </div>
 
@@ -106,7 +106,7 @@ export default function Contribuisci() {
           </div>
           <label className={cx("flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed p-3.5 transition hover:bg-ink/5", form === "immagine" && !file ? "border-leaf" : "hairline")}>
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-paper-2"><PlusIcon /></span>
-            <span className="min-w-0 flex-1 text-sm">{file ? <span className="block truncate">{file.name}</span> : <>{form === "immagine" ? "Scegli la foto" : "Aggiungi una foto"} <span className="soft">· facoltativa{form === "immagine" ? " ma consigliata" : ""}</span></>}</span>
+            <span className="min-w-0 flex-1 text-sm">{file ? <span className="block truncate">{file.name}</span> : <>{form === "immagine" ? "Scegli la foto" : "Aggiungi una foto"} <span className="soft">, facoltativa{form === "immagine" ? " ma consigliata" : ""}</span></>}</span>
             <input type="file" accept="image/*" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
           <Field label={spec.titleLabel} value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} maxLength={120} placeholder={spec.titlePlaceholder} />

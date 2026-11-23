@@ -1,5 +1,6 @@
 import HexField from "@/ui/HexField";
-import { ArrowIcon, Dock, Label, LinkButton, Logo, Ring, Tag } from "@/ui/kit";
+import Topo from "@/ui/Topo";
+import { ArrowIcon, Dock, Kick, Label, LinkButton, Logo, Ring, Tag } from "@/ui/kit";
 
 const SURFACES = [
   { n: "01", name: "Field", color: "var(--color-field)", title: "Il rilievo, in tasca.", body: "Un'osservazione in meno di trenta secondi: tema, posizione, foto, percezione. Sul territorio, dal telefono." },
@@ -8,32 +9,33 @@ const SURFACES = [
 ];
 
 const STORY = [
-  { title: "Parti", color: "#8b8f98", body: "La mappa è spenta. Inizi un'uscita: da qui l'app conta i passi e ti indica la zona non esplorata più vicina." },
-  { title: "Cammina", color: "#f4f3ee", body: "Ogni zona che attraversi si accende, per te e per tutti gli altri team. Nessuno ci tornerà per niente." },
-  { title: "Osserva", color: "#37e08b", body: "Foto, flussi, percezioni, dati, informazioni, idee. Uno scatto rapido ora, la didascalia quando ti fermi." },
-  { title: "Conferma", color: "#ff9cc2", body: "Passando dove ha lavorato un altro team, confermi i loro rilievi sul posto. Solo allora diventano punti di tutti." },
+  { title: "Parti", color: "#8a7d68", body: "La mappa è spenta. Inizi un'uscita: da qui l'app conta i passi e ti indica la zona non esplorata più vicina." },
+  { title: "Cammina", color: "#f1ead9", body: "Ogni zona che attraversi si accende, per te e per tutti gli altri team. Nessuno ci tornerà per niente." },
+  { title: "Osserva", color: "#d6993e", body: "Foto, flussi, percezioni, dati, informazioni, idee. Uno scatto rapido ora, la didascalia quando ti fermi." },
+  { title: "Conferma", color: "#e08a6e", body: "Passando dove ha lavorato un altro team, confermi i loro rilievi sul posto. Solo allora diventano punti di tutti." },
 ];
 
 const INDICATORS = [
   { label: "Copertura", v: 0.62, color: "var(--color-glow)", body: "Quanta parte del territorio è stata esplorata." },
-  { label: "Equilibrio", v: 0.78, color: "#7fb0ff", body: "Field, Desk e Feel crescono insieme." },
-  { label: "Affidabilità", v: 0.54, color: "#ff9cc2", body: "Rilievi confermati da un altro team." },
-  { label: "Scambio", v: 0.41, color: "#f5c75a", body: "Validazioni che attraversano i team." },
+  { label: "Equilibrio", v: 0.78, color: "#8fb3d1", body: "Field, Desk e Feel crescono insieme." },
+  { label: "Affidabilità", v: 0.54, color: "#e08a6e", body: "Rilievi confermati da un altro team." },
+  { label: "Scambio", v: 0.41, color: "#e8c07a", body: "Validazioni che attraversano i team." },
 ];
 
 export default function Home() {
   return (
     <main>
       {/* ------------------------------------------------------------ scena */}
-      <section className="relative flex min-h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,#ffffff_0%,#eef4ee_45%,#dfe9e3_100%)]">
+      <section className="relative flex min-h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,#f5f1e6_0%,#ebe6d8_50%,#e2dbc9_100%)]">
+        <Topo seed={2.3} cx={0.18} cy={0.12} n={12} className="absolute inset-0 size-full text-ink" opacity={0.1} />
         <HexField className="absolute inset-0 size-full [mask-image:linear-gradient(to_bottom,transparent_0%,transparent_30%,black_78%)]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[70%] bg-[radial-gradient(60%_70%_at_50%_45%,rgb(255_255_255/0.92),transparent)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[70%] bg-[radial-gradient(60%_70%_at_50%_45%,rgb(245_241_230/0.95),transparent)]" />
 
         <header className="relative z-10 flex items-start justify-between p-5 sm:p-7">
           <Logo />
           <div className="hidden flex-col items-center gap-1.5 sm:flex">
             <span className="ruler h-2.5 w-56 text-ink/50" />
-            <Label>Copertura 62% · 3 team sul campo</Label>
+            <Label>Copertura 62% – 3 team sul campo</Label>
           </div>
           <span className="glass inline-flex h-9 items-center gap-2 rounded-full px-3.5">
             <span className="size-2 rounded-full bg-glow" />
@@ -43,9 +45,9 @@ export default function Home() {
         </header>
 
         <div className="relative z-10 mx-auto mt-[9dvh] max-w-4xl px-6 text-center">
-          <Tag className="animate-rise bg-white/60">Ricerca sul campo cooperativa</Tag>
+          <Kick n="01" className="animate-rise bg-card">Ricerca sul campo cooperativa</Kick>
           <h1 className="display mt-6 animate-rise text-[clamp(2.75rem,8vw,6.5rem)] [animation-delay:80ms]">
-            Esplora un territorio. <span className="serif italic tracking-normal">Insieme.</span>
+            Esplora un territorio. <span className="text-leaf">Insieme.</span>
           </h1>
           <p className="soft mx-auto mt-6 max-w-xl animate-rise text-lg leading-snug tracking-[-0.01em] [animation-delay:160ms]">
             Team diversi, una sola mappa. Ogni rilievo validato le dà colore: nessuna classifica, si vince
@@ -66,7 +68,7 @@ export default function Home() {
         <div className="mx-auto max-w-6xl">
           <Label>Come si gioca</Label>
           <h2 className="display mt-3 max-w-3xl text-[clamp(2rem,5vw,3.75rem)]">
-            Un&apos;uscita a piedi, <span className="serif italic tracking-normal text-glow">quattro gesti.</span>
+            Un&apos;uscita a piedi, <span className="text-glow">quattro gesti.</span>
           </h2>
           <ol className="mt-14 grid gap-px overflow-hidden rounded-panel border hairline bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
             {STORY.map((s, i) => (
@@ -98,7 +100,7 @@ export default function Home() {
           </h2>
           <div className="mt-14 grid gap-4 md:grid-cols-3">
             {SURFACES.map((s) => (
-              <article key={s.name} className="surface group relative overflow-hidden rounded-panel border hairline p-7 transition duration-500 hover:-translate-y-1 hover:shadow-float">
+              <article key={s.name} className="ritaglio group relative overflow-hidden p-7 transition duration-500 hover:-translate-y-1 hover:bg-leaf hover:text-paper">
                 <div className="flex items-center justify-between">
                   <Tag color={s.color}>{s.name}</Tag>
                   <span className="label soft">{s.n}</span>
@@ -113,12 +115,13 @@ export default function Home() {
       </section>
 
       {/* ----------------------------------------------------- cooperazione */}
-      <section className="on-ink relative overflow-hidden rounded-t-[48px] px-6 py-28">
+      <section className="on-ink relative overflow-hidden px-6 py-28">
+        <Topo seed={4.1} cx={0.85} cy={0.9} n={16} className="absolute inset-0 size-full" opacity={0.14} />
         <HexField dark density={22} className="absolute inset-0 size-full opacity-60 [mask-image:radial-gradient(70%_60%_at_80%_100%,black,transparent)]" />
         <div className="relative mx-auto max-w-6xl">
           <Label>Gamification cooperativa</Label>
           <h2 className="display mt-3 max-w-3xl text-[clamp(2rem,5vw,3.75rem)]">
-            Un solo punteggio. <span className="serif italic tracking-normal text-glow">Di tutti.</span>
+            Un solo punteggio. <span className="text-glow">Di tutti.</span>
           </h2>
           <p className="soft mt-5 max-w-xl text-lg leading-snug">
             Un rilievo vale solo quando un altro team lo conferma. I doppioni rendono sempre meno. Conta
@@ -168,14 +171,15 @@ export default function Home() {
       </section>
 
       {/* ------------------------------------------------------------- via */}
-      <section className="on-ink grid min-h-[80dvh] place-items-center px-6 pb-40 text-center">
-        <div>
+      <section className="on-ink relative grid min-h-[80dvh] place-items-center overflow-hidden px-6 pb-40 text-center">
+        <Topo seed={0.9} cx={0.5} cy={0.55} n={14} className="absolute inset-0 size-full" opacity={0.16} />
+        <div className="relative">
           <h2 className="serif text-[clamp(4rem,12vw,9rem)]">Pronti?</h2>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <LinkButton href="/entra" size="lg">Entra con un codice</LinkButton>
             <LinkButton href="/regia" size="lg" variant="outline">Accesso di regia</LinkButton>
           </div>
-          <p className="label soft mt-16">Territorial Quest · dalla ricerca «Learners, Players, Designers»</p>
+          <p className="label soft mt-16">Territorial Quest – dalla ricerca «Learners, Players, Designers»</p>
         </div>
       </section>
 

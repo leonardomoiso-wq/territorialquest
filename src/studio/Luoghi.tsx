@@ -142,7 +142,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
               </>
             ) : route ? (
               <>
-                <span className="px-3 text-sm">Tocca i luoghi sulla mappa per aggiungerli o toglierli · {route.stops.length} tappe</span>
+                <span className="px-3 text-sm">Tocca i luoghi sulla mappa per aggiungerli o toglierli – {route.stops.length} tappe</span>
                 <Button size="sm" variant="ghost" onClick={() => setRoute(null)}>Annulla</Button>
                 <Button size="sm" variant="glow" disabled={busy || route.stops.length < 2} onClick={saveR}>Salva il percorso</Button>
               </>
@@ -171,7 +171,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
 
         {tab === "luoghi" && unplaced.length > 0 && (
           <Card className="!border-sun !p-4">
-            <Label>Da posizionare · {unplaced.length}</Label>
+            <Label>Da posizionare – {unplaced.length}</Label>
             <p className="soft mt-1 text-[13px]">Importati senza coordinate: tocca un luogo, poi il punto sulla mappa. Finché non è posizionato nessuno lo vede.</p>
             <ul className="mt-3 max-h-64 space-y-1.5 overflow-y-auto">
               {unplaced.map((pl) => (
@@ -218,7 +218,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
             <div><Label className="mb-2 block">Colore</Label><Swatches value={route.color} onChange={(color) => setRoute({ ...route, color })} /></div>
             <div>
               <div className="mb-2 flex items-baseline justify-between"><Label>Tappe in ordine</Label>
-                <span className="soft text-[13px]">{formatMeters(routeLength(route.stops, data.places))} · ≈ {routeMinutes(routeLength(route.stops, data.places), route.stops.length)} min</span></div>
+                <span className="soft text-[13px]">{formatMeters(routeLength(route.stops, data.places))} – ≈ {routeMinutes(routeLength(route.stops, data.places), route.stops.length)} min</span></div>
               {route.stops.length === 0 ? <p className="soft text-sm">Tocca i luoghi sulla mappa, oppure aggiungili da qui sotto.</p> : (
                 <ol className="space-y-1.5">
                   {route.stops.map((id, i) => (
@@ -261,7 +261,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
                 <h3 className="min-w-0 flex-1 truncate text-[16px] tracking-[-0.02em]">{r.name}</h3>
                 <span className="soft text-[13px]">{r.stops.length} tappe</span>
               </div>
-              <p className="soft mt-1.5 text-[13px]">{formatMeters(m)} · ≈ {routeMinutes(m, r.stops.length)} min · {r.stops.map(placeName).join(" → ")}</p>
+              <p className="soft mt-1.5 text-[13px]">{formatMeters(m)} – ≈ {routeMinutes(m, r.stops.length)} min – {r.stops.map(placeName).join(" → ")}</p>
             </Card>
           );
         }))}
@@ -288,7 +288,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
               placeholder="Fotografa le arcate dal lungofiume e conta chi attraversa in cinque minuti." />
 
             <div>
-              <div className="mb-2 flex items-baseline justify-between"><Label>Immagini · la prima è la copertina</Label><span className="soft text-xs">{place.images.length}/8</span></div>
+              <div className="mb-2 flex items-baseline justify-between"><Label>Immagini – la prima è la copertina</Label><span className="soft text-xs">{place.images.length}/8</span></div>
               <div className="grid grid-cols-4 gap-2">
                 {place.images.map((path, i) => (
                   <div key={path} className="group relative aspect-square overflow-hidden rounded-2xl bg-paper-2">
@@ -314,7 +314,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <Label className="mb-2 block">Raggio di arrivo · {place.radius_m} m</Label>
+                <Label className="mb-2 block">Raggio di arrivo – {place.radius_m} m</Label>
                 <input type="range" min={10} max={200} step={5} value={place.radius_m} onChange={(e) => setPlace({ ...place, radius_m: Number(e.target.value) })} className="w-full accent-ink" />
                 <span className="soft text-xs">Entro questa distanza il luogo risulta raggiunto.</span>
               </label>

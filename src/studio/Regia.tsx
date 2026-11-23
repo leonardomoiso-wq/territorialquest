@@ -72,7 +72,7 @@ export default function Regia({ data, me, now }: Ctx) {
               {data.observations.slice(0, 8).map((o) => (
                 <li key={o.id} className="flex items-center gap-3 py-2.5">
                   <FormTag form={o.form} />
-                  <span className="min-w-0 flex-1 truncate text-[15px]">{o.title}{summary(o) && <span className="soft"> · {summary(o)}</span>}</span>
+                  <span className="min-w-0 flex-1 truncate text-[15px]">{o.title}{summary(o) && <span className="soft"> – {summary(o)}</span>}</span>
                   <span className="soft hidden items-center gap-1.5 text-[13px] sm:inline-flex">
                     {teamOf(data, o.team_id) && <Dot color={teamOf(data, o.team_id)!.color} />}
                     {nameOf(data, o.author_id)}
@@ -96,9 +96,9 @@ export default function Regia({ data, me, now }: Ctx) {
           <div className="mt-6 grid grid-cols-4 gap-2 text-center">
             {[
               ["Copertura", ind.coverage, "var(--color-glow)"],
-              ["Equilibrio", ind.balance, "#7fb0ff"],
-              ["Affidabilità", ind.reliability, "#ff9cc2"],
-              ["Scambio", ind.exchange, "#f5c75a"],
+              ["Equilibrio", ind.balance, "#8fb3d1"],
+              ["Affidabilità", ind.reliability, "#e08a6e"],
+              ["Scambio", ind.exchange, "#e8c07a"],
             ].map(([label, v, color]) => (
               <div key={label as string}>
                 <Ring value={v as number} color={color as string} size={58} />
@@ -122,7 +122,7 @@ export default function Regia({ data, me, now }: Ctx) {
                   </div>
                   <Meter value={ratio} className="mt-2" color={state === "done" ? "var(--color-glow)" : undefined} />
                   <div className="label soft mt-1.5">
-                    {MISSION_KIND[mission.kind].label} · {state === "done" ? "raggiunta" : `ancora ${remaining(mission.ends_at, now)}`}
+                    {MISSION_KIND[mission.kind].label} – {state === "done" ? "raggiunta" : `ancora ${remaining(mission.ends_at, now)}`}
                   </div>
                 </li>
               ))}
@@ -165,7 +165,7 @@ export default function Regia({ data, me, now }: Ctx) {
             <ul className="mt-4 space-y-2 border-t hairline pt-3">
               {data.announcements.slice(0, 3).map((a) => (
                 <li key={a.id} className="text-[13px]">
-                  <span className="label soft">{teamOf(data, a.team_id)?.name ?? "Tutti"} · {ago(a.created_at, now)}</span>
+                  <span className="label soft">{teamOf(data, a.team_id)?.name ?? "Tutti"} – {ago(a.created_at, now)}</span>
                   <p className="mt-0.5">{a.body}</p>
                 </li>
               ))}

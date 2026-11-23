@@ -76,7 +76,7 @@ function Panel() {
           <span className="hidden items-center gap-2 text-sm md:inline-flex">
             <Dot color={phaseColor} live={phase === "live"} />
             {PHASE_LABEL[phase]}
-            {phase === "live" && <span className="soft">· {remaining(c.ends_at, now)}</span>}
+            {phase === "live" && <span className="soft">– {remaining(c.ends_at, now)}</span>}
           </span>
           <span className="num hidden rounded-full border hairline px-3 py-1.5 text-[13px] tracking-[0.15em] lg:inline">{c.join_code}</span>
           {c.status === "live"

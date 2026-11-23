@@ -24,11 +24,11 @@ Questi principi sono le risposte ai difetti emersi nella sperimentazione. Una mo
 ## Mappa del codice
 
 ```
-src/domain/     logica pura, testata (vitest): types, scoring, forms, survey, geo, walk, time, environment, export
+src/domain/     logica pura, testata (vitest): types, scoring, forms, survey, geo, walk, time, environment, export, datasets
 src/lib/        data.ts (tutte le chiamate Supabase + hook useCampaign in tempo reale), drafts.ts (scatti offline), hooks.ts
-src/ui/         kit.tsx (design system), MapView.tsx (MapLibre: 2D, 3D reale, modello a celle), HexField.tsx, Recovery.tsx
+src/ui/         kit.tsx (design system), MapView.tsx (MapLibre: 2D, 3D reale, modello a celle, strati), charts.tsx, Topo.tsx, HexField.tsx, Recovery.tsx
 src/campo/      app del giocatore: Collect (forme), Survey (indagine micro), useWalk (uscita), Story, Moments
-src/studio/     sezioni della regia: Regia, Tempi, Aree, Luoghi, Team, Rilievi(+Dati), Pubblico, SurveyEditor, shared
+src/studio/     sezioni della regia: Regia, Tempi, Aree, Luoghi, Fonti, Team, Rilievi(+Dati), Pubblico, SurveyEditor, shared
 src/app/        pagine: / · /accedi · /regia · /entra · /studio · /studio/[id]?vista= · /campo/[id] · /mappa/[id] · /contribuisci/[id] · /stato · /design
 src/utils/supabase/  env.ts (progetto fissato nel codice), client/server/middleware; src/proxy.ts protegge le aree riservate
 supabase/migrations/ schema in file datati e idempotenti → generano supabase/setup.sql e supabase/update.sql
@@ -47,6 +47,7 @@ Per ogni modifica segui il percorso **dominio → database → dati → interfac
 - nuova **tabella o colonna** (migrazione)
 - cambio alle **regole di punteggio** o nuova **missione**
 - nuovo contenuto sulla **mappa pubblica**
+- nuovo tipo di file o di colonna nei **dati del territorio**
 
 Prima di toccare database o punteggio leggi `references/data-model.md` (tabelle, regole di accesso, funzioni) e `references/game-and-method.md` (formule, indicatori, metodologia con la letteratura). Per qualunque schermata leggi `references/design-system.md`.
 

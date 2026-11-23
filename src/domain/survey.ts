@@ -126,4 +126,4 @@ export const completeness = (d: Partial<SurveyData>) => {
 
 /** Indagine su una riga, per CSV e anteprime. */
 export const surveyLine = (d: Partial<SurveyData>) =>
-  (d.survey ?? []).filter((x) => x.type !== "foto").map((x) => `${x.label}: ${formatAnswer(x, d.answers?.[x.id])}`).join(" · ");
+  (d.survey ?? []).filter((x) => x.type !== "foto").map((x) => `${x.label}: ${formatAnswer(x, d.answers?.[x.id])}`).join(" – ");

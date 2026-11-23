@@ -34,7 +34,7 @@ export default function Team({ data, me, now, refresh }: Ctx) {
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px]">{m.profile?.display_name ?? "Senza nome"}{m.user_id === me.user_id && <span className="soft"> (tu)</span>}</div>
           <div className="label soft mt-0.5">
-            {m.field_role ? FIELD_ROLES.find((r) => r.id === m.field_role)?.label : "ruolo libero"} · {count} rilievi · {online ? "sul campo" : ago(m.last_seen_at, now)}
+            {m.field_role ? FIELD_ROLES.find((r) => r.id === m.field_role)?.label : "ruolo libero"} – {count} rilievi – {online ? "sul campo" : ago(m.last_seen_at, now)}
           </div>
         </div>
         <select aria-label="Team" className={selectClass} value={m.team_id ?? ""} disabled={busy} onChange={(e) => act(() => updateMember(m.id, { team_id: e.target.value || null }))}>

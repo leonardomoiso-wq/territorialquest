@@ -106,7 +106,7 @@ export default function Survey({ place, open, busy, error, onClose, onSubmit }: 
   const reset = () => { setI(0); setAnswers({}); setPhotos({}); setNote(""); };
 
   return (
-    <Sheet open={open && !!place} onClose={onClose} kicker={place ? `Indagine sul sito · ${place.name}` : ""}
+    <Sheet open={open && !!place} onClose={onClose} kicker={place ? `Indagine sul sito – ${place.name}` : ""}
       title={review ? "Riepilogo" : <span className="text-[24px] leading-tight">{q?.label}</span>} wide>
       <div className="mb-5 flex items-center gap-3">
         <Meter value={qs.length ? Math.min(i, qs.length) / qs.length : 0} color="var(--color-glow)" />
@@ -134,7 +134,7 @@ export default function Survey({ place, open, busy, error, onClose, onSubmit }: 
               </li>
             ))}
           </ul>
-          <Area label="Nota finale · facoltativa" value={note} onChange={(e) => setNote(e.target.value)} maxLength={800} placeholder="Qualcosa che le domande non coglievano." />
+          <Area label="Nota finale – facoltativa" value={note} onChange={(e) => setNote(e.target.value)} maxLength={800} placeholder="Qualcosa che le domande non coglievano." />
           <p className="soft text-sm">{done}/{qs.length} risposte. Puoi inviare anche un&apos;indagine parziale; un altro team la conferma sul posto.</p>
           {error && <Notice tone="error">{error}</Notice>}
         </div>

@@ -19,7 +19,7 @@ Architettura, modello dei dati e direzione di stile: [docs/ARCHITETTURA.md](docs
 | `/mappa/[id]` | Mappa pubblica interattiva: solo contenuti validati, senza nomi; per i membri è anche l'archivio |
 | `/contribuisci/[id]` | Contributi individuali, fuori dal gioco dei team, pubblicati dopo la revisione della regia |
 | `/stato` | Diagnosi del collegamento al database |
-| `/design` | Design system: colori, tipografia, componenti |
+| `/design` | Design system, nel linguaggio «carta e mappa» |
 
 ## Come si gioca: l'Uscita
 
@@ -53,6 +53,22 @@ La mappa mostra rilievi validati, indagini sui siti, luoghi, percorsi e contribu
 con il nome del team ma mai quello delle persone. Chiunque abbia un profilo può proporre
 un contributo su un punto della mappa (licenza CC BY 4.0); la regia lo pubblica o no, con una nota.
 I contributi non entrano nel punteggio dei team.
+
+## Dati del territorio (sezione Fonti)
+
+Si trascinano nella sezione **Fonti** della regia più file insieme. Ognuno viene riconosciuto:
+
+- **Indicatori** — CSV con una riga per Comune (o altra chiave), anche per anno o per categoria:
+  diventano schede del territorio, confronti a barre e serie nel tempo. Si collegano alle aree
+  che si chiamano come i Comuni.
+- **Strati di punti** — CSV con coordinate (OSM, Wikidata…): punti sulla mappa; quelli scelti
+  (per categoria e distanza dal tracciato) diventano luoghi del gioco.
+- **Tabelle** — elenchi e schede descrittive; un elenco senza coordinate diventa luoghi
+  «da posizionare», che la regia colloca sulla mappa dalla sezione Luoghi.
+- **GeoJSON** — confini (diventano aree), tracciati (strato a puntini), punti.
+
+Le etichette delle colonne sono ricavate dai nomi (con un dizionario per Istat, ISPRA, MEF, OSM)
+e si correggono prima di salvare. Fonte e licenza compaiono nella mappa pubblica.
 
 ## Accesso di regia e accesso giocatori
 

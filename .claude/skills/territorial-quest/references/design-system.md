@@ -1,17 +1,22 @@
 # Design system
 
-Riferimenti di stile: why.zero.university, learnwithzero.com, app.zero.university (se ne riprende il linguaggio, non il marchio). Idea guida: **il territorio è la scena** — grigio che prende colore con i dati. Pagina di riferimento viva: `/design`.
+Idea guida: **il territorio è la scena**, carta che prende colore con i dati. Prima versione ispirata a why.zero.university (HUD, dock, una cosa per volta); linguaggio attuale dalla skill `slide-html-territorio`. Pagina di riferimento viva: `/design`.
 
 ## Token (`src/app/globals.css`, Tailwind v4 `@theme`)
 
-- Colori: `ink #0b0b0c`, `ink-2`, `ink-3`, `paper #f4f3ee`, `paper-2`, `card #fff`, `line #d4d3ce`, `mute`, `graphite`; accenti `moss`, `leaf #17804f`, `glow #37e08b` (solo punteggio collettivo e stati dal vivo), `field #17804f`, `desk #2f6fe0`, `feel #e2578f`, `sun`, `alert`.
-- Font: Geist (display, peso 400, spaziatura −0.045em → utility `display`), Instrument Serif (momenti di soglia, citazioni → `serif`), Geist Mono maiuscolo spaziato (etichette → `label`, numeri → `num`).
-- Superfici: `.on-ink` / `.on-paper` invertono testo e bordi per i figli; `glass` e `glass-ink` per i pannelli sulla mappa; `ruler` per il righello dell'HUD; raggi `rounded-card` 22px e `rounded-panel` 32px.
-- Animazioni: `animate-rise`, `animate-fade`, `animate-pulse-ring`, `animate-pop`, `animate-burst`; tutte annullate da `prefers-reduced-motion`.
+Linguaggio **carta e mappa** dalla skill `slide-html-territorio` (mappe dei parchi, ritagli di carta, curve di livello, poster di viaggio), palette Appennino:
+
+- Colori: `ink #2b2118` (inchiostro bruno), `brown #3a2a1c` (fondi scuri su lino), `paper #ebe6d8`, `paper-2`, `card #f5f1e6` (ritagli), `edge #fbf8f0` (bordo bianco), `line`, `mute`, `graphite`; `leaf #4a6b43` (verde), `sage #b4c49c`, `glow #d6993e` (ocra: punteggio collettivo e stati dal vivo), `field #4a6b43`, `desk #3d6f99`, `feel #b8573f`, `alert #a8473a`.
+- Caratteri: Bricolage Grotesque 500 per i titoli (`display`, `serif` senza corsivo: le parole in evidenza prendono il colore), Hanken Grotesk per il testo, IBM Plex Mono maiuscolo per etichette e numeri (`label`, `num`).
+- Texture senza immagini: grana della carta su tutta la pagina (`body::after`, SVG feTurbulence), lino sui fondi scuri (`.on-ink`).
+- Utility: `ritaglio` (bordo bianco 5 px, ombra, rotazione alternata −0,35°/+0,4°), `sentiero` (riga a puntini), `cartello` (riquadro mono con bordo; componente `Kick` con numero ocra), `glass`/`glass-ink` per i pannelli sulla mappa, `ruler`.
+- Curve di livello: componente `Topo` (anelli deformati da tre sinusoidi, seme deterministico) sulle schermate di soglia e sui fondi scuri.
+- Grafici (`src/ui/charts.tsx`): `Bars`, `Lines` (etichette dirette, cursore con valori), `Spark`, `ValueTable`; palette categorica `SERIES` in `src/domain/datasets.ts` verificata sul fondo carta: verde, ocra, blu, rosso, viola, terra, in quest'ordine e assegnata alla chiave, mai al rango.
+- Niente punto mediano (·) nei testi: si usa la virgola o il trattino lungo.
 
 ## Componenti (`src/ui/kit.tsx`)
 
-`Button`/`LinkButton` (primary, glow, ghost, outline, danger; sm/md/lg; sempre a pillola), `IconButton`, `Label`, `Tag` (colorato), `Dot` (con `live`), `Card`, `SectionTitle`, `Stat`, `Meter`, `Ring`, `Field`, `Area`, `Select`, `Segmented`, `Dock` (barra flottante in basso: l'azione primaria vive lì), `Sheet` (foglio dal basso su telefono, centrato su desktop; Esc chiude), `Empty` (titolo in serif corsivo che spiega che cosa fare), `Notice` (info, ok, error), `Spinner`.
+`Button`/`LinkButton` (primary, glow, ghost, outline, danger; sm/md/lg; a pillola, comode al pollice), `Kick`, `IconButton`, `Label`, `Tag` (colorato), `Dot` (con `live`), `Card`, `SectionTitle`, `Stat`, `Meter`, `Ring`, `Field`, `Area`, `Select`, `Segmented`, `Dock` (barra flottante in basso: l'azione primaria vive lì), `Sheet` (foglio dal basso su telefono, centrato su desktop; in un portale su `document.body`, sopra ogni intestazione; Esc chiude), `Empty` (titolo in serif corsivo che spiega che cosa fare), `Notice` (info, ok, error), `Spinner`.
 
 Componenti di dominio riutilizzabili: `FormTag`, `FormIcon` (`src/campo/Collect.tsx`), `SurveyAnswers` (`src/campo/Survey.tsx`), `KindTag`, `Swatches`, `backdrop()` (`src/studio/shared.tsx`), `MapView` (props per aree, rilievi, flussi, luoghi, percorsi, contributi, giocatori, nebbia e celle accese, modalità 2d/3d/model, disegno, modifica vertici, pennello, sfondi).
 
