@@ -36,6 +36,10 @@ export default function Luoghi({ data, refresh }: Ctx) {
   const [selected, setSelected] = useState<string | null>(null);
   const [route, setRoute] = useState<RouteDraft | null>(null);
   const [uploading, setUploading] = useState(false);
+  /** Luogo importato senza coordinate che si sta posizionando. */
+  const [placing, setPlacing] = useState<Place | null>(null);
+  const unplaced = data.places.filter((p) => p.placed === false);
+  const placedPlaces = data.places.filter((p) => p.placed !== false);
 
   const visitsBy = useMemo(() => {
     const m = new Map<string, number>();
@@ -53,7 +57,13 @@ export default function Luoghi({ data, refresh }: Ctx) {
     ? [{ id: route.id ?? "nuovo", campaign_id: c.id, name: route.name, description: "", color: route.color, stops: route.stops, created_at: "" }]
     : data.routes;
 
-  const onMapClick = picking
+  const onMapClick = placing
+    ? (p: [number, number]) => {
+        const pl = placing;
+        setPlacing(null);
+        run(async () => { await savePlace({ ...pl, lng: p[0], lat: p[1], placed: true }); await refresh(); });
+      }
+    : picking
     ? (p: [number, number]) => {
         setPicking(false);
         setPlace((d) => (d ? { ...d, lng: p[0], lat: p[1] } : blankPlace(p[0], p[1])));
@@ -113,14 +123,19 @@ export default function Luoghi({ data, refresh }: Ctx) {
       <div className="relative h-[76dvh] min-h-[480px] overflow-hidden rounded-panel border hairline">
         <MapView
           className="size-full" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} fit {...backdrop(c)}
-          places={data.places} routes={shownRoutes} activeRouteId={route ? route.id ?? "nuovo" : null}
+          places={data.places} routes={shownRoutes} layers={data.datasets.filter((d) => d.kind === "punti" || d.kind === "linee")} activeRouteId={route ? route.id ?? "nuovo" : null}
           selectedPlaceId={place?.id ?? selected} reached={[...visitsBy.keys()]}
           pin={place && !place.id ? [place.lng, place.lat] : null}
           onClick={onMapClick} onPlaceClick={onPlaceClick}
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4">
           <div className="glass pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-[28px] p-1.5">
-            {picking ? (
+            {placing ? (
+              <>
+                <span className="px-3 text-sm">Tocca la mappa dove si trova «{placing.name}»</span>
+                <Button size="sm" variant="ghost" onClick={() => setPlacing(null)}>Annulla</Button>
+              </>
+            ) : picking ? (
               <>
                 <span className="px-3 text-sm">Tocca la mappa dove si trova il luogo</span>
                 <Button size="sm" variant="ghost" onClick={() => setPicking(false)}>Annulla</Button>
@@ -147,16 +162,34 @@ export default function Luoghi({ data, refresh }: Ctx) {
         <div className="flex items-end justify-between gap-3">
           <div>
             <Label>Esplorazione</Label>
-            <h2 className="display mt-1 text-[26px]">{data.places.length} luoghi · {data.routes.length} percorsi</h2>
+            <h2 className="display mt-1 text-[26px]">{placedPlaces.length} luoghi, {data.routes.length} percorsi</h2>
           </div>
           <span className="soft text-[13px] whitespace-nowrap">{totalPoints} pt per team</span>
         </div>
         <Segmented value={tab} onChange={setTab} options={[{ id: "luoghi", label: "Luoghi" }, { id: "percorsi", label: "Percorsi" }]} />
         {error && !place && <Notice tone="error">{error}</Notice>}
 
-        {tab === "luoghi" && (data.places.length === 0 ? (
-          <Empty title="Nessun luogo, per ora.">Un luogo è una meta: un ponte storico, un giardino, un murale, un&apos;ansa del fiume. Raggiungerlo e raccogliere lì un rilievo vale punti per tutti.</Empty>
-        ) : data.places.map((pl) => {
+        {tab === "luoghi" && unplaced.length > 0 && (
+          <Card className="!border-sun !p-4">
+            <Label>Da posizionare · {unplaced.length}</Label>
+            <p className="soft mt-1 text-[13px]">Importati senza coordinate: tocca un luogo, poi il punto sulla mappa. Finché non è posizionato nessuno lo vede.</p>
+            <ul className="mt-3 max-h-64 space-y-1.5 overflow-y-auto">
+              {unplaced.map((pl) => (
+                <li key={pl.id}>
+                  <button onClick={() => { setPicking(false); setPlacing(pl); }}
+                    className={cx("flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition", placing?.id === pl.id ? "border-ink bg-ink text-paper" : "hairline hover:bg-ink/5")}>
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: categoryOf(pl.category).color }} />
+                    <span className="min-w-0 flex-1 truncate">{pl.name}</span>
+                    <span className="soft truncate text-xs">{String(pl.attributes?.localita ?? pl.attributes?.comune ?? "")}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+        {tab === "luoghi" && (placedPlaces.length === 0 ? (
+          unplaced.length > 0 ? null : <Empty title="Nessun luogo, per ora.">Un luogo è una meta: un ponte storico, un giardino, un murale, un&apos;ansa del fiume. Raggiungerlo e raccogliere lì un rilievo vale punti per tutti.</Empty>
+        ) : placedPlaces.map((pl) => {
           const cat = categoryOf(pl.category), cover = mediaUrl(pl.images[0] ?? null);
           return (
             <Card key={pl.id} className={cx("flex cursor-pointer gap-3 !p-3 transition", selected === pl.id && "!border-ink shadow-soft")} onClick={() => setSelected(pl.id === selected ? null : pl.id)}>
@@ -166,7 +199,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2"><Tag color={cat.color}>{cat.label}</Tag><span className="num soft ml-auto text-[13px]">{pl.points} pt</span></div>
                 <h3 className="mt-1 truncate text-[16px] tracking-[-0.02em]">{pl.name}</h3>
-                <p className="soft text-[13px]">{visitsBy.get(pl.id) ?? 0} arrivi · {obsBy.get(pl.id) ?? 0} rilievi · {pl.survey?.length ? `indagine di ${pl.survey.length} domande` : "senza indagine"}</p>
+                <p className="soft text-[13px]">{visitsBy.get(pl.id) ?? 0} arrivi, {obsBy.get(pl.id) ?? 0} rilievi, {pl.survey?.length ? `indagine di ${pl.survey.length} domande` : "senza indagine"}{pl.source ? `, da ${pl.source}` : ""}</p>
                 {selected === pl.id && (
                   <div className="mt-2.5 flex gap-2">
                     <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setError(null); setPlace({ ...pl }); }}>Modifica</Button>

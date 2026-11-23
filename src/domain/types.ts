@@ -143,7 +143,7 @@ export interface Announcement {
   created_at: string;
 }
 
-export type PlaceCategory = "storico" | "naturalistico" | "culturale" | "sociale" | "paesaggio" | "altro";
+export type PlaceCategory = "storico" | "naturalistico" | "culturale" | "sociale" | "paesaggio" | "ospitalita" | "altro";
 
 /** Luogo di interesse da raggiungere, creato dalla regia. */
 export interface Place {
@@ -163,6 +163,12 @@ export interface Place {
   images: string[];
   /** Scheda d'indagine sul sito (scala micro). */
   survey?: import("./survey").Question[];
+  /** Provenienza, se importato da un file. */
+  source?: string;
+  /** Colonne originali del file da cui è stato importato. */
+  attributes?: Record<string, unknown>;
+  /** false = importato senza coordinate, da posizionare dalla regia. */
+  placed?: boolean;
   created_at: string;
 }
 
@@ -194,9 +200,10 @@ export const PLACE_CATEGORIES: { id: PlaceCategory; label: string; color: string
   { id: "culturale", label: "Culturale", color: "#7a63d2" },
   { id: "sociale", label: "Sociale", color: "#d9608f" },
   { id: "paesaggio", label: "Paesaggio", color: "#3b8fd8" },
+  { id: "ospitalita", label: "Ospitalità", color: "#a8651c" },
   { id: "altro", label: "Altro", color: "#3d4046" },
 ];
-export const categoryOf = (id: string | null | undefined) => PLACE_CATEGORIES.find((c) => c.id === id) ?? PLACE_CATEGORIES[5];
+export const categoryOf = (id: string | null | undefined) => PLACE_CATEGORIES.find((c) => c.id === id) ?? PLACE_CATEGORIES[PLACE_CATEGORIES.length - 1];
 
 export type ContributionStatus = "pending" | "approved" | "rejected";
 
@@ -247,6 +254,7 @@ export interface CampaignData {
   routes: Route[];
   visits: Visit[];
   contributions: Contribution[];
+  datasets: import("./datasets").Dataset[];
 }
 
 export const KIND_LABEL: Record<ObservationKind, string> = {

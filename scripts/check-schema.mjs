@@ -18,7 +18,8 @@ const places = readFileSync("supabase/migrations/20261117000000_places_routes.sq
 const recovery = readFileSync("supabase/migrations/20261117000100_recovery.sql", "utf8");
 const pub = readFileSync("supabase/migrations/20261117000200_public.sql", "utf8");
 const orgs = readFileSync("supabase/migrations/20261118000000_organizers.sql", "utf8");
-for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); await db.exec(pub); await db.exec(orgs); } // due passate: idempotenza
+const ds = readFileSync("supabase/migrations/20261123000000_datasets.sql", "utf8");
+for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); await db.exec(pub); await db.exec(orgs); await db.exec(ds); } // due passate: idempotenza
 
 const as = async (uid, q, params) => {
   await db.exec(`set role authenticated; select set_config('app.uid', '${uid}', false);`);
@@ -137,4 +138,12 @@ await fails("un giocatore non approva", async () => { const r = await as(anna, `
 await as(master, `update contributions set status = 'approved', reviewed_by = $2, reviewed_at = now() where id = $1`, [cid, master]);
 pm = one(await asAnon(`select public_map($1) m`, [camp])).m;
 console.log("dopo l'approvazione:", pm.contributions.map((x) => x.display_name + ": " + x.title));
+// dati del territorio
+await fails("un giocatore non importa dati", () => as(anna, `insert into datasets (campaign_id, name, kind) values ($1, 'X', 'indicatori')`, [camp]));
+await as(master, `insert into datasets (campaign_id, name, kind, key_column, rows) values ($1, 'Geografia', 'indicatori', 'comune', '[{"comune":"Berceto","alt_sede":808}]')`, [camp]);
+console.log("membro legge i dati:", one(await as(anna, `select count(*)::int n from datasets where campaign_id = $1`, [camp])).n);
+console.log("dati pubblici da fuori:", one(await asAnon(`select jsonb_array_length(public_datasets($1)) n`, [camp])).n);
+const hidden = one(await as(master, `insert into places (campaign_id, name, lng, lat, placed, category, attributes, source) values ($1, 'Ostello da posizionare', 7.68, 45.07, false, 'ospitalita', '{"posti":"21"}', 'accoglienza.csv') returning id`, [camp])).id;
+await fails("non si arriva a un luogo da posizionare", () => as(anna, `select check_in($1, 7.68, 45.07)`, [hidden]));
+console.log("luogo da posizionare nascosto al pubblico:", !one(await asAnon(`select public_map($1) m`, [camp])).m.places.some((p) => p.id === hidden));
 console.log("SCHEMA OK");

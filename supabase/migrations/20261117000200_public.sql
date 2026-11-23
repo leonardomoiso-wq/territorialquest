@@ -69,7 +69,7 @@ begin
       'environment', a.environment, 'terrain', a.terrain)) from areas a where a.campaign_id = c), '[]'),
     'themes', coalesce((select jsonb_agg(jsonb_build_object('id', t.id, 'name', t.name, 'color', t.color) order by t.sort) from themes t where t.campaign_id = c), '[]'),
     'teams', coalesce((select jsonb_agg(jsonb_build_object('id', t.id, 'name', t.name, 'color', t.color)) from teams t where t.campaign_id = c), '[]'),
-    'places', coalesce((select jsonb_agg(to_jsonb(p) - 'campaign_id') from places p where p.campaign_id = c), '[]'),
+    'places', coalesce((select jsonb_agg(to_jsonb(p) - 'campaign_id') from places p where p.campaign_id = c and coalesce((to_jsonb(p) ->> 'placed')::boolean, true)), '[]'),
     'routes', coalesce((select jsonb_agg(to_jsonb(r) - 'campaign_id') from routes r where r.campaign_id = c), '[]'),
     'observations', coalesce((select jsonb_agg(jsonb_build_object(
       'id', o.id, 'form', o.form, 'kind', o.kind, 'lens', o.lens, 'title', o.title, 'note', o.note, 'feeling', o.feeling,

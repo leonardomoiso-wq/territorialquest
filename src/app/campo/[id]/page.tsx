@@ -9,12 +9,14 @@ import Story from "@/campo/Story";
 import Survey, { SurveyAnswers, type SurveyResult } from "@/campo/Survey";
 import { useWalk, vibrate } from "@/campo/useWalk";
 import { formOf, kindOf, lensLabel, pathLength, summary, type Form } from "@/domain/forms";
+import { figuresFor, formatValue, pointsOf } from "@/domain/datasets";
 import { areaAt, cellOf } from "@/domain/geo";
 import { BASE, indicators, MISSION_KIND, missionProgress, novelty, scoreObservations } from "@/domain/scoring";
-import { ago, areaOpen, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
+import { ago, areaOpen, isOnline, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
 import { categoryOf, FIELD_ROLES, type FieldRole, type Observation, type Place } from "@/domain/types";
 import { bearing, formatDuration, formatMeters, metersBetween, nearestDark, windOf } from "@/domain/walk";
 import { routeLength, routeMinutes } from "@/studio/Luoghi";
+import { Spark } from "@/ui/charts";
 import { addObservation, checkIn, uploadMedia, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
 import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
 import { useAction, useNow } from "@/lib/hooks";
@@ -22,7 +24,7 @@ import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
 
-type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near";
 type LngLat = [number, number];
 
 const NEAR = 80; // metri: «sei sul posto»
@@ -34,6 +36,7 @@ const ICON = {
   camera: "M4 8h3l1.500-2h7L17 8h3v11H4zM12 16.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
   check: "M5 12.500 10 17.500 19 7",
   tray: "M4 13l2.500-7h11L20 13v5H4zM4 13h5l1 2h4l1-2h5",
+  near: "M12 21s-6.500-5.600-6.500-11A6.500 6.500 0 0 1 18.500 10c0 5.400-6.500 11-6.500 11zM12 12.500a2.500 2.500 0 1 0 0-5 2.500 2.500 0 0 0 0 5z",
   walk: "M13 4.500a1.500 1.500 0 1 0 0-.010M9 21l2-6-2.500-2.500L10 8l3 1 2 3h3M11 15l3 2 1 4",
   target: "M12 3v3M12 18v3M3 12h3M18 12h3M12 15.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
   route: "M6 19a2 2 0 1 0 0-.010M18 7a2 2 0 1 0 0-.010M6 17V11a4 4 0 0 1 4-4h6",
@@ -184,6 +187,19 @@ export default function Campo() {
   const stopTarget = nextStop && position ? { meters: metersBetween(position, [nextStop.lng, nextStop.lat]), bearing: bearing(position, [nextStop.lng, nextStop.lat]) } : null;
   const target = walking && position && !activeRoute ? nearestDark(position, ind.territory, litNow) : null;
   const currentPlace = data.places.find((p) => p.id === placeId) ?? null;
+
+  /* ------------------------------------------------ vicino a te (raggio 300 m) */
+  const AROUND = 300;
+  const hereNow = position ? areaAt(position[0], position[1], data.areas) : null;
+  const figures = hereNow ? figuresFor(data.datasets, hereNow.name) : [];
+  const placesAround = position ? data.places.filter((p) => p.placed !== false).map((p) => ({ p, m: metersBetween(position, [p.lng, p.lat]) })).filter((x) => x.m <= AROUND).sort((a, b) => a.m - b.m) : [];
+  const toValidateAround = toValidate.filter((o) => distance(o) <= AROUND);
+  const layerAround = position ? data.datasets.filter((d) => d.kind === "punti").flatMap((d) => pointsOf(d).map((x) => ({ ...x, dataset: d.name, color: d.color, m: metersBetween(position, [x.lng, x.lat]) }))).filter((x) => x.m <= AROUND).sort((a, b) => a.m - b.m) : [];
+  const aroundCount = placesAround.length + toValidateAround.length;
+  /** Luoghi completati dal mio team: arrivo e rilievo confermato. */
+  const completed = [...ind.places.values()].filter((x) => [...x.detailed].some((k) => k === me.team_id || k === `persona:${me.user_id}`) && reached.has(x.place.id)).map((x) => x.place.id);
+  /** Compagni di team con un segnale recente, visibili durante l'uscita. */
+  const mates = walking && me.team_id ? data.members.filter((m) => m.team_id === me.team_id && m.user_id !== me.user_id && m.last_lng != null && m.last_lat != null && isOnline(m.last_seen_at, now)) : [];
   const placeDistance = (p: Place) => (position ? metersBetween(position, [p.lng, p.lat]) : null);
   const followRoute = (rid: string | null) => {
     setRouteId(rid);
@@ -305,7 +321,13 @@ export default function Campo() {
         focus={walking && follow && !picking ? position : null} onDrag={() => setFollow(false)}
         pin={(picking || panel === "new") && !tracing ? pin : null}
         draft={(picking || panel === "new") && tracing ? path : undefined} draftLine
-        players={position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#0b0b0c", lng: position[0], lat: position[1], online: true }] : []}
+        players={[
+          ...mates.map((m) => ({ id: m.id, name: m.profile?.display_name ?? "", color: myTeam?.color ?? "#4a6b43", lng: m.last_lng!, lat: m.last_lat!, online: true })),
+          ...(position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#2b2118", lng: position[0], lat: position[1], online: true }] : []),
+        ]}
+        reach={position && canCollect ? NEAR : null} completed={completed}
+        layers={data.datasets.filter((d) => d.kind === "punti" || d.kind === "linee")}
+        onLayerPointClick={(x) => setToast(`${x.label}${x.category && x.category !== x.label ? `, ${x.category}` : ""} (${x.dataset})`)}
         onClick={picking ? (p) => (tracing ? setPath((ps) => [...ps, p]) : setPin(p)) : undefined}
         onObservationClick={(oid) => { const o = data.observations.find((x) => x.id === oid); if (o) { setDetail(o); setPanel("detail"); } }}
       />
@@ -421,6 +443,7 @@ export default function Campo() {
               </button>
               <Counter label="Conferma i rilievi degli altri" d={ICON.check} count={toValidate.length} onClick={() => setPanel("validate")} />
               {drafts.length > 0 && <Counter label="Foto da completare" d={ICON.tray} count={drafts.length} onClick={() => setPanel("drafts")} />}
+              <Counter label="Vicino a te" d={ICON.near} count={aroundCount} onClick={() => setPanel("near")} />
               {data.places.length > 0 && <Counter label="Luoghi e percorsi" d={ICON.route} count={0} onClick={() => setPanel("routes")} />}
               {walking
                 ? <Button variant="outline" className="h-10" onClick={end}>Rientra</Button>
@@ -429,6 +452,69 @@ export default function Campo() {
           )}
         </div>
       </div>
+
+      {/* ----------------------------------------------------- vicino a te */}
+      <Sheet open={openPanel === "near"} onClose={() => setPanel(null)} kicker={`Entro ${AROUND} m`} title="Vicino a te" wide>
+        {!position ? <Empty title="Posizione non disponibile.">Consenti la posizione al browser per vedere che cosa hai intorno.</Empty> : (
+          <div className="space-y-6">
+            {hereNow && (
+              <section className="on-ink rounded-card p-5">
+                <Label>Sei in</Label>
+                <h3 className="display mt-1 text-[30px]">{hereNow.name}</h3>
+                {figures.length === 0 ? <p className="soft mt-2 text-sm">Nessun dato del territorio per quest&apos;area.</p> : (
+                  <ul className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                    {figures.slice(0, 10).map((f) => (
+                      <li key={f.dataset.id + f.column.key} className="min-w-0">
+                        <span className="label soft block truncate !text-[9px]">{f.column.label}{f.year ? ` ${f.year}` : ""}</span>
+                        <span className="flex items-baseline justify-between gap-3">
+                          <span className="display num text-[22px]">{formatValue(f.value, f.column.unit)}</span>
+                          {f.series.length > 2 && <Spark points={f.series} unit={f.column.unit} />}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {figures.length > 10 && <p className="soft mt-3 text-xs">e altri {figures.length - 10} indicatori nella mappa pubblica</p>}
+              </section>
+            )}
+            <section>
+              <Label className="mb-2 block">Luoghi · {placesAround.length}</Label>
+              {placesAround.length === 0 ? <p className="soft text-sm">Nessun luogo da raggiungere qui intorno.</p> : (
+                <ul className="divide-y divide-line">
+                  {placesAround.map(({ p, m }) => (
+                    <li key={p.id}><button className="flex w-full items-center gap-3 py-2.5 text-left" onClick={() => { setPlaceId(p.id); setPanel("place"); }}>
+                      <span className="size-3 shrink-0 rounded-full" style={{ background: categoryOf(p.category).color, boxShadow: completed.includes(p.id) ? "0 0 0 3px #d6993e" : reached.has(p.id) ? "0 0 0 3px #4a6b43" : undefined }} />
+                      <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                      <span className="soft text-sm">{completed.includes(p.id) ? "completato" : reached.has(p.id) ? "raggiunto" : formatMeters(m)}</span>
+                    </button></li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section>
+              <Label className="mb-2 block">Da confermare · {toValidateAround.length}</Label>
+              {toValidateAround.length === 0 ? <p className="soft text-sm">Nessun rilievo di altri team qui intorno.</p> : (
+                <Button variant="outline" onClick={() => setPanel("validate")}>Conferma i {toValidateAround.length} rilievi vicini</Button>
+              )}
+            </section>
+            {layerAround.length > 0 && (
+              <section>
+                <Label className="mb-2 block">Servizi e punti utili · {layerAround.length}</Label>
+                <ul className="divide-y divide-line">
+                  {layerAround.slice(0, 12).map((x, i) => (
+                    <li key={i} className="flex items-center gap-3 py-2 text-sm">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ background: x.color }} />
+                      <span className="min-w-0 flex-1 truncate">{x.label}{x.category && x.category !== x.label ? <span className="soft">, {x.category}</span> : null}</span>
+                      <span className="soft">{formatMeters(x.m)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <p className="soft text-xs">Il cerchio ocra sulla mappa è il tuo raggio d&apos;azione: dentro, i luoghi si raggiungono e i rilievi degli altri si confermano.</p>
+          </div>
+        )}
+      </Sheet>
 
       {/* ---------------------------------------------------------- luogo */}
       <Sheet open={openPanel === "place" && !!currentPlace} onClose={() => setPanel(null)}
@@ -445,7 +531,15 @@ export default function Campo() {
                   {p.images.map((path) => /* eslint-disable-next-line @next/next/no-img-element */ <img key={path} src={mediaUrl(path) ?? ""} alt="" className="h-52 w-[85%] shrink-0 snap-center rounded-card object-cover sm:w-[70%]" />)}
                 </div>
               )}
-              {p.description && <p className="text-[15px] leading-snug">{p.description}</p>}
+              {p.description && !(p.attributes && Object.keys(p.attributes).length) && <p className="text-[15px] leading-snug">{p.description}</p>}
+              {p.attributes && Object.keys(p.attributes).length > 0 && (
+                <dl className="divide-y divide-line rounded-2xl border hairline text-sm">
+                  {Object.entries(p.attributes).filter(([k, v]) => v !== null && v !== "" && !/^(lat|lon|lng|cod)$/i.test(k)).slice(0, 10).map(([k, v]) => (
+                    <div key={k} className="flex gap-3 px-3.5 py-2"><dt className="soft min-w-0 flex-1">{k.replace(/_/g, " ")}</dt><dd className="text-right">{String(v)}</dd></div>
+                  ))}
+                  {p.source && <div className="soft px-3.5 py-2 text-xs">Fonte: {p.source}</div>}
+                </dl>
+              )}
               {p.prompt && (
                 <div className="rounded-2xl border-l-4 bg-paper-2 py-3 pr-4 pl-4" style={{ borderColor: categoryOf(p.category).color }}>
                   <span className="label soft">Che cosa raccogliere qui</span>

@@ -9,6 +9,7 @@ import { cellToLatLng } from "h3-js";
 import { useEffect, useRef } from "react";
 import { cellHeight, environmentOf, modelCells, type Environment } from "@/domain/environment";
 import { boundsOf, cellOf, cellRing, cellsOf } from "@/domain/geo";
+import { pointsOf, type Dataset } from "@/domain/datasets";
 import { categoryOf, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
 
 setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -102,6 +103,13 @@ interface Props {
   /** Contributi individuali approvati (o in revisione, per la regia). */
   contributions?: { id: string; lng: number; lat: number; form: string; status?: string }[];
   onContributionClick?: (id: string) => void;
+  /** Strati di riferimento dai dati del territorio (punti e linee). */
+  layers?: Dataset[];
+  onLayerPointClick?: (info: { dataset: string; label: string; category: string }) => void;
+  /** Raggio d'azione in metri attorno alla posizione del giocatore («me»). */
+  reach?: number | null;
+  /** Luoghi completati (arrivo e indagine confermata). */
+  completed?: Iterable<string>;
   onObservationClick?: (id: string) => void;
   onMove?: (center: [number, number], zoom: number) => void;
   onReady?: (api: MapApi) => void;
@@ -217,17 +225,28 @@ export default function MapView(props: Props) {
 
     set("pin", fc(p.pin ? [point(p.pin)] : []));
 
+    const layerPoints: GeoJSON.Feature[] = [], layerLines: GeoJSON.Feature[] = [];
+    for (const d of p.layers ?? []) {
+      if (d.kind === "punti") for (const x of pointsOf(d)) layerPoints.push(point([x.lng, x.lat], { color: d.color, dataset: d.name, label: x.label, category: x.category }));
+      if (d.kind === "linee" && !Array.isArray(d.rows)) for (const f of d.rows.features ?? []) layerLines.push({ ...f, properties: { ...(f.properties ?? {}), color: d.color } });
+    }
+    set("layer-points", fc(layerPoints));
+    set("layer-lines", fc(layerLines));
+    const me = (p.players ?? []).find((u) => u.id === "me");
+    set("reach", fc(me && p.reach ? [point([me.lng, me.lat], { r0: p.reach / (156543.03 * Math.cos((me.lat * Math.PI) / 180)) })] : []));
+
     set("contribs", fc((p.contributions ?? []).map((x) => point([x.lng, x.lat], {
       id: x.id, color: CONTRIB_COLOR[x.form] ?? "#7a63d2", pending: x.status === "pending",
     }))));
 
     /* ------------------------------------------------------ luoghi e percorsi */
     const reached = new Set(p.reached ?? []);
-    set("places", fc((p.places ?? []).map((pl) => {
+    const completed = new Set(p.completed ?? []);
+    set("places", fc((p.places ?? []).filter((pl) => pl.placed !== false).map((pl) => {
       // raggio in pixel a zoom 0: si scala con lo zoom nella regola del livello
       const r0 = pl.radius_m / (156543.03 * Math.cos((pl.lat * Math.PI) / 180));
       return point([pl.lng, pl.lat], {
-        id: pl.id, name: pl.name, color: categoryOf(pl.category).color, reached: reached.has(pl.id),
+        id: pl.id, name: pl.name, color: categoryOf(pl.category).color, reached: reached.has(pl.id), done: completed.has(pl.id),
         selected: pl.id === p.selectedPlaceId, r0, r22: r0 * 4194304,
       });
     })));
@@ -325,7 +344,7 @@ export default function MapView(props: Props) {
 
       m.on("load", () => {
         const empty = fc([]);
-        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "contribs", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
+        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
 
         m.addLayer({ id: "tq-veil", type: "background", paint: { "background-color": PAPER, "background-opacity": 0 } });
         m.addLayer({ id: "cells-fill", type: "fill", source: "cells", paint: {
@@ -362,6 +381,17 @@ export default function MapView(props: Props) {
           "line-color": "#0f9aa8", "line-width": ["interpolate", ["linear"], ["get", "intensity"], 1, 2, 5, 8],
           "line-opacity": ["case", ["==", ["get", "status"], "validated"], 0.9, 0.5],
         } });
+        m.addLayer({ id: "layer-lines-casing", type: "line", source: "layer-lines", layout: { "line-cap": "round", "line-join": "round" }, paint: {
+          "line-color": "#f5f1e6", "line-width": 7, "line-opacity": 0.9,
+        } });
+        // sentiero a puntini, come nelle mappe dei parchi
+        m.addLayer({ id: "layer-lines", type: "line", source: "layer-lines", layout: { "line-cap": "round", "line-join": "round" }, paint: {
+          "line-color": ["get", "color"], "line-width": 4.5, "line-dasharray": [0, 2],
+        } });
+        m.addLayer({ id: "layer-points", type: "circle", source: "layer-points", paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 2.5, 16, 5.5], "circle-color": ["get", "color"],
+          "circle-stroke-color": "#f5f1e6", "circle-stroke-width": 1.5, "circle-opacity": 0.9,
+        } });
         m.addLayer({ id: "routes-casing", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: {
           "line-color": "#ffffff", "line-width": 7, "line-opacity": ["case", ["get", "active"], 0.85, 0.25],
         } });
@@ -379,6 +409,11 @@ export default function MapView(props: Props) {
           "circle-opacity": ["case", ["==", ["get", "status"], "validated"], 1, 0.45],
           "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5,
         } });
+        // raggio d'azione: entro questo cerchio luoghi e rilievi si possono toccare
+        m.addLayer({ id: "reach", type: "circle", source: "reach", paint: {
+          "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 0, ["get", "r0"], 22, ["*", ["get", "r0"], 4194304]],
+          "circle-color": "#d6993e", "circle-opacity": 0.08, "circle-stroke-color": "#d6993e", "circle-stroke-width": 2, "circle-stroke-opacity": 0.55,
+        } });
         m.addLayer({ id: "players-halo", type: "circle", source: "players", paint: {
           "circle-radius": 14, "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "online"], 0.22, 0.06],
         } });
@@ -393,8 +428,10 @@ export default function MapView(props: Props) {
           "circle-opacity": ["case", ["get", "pending"], 0.6, 1], "circle-stroke-opacity": ["case", ["get", "pending"], 0.5, 1],
         } });
         m.addLayer({ id: "places-halo", type: "circle", source: "places", paint: {
-          "circle-radius": ["case", ["get", "selected"], 20, 15], "circle-color": "#ffffff", "circle-opacity": 0.92,
-          "circle-stroke-color": ["case", ["get", "reached"], "#37e08b", "#0b0b0c"], "circle-stroke-width": ["case", ["get", "reached"], 3, 1.5],
+          "circle-radius": ["case", ["get", "selected"], 20, 15],
+          "circle-color": ["case", ["get", "done"], "#d6993e", "#ffffff"], "circle-opacity": 0.95,
+          "circle-stroke-color": ["case", ["get", "done"], "#2b2118", ["get", "reached"], "#4a6b43", "#2b2118"],
+          "circle-stroke-width": ["case", ["get", "reached"], 3, 1.5],
         } });
         m.addLayer({ id: "places", type: "circle", source: "places", paint: {
           "circle-radius": ["case", ["get", "selected"], 12, 9], "circle-color": ["get", "color"],
@@ -507,6 +544,8 @@ export default function MapView(props: Props) {
         if (cur.edit || cur.onPaint) return;
         // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick(lngLat(e));
+        const lp = hit(e, "layer-points");
+        if (lp && cur.onLayerPointClick) return cur.onLayerPointClick({ dataset: String(lp.properties.dataset), label: String(lp.properties.label), category: String(lp.properties.category) });
         const ct = hit(e, "contribs");
         if (ct && cur.onContributionClick) return cur.onContributionClick(String(ct.properties.id));
         const pl = hit(e, "places-halo") ?? hit(e, "places");

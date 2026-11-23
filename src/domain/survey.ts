@@ -77,6 +77,14 @@ export const SURVEY_TEMPLATES: Record<PlaceCategory, Question[]> = {
     q("scelta", "Momento della giornata", { options: ["Mattina", "Mezzogiorno", "Pomeriggio", "Tramonto", "Sera"] }),
     q("testo", "Che cosa cambieresti in questa vista?"),
   ],
+  ospitalita: [
+    q("foto", "L'ingresso, così come lo trova chi arriva a piedi"),
+    q("sino", "È segnalata lungo il cammino?"),
+    q("conteggio", "Posti letto dichiarati o osservati"),
+    q("multipla", "Servizi per chi cammina", { options: ["Acqua", "Lavaggio", "Cucina", "Ricarica", "Deposito zaini", "Timbro della credenziale"] }),
+    q("scala", "Accoglienza percepita", { low: "Fredda", high: "Calorosa" }),
+    q("testo", "Che cosa racconta chi la gestisce?"),
+  ],
   altro: [
     q("foto", "Il dettaglio più significativo"),
     q("scala", "Quanto è interessante per la ricerca", { low: "Poco", high: "Molto" }),

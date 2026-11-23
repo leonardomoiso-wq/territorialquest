@@ -26,7 +26,7 @@ const base = (observations: Observation[]): CampaignData => ({
   ],
   areas: [{ id: "a1", campaign_id: "c", team_id: null, name: "Aurora", color: "#000", geometry: square, opens_at: null, closes_at: null }],
   themes: [{ id: "th1", campaign_id: "c", name: "Ambiente", color: "#000", sort: 1 }],
-  missions: [], observations, announcements: [], walks: [], places: [], routes: [], visits: [], contributions: [],
+  missions: [], observations, announcements: [], walks: [], places: [], routes: [], visits: [], contributions: [], datasets: [],
 });
 
 describe("punteggio cooperativo", () => {

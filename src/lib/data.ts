@@ -7,6 +7,7 @@ import type {
   Announcement, Area, Campaign, CampaignData, FieldRole, Membership, Mission, Contribution, Observation, ObservationKind, Place, Polygon, Route, Team, Theme, Visit, Walk,
 } from "@/domain/types";
 import { createClient } from "@/utils/supabase/client";
+import type { Dataset } from "@/domain/datasets";
 import { projectRef } from "@/utils/supabase/env";
 
 const db = () => createClient();
@@ -104,7 +105,7 @@ export const deleteCampaign = (id: string) => unwrap(db().from("campaigns").dele
 
 export async function loadCampaign(id: string): Promise<CampaignData | null> {
   const s = db();
-  const [campaign, teams, members, areas, themes, missions, observations, announcements, walks, places, routes, visits, contributions] = await Promise.all([
+  const [campaign, teams, members, areas, themes, missions, observations, announcements, walks, places, routes, visits, contributions, datasets] = await Promise.all([
     s.from("campaigns").select("*").eq("id", id).maybeSingle(),
     s.from("teams").select("*").eq("campaign_id", id).order("created_at"),
     s.from("memberships").select("*, profile:profiles(id, display_name)").eq("campaign_id", id).order("joined_at"),
@@ -118,6 +119,7 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     s.from("routes").select("*").eq("campaign_id", id).order("created_at"),
     s.from("visits").select("*").eq("campaign_id", id).limit(5000),
     s.from("contributions").select("*").eq("campaign_id", id).order("created_at", { ascending: false }).limit(2000),
+    s.from("datasets").select("*").eq("campaign_id", id).order("created_at"),
   ]);
   const failed = [campaign, teams, members, areas, themes, missions, observations, announcements].find((r) => r.error);
   if (failed?.error) throw new Error(explain(failed.error));
@@ -137,10 +139,11 @@ export async function loadCampaign(id: string): Promise<CampaignData | null> {
     routes: (routes.data ?? []) as Route[],
     visits: (visits.data ?? []) as Visit[],
     contributions: (contributions.data ?? []) as Contribution[],
+    datasets: (datasets.data ?? []) as Dataset[],
   };
 }
 
-const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements", "walks", "places", "routes", "visits", "contributions"];
+const LIVE_TABLES = ["campaigns", "teams", "memberships", "areas", "missions", "observations", "announcements", "walks", "places", "routes", "visits", "contributions", "datasets"];
 
 /** Dati della campagna, aggiornati in tempo reale. */
 export function useCampaign(id: string | undefined) {
@@ -321,8 +324,15 @@ export interface PublicMap {
   observations: Observation[];
   contributions: Contribution[];
   stats: { walked_m: number; visits: number; teams: number };
+  datasets: Dataset[];
 }
-export const loadPublicMap = (id: string) => unwrap<PublicMap | null>(db().rpc("public_map", { c: id }));
+export async function loadPublicMap(id: string): Promise<PublicMap | null> {
+  const map = await unwrap<PublicMap | null>(db().rpc("public_map", { c: id }));
+  if (!map) return null;
+  // i dati del territorio arrivano a parte: se la funzione non c'è ancora, la mappa si apre comunque
+  const datasets = await unwrap<Dataset[]>(db().rpc("public_datasets", { c: id })).catch(() => [] as Dataset[]);
+  return { ...map, places: map.places.filter((p) => p.placed !== false), datasets };
+}
 
 export async function addContribution(campaignId: string, userId: string, input: {
   display_name: string; form: Contribution["form"]; title: string; note: string; feeling: string | null;
@@ -342,3 +352,17 @@ export const deleteContribution = (id: string) => unwrap(db().from("contribution
 export const isOrganizer = () => unwrap<boolean>(db().rpc("is_organizer"));
 /** true se il codice di regia è corretto. */
 export const claimOrganizer = (code: string) => unwrap<boolean>(db().rpc("claim_organizer", { code }));
+
+/* ------------------------------------------------------- dati del territorio */
+export const saveDataset = (d: Partial<Dataset> & { campaign_id: string; name: string; kind: Dataset["kind"] }) => {
+  const { id, created_at: _c, ...row } = d;
+  void _c;
+  return id ? unwrap(db().from("datasets").update(row).eq("id", id)) : unwrap(db().from("datasets").insert(row));
+};
+export const deleteDataset = (id: string) => unwrap(db().from("datasets").delete().eq("id", id));
+/** Inserisce molti luoghi in una volta (importazione). */
+export const insertPlaces = (rows: (Partial<Place> & { campaign_id: string; name: string; lng: number; lat: number })[]) =>
+  unwrap(db().from("places").insert(rows));
+/** Inserisce molte aree in una volta (confini da GeoJSON). */
+export const insertAreas = (rows: { campaign_id: string; name: string; color: string; geometry: Polygon }[]) =>
+  unwrap(db().from("areas").insert(rows));

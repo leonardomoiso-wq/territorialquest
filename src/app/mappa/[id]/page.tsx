@@ -5,22 +5,25 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FormTag } from "@/campo/Collect";
 import { SurveyAnswers } from "@/campo/Survey";
+import { figuresFor, formatValue } from "@/domain/datasets";
 import { formOf, summary } from "@/domain/forms";
 import { categoryOf, type Contribution, type Observation, type Place } from "@/domain/types";
 import { formatMeters } from "@/domain/walk";
 import { explain, loadPublicMap, mediaUrl, type PublicMap } from "@/lib/data";
 import { backdrop } from "@/studio/shared";
+import { Spark } from "@/ui/charts";
 import MapView, { type MapMode } from "@/ui/MapView";
 import { Button, cx, Empty, Label, LinkButton, Logo, Notice, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
 
-type Layer = "territorio" | "siti" | "luoghi" | "contributi";
-type Item = { kind: "obs"; o: Observation } | { kind: "contrib"; c: Contribution } | { kind: "place"; p: Place };
+type Layer = "territorio" | "siti" | "luoghi" | "contributi" | "dati";
+type Item = { kind: "obs"; o: Observation } | { kind: "contrib"; c: Contribution } | { kind: "place"; p: Place } | { kind: "area"; name: string };
 
 const LAYERS: { id: Layer; label: string; color: string }[] = [
   { id: "territorio", label: "Territorio", color: "#17804f" },
   { id: "siti", label: "Indagini sui siti", color: "#b5643c" },
   { id: "luoghi", label: "Luoghi e percorsi", color: "#e8a81c" },
   { id: "contributi", label: "Contributi", color: "#7a63d2" },
+  { id: "dati", label: "Dati del territorio", color: "#a8651c" },
 ];
 const date = (iso: string) => new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
 
@@ -28,7 +31,8 @@ export default function Mappa() {
   const { id } = useParams<{ id: string }>();
   const [map, setMap] = useState<PublicMap | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [on, setOn] = useState<Set<Layer>>(new Set(["territorio", "siti", "luoghi", "contributi"]));
+  const [on, setOn] = useState<Set<Layer>>(new Set(["territorio", "siti", "luoghi", "contributi", "dati"]));
+  const [toast, setToast] = useState<string | null>(null);
   const [mode, setMode] = useState<MapMode>("2d");
   const [item, setItem] = useState<Item | null>(null);
   const [list, setList] = useState(false);
@@ -76,6 +80,9 @@ export default function Mappa() {
         onObservationClick={(oid) => { const o = map.observations.find((x) => x.id === oid); if (o) setItem({ kind: "obs", o }); }}
         onContributionClick={(cid) => { const x = map.contributions.find((y) => y.id === cid); if (x) setItem({ kind: "contrib", c: x }); }}
         onPlaceClick={(pid) => { const p = place(pid); if (p) setItem({ kind: "place", p }); }}
+        layers={on.has("dati") ? map.datasets.filter((d) => d.kind === "punti" || d.kind === "linee") : []}
+        onLayerPointClick={(x) => setToast(`${x.label}${x.category && x.category !== x.label ? `, ${x.category}` : ""} (${x.dataset})`)}
+        onAreaClick={(aid) => { const a = map.areas.find((x) => x.id === aid); if (a) setItem({ kind: "area", name: a.name }); }}
       />
 
       {/* ------------------------------------------------------- intestazione */}
@@ -109,10 +116,15 @@ export default function Mappa() {
         </div>
       </div>
 
+      {toast && (
+        <button onClick={() => setToast(null)} className="glass-ink absolute inset-x-0 bottom-24 z-20 mx-auto w-fit max-w-[calc(100vw-1.5rem)] rounded-full px-4 py-2 text-sm">{toast}</button>
+      )}
+
       {/* ---------------------------------------------------------------- dock */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="glass pointer-events-auto flex items-center gap-1.5 rounded-full p-1.5">
           <Button variant="ghost" onClick={() => setList(true)}>Elenco · {entries.length}</Button>
+          {map.datasets.length > 0 && <Button variant="ghost" onClick={() => setItem({ kind: "area", name: "" })}>Fonti</Button>}
           {c.contributions_open && <LinkButton href={`/contribuisci/${id}`} prefetch={false} variant="glow">Contribuisci</LinkButton>}
         </div>
       </div>
@@ -145,8 +157,37 @@ export default function Mappa() {
 
       {/* ------------------------------------------------------------ dettaglio */}
       <Sheet open={!!item} onClose={() => setItem(null)} wide
-        kicker={!item ? "" : item.kind === "obs" ? `${team(item.o.team_id)?.name ?? "Regia"} · ${date(item.o.created_at)}` : item.kind === "contrib" ? `Contributo di ${item.c.display_name} · ${date(item.c.created_at)}` : `${categoryOf(item.p.category).label} · luogo`}
-        title={!item ? "" : item.kind === "obs" ? item.o.title : item.kind === "contrib" ? item.c.title : item.p.name}>
+        kicker={!item ? "" : item.kind === "area" ? (item.name ? "Scheda del territorio" : "Dati del territorio") : item.kind === "obs" ? `${team(item.o.team_id)?.name ?? "Regia"} · ${date(item.o.created_at)}` : item.kind === "contrib" ? `Contributo di ${item.c.display_name} · ${date(item.c.created_at)}` : `${categoryOf(item.p.category).label} · luogo`}
+        title={!item ? "" : item.kind === "area" ? item.name || "Fonti" : item.kind === "obs" ? item.o.title : item.kind === "contrib" ? item.c.title : item.p.name}>
+        {item?.kind === "area" && (() => {
+          const figs = item.name ? figuresFor(map.datasets, item.name) : [];
+          const groups = [...new Set(figs.map((f) => f.dataset.id))].map((id) => figs.filter((f) => f.dataset.id === id));
+          return (
+            <div className="space-y-5">
+              {item.name && figs.length === 0 && <p className="soft text-sm">Nessun indicatore per quest&apos;area: i dati si collegano alle aree che si chiamano come i Comuni dei file.</p>}
+              {groups.map((g) => (
+                <section key={g[0].dataset.id}>
+                  <Label className="mb-2 block">{g[0].dataset.name}</Label>
+                  <ul className="divide-y divide-line">
+                    {g.map((f) => (
+                      <li key={f.column.key} className="flex items-center gap-3 py-2 text-sm">
+                        <span className="min-w-0 flex-1">{f.column.label}{f.year ? <span className="soft"> {f.year}</span> : null}</span>
+                        {f.series.length > 2 && <Spark points={f.series} unit={f.column.unit} />}
+                        <span className="num w-28 text-right">{formatValue(f.value, f.column.unit)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+              <section>
+                <Label className="mb-2 block">Fonti dei dati</Label>
+                <ul className="space-y-1 text-[13px]">
+                  {map.datasets.map((d) => <li key={d.id}><b className="font-medium">{d.name}</b>{d.source ? `: ${d.source}` : ""}{d.licence ? ` (${d.licence})` : ""}{d.note ? <span className="soft"> {d.note}</span> : null}</li>)}
+                </ul>
+              </section>
+            </div>
+          );
+        })()}
         {item?.kind === "place" && (
           <div className="space-y-4">
             {item.p.images.length > 0 && (
