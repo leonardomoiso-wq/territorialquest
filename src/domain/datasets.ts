@@ -151,6 +151,16 @@ export const nameFromFile = (file: string) => {
   return base.charAt(0).toUpperCase() + base.slice(1);
 };
 
+/** Fonte e licenza riconoscibili dal nome del file (da controllare prima di salvare). */
+export function guessSource(file: string): { source: string; licence: string } {
+  const f = file.toLowerCase();
+  if (/(^|[^a-z])osm[_-]|openstreetmap/.test(f)) return { source: "OpenStreetMap", licence: "ODbL" };
+  if (/wikidata/.test(f)) return { source: "Wikidata", licence: "CC0" };
+  if (/idrogeo|ispra|dissesto/.test(f)) return { source: "ISPRA IdroGEO", licence: "CC BY 4.0" };
+  if (/istat|censiment|piramide|struttura_eta|movimento|pop_serie/.test(f)) return { source: "Istat", licence: "CC BY 4.0" };
+  return { source: "", licence: "" };
+}
+
 /** Riconosce il tipo di un CSV e prepara colonne e righe tipizzate. */
 export function classify(fileName: string, text: string): Draft {
   const { header, rows: raw } = parseCSV(text);
@@ -302,17 +312,53 @@ export function series(d: Dataset, column: string): { key: string; points: { t: 
 }
 
 /** Righe di punti con coordinate valide, per la mappa. */
-export function pointsOf(d: Dataset): { lng: number; lat: number; label: string; category: string; row: Row }[] {
+export function pointsOf(d: Dataset): { lng: number; lat: number; label: string; category: string; row: Row; index: number }[] {
   if (d.kind !== "punti" || !isRows(d.rows)) return [];
   const lat = d.columns.find((c) => LAT.includes(c.key.toLowerCase()))?.key ?? "lat";
   const lng = d.columns.find((c) => LNG.includes(c.key.toLowerCase()))?.key ?? "lng";
   return d.rows
-    .filter((r) => typeof r[lat] === "number" && typeof r[lng] === "number")
-    .map((r) => ({
-      lat: r[lat] as number, lng: r[lng] as number, row: r,
+    .map((r, index) => ({ r, index }))
+    .filter(({ r }) => typeof r[lat] === "number" && typeof r[lng] === "number")
+    .map(({ r, index }) => ({
+      lat: r[lat] as number, lng: r[lng] as number, row: r, index,
       label: String((d.label_column && r[d.label_column]) ?? (d.category_column && r[d.category_column]) ?? d.name),
       category: String((d.category_column && r[d.category_column]) ?? ""),
     }));
+}
+
+/** Colore di ogni categoria di uno strato: le prime sei nella palette fissa, le altre in grigio terra. */
+export function categoryColors(d: Dataset): Map<string, string> {
+  const cats = distinct(d, d.category_column).map((x) => x.value);
+  if (cats.length <= 1) return new Map(cats.map((c) => [c, d.color]));
+  return new Map(cats.map((c, i) => [c, i < SERIES.length ? SERIES[i] : OTHER]));
+}
+export const OTHER = "#8a7d68";
+
+/** Estensione [ovest, sud, est, nord] di punti e linee degli strati. */
+export function layersBounds(ds: Dataset[]): [[number, number], [number, number]] | null {
+  let w = Infinity, s = Infinity, e = -Infinity, n = -Infinity;
+  const add = (x: number, y: number) => { w = Math.min(w, x); e = Math.max(e, x); s = Math.min(s, y); n = Math.max(n, y); };
+  const walk = (c: unknown): void => {
+    if (Array.isArray(c) && typeof c[0] === "number") add(c[0] as number, c[1] as number);
+    else if (Array.isArray(c)) c.forEach(walk);
+  };
+  for (const d of ds) {
+    if (d.kind === "punti") for (const p of pointsOf(d)) add(p.lng, p.lat);
+    if (d.kind === "linee" && !isRows(d.rows)) for (const f of d.rows.features ?? []) walk((f.geometry as GeoJSON.LineString | null)?.coordinates);
+  }
+  return Number.isFinite(w) ? [[w, s], [e, n]] : null;
+}
+
+/** Zoom approssimato che fa stare un'estensione in uno schermo. */
+export function zoomFor(b: [[number, number], [number, number]]): number {
+  const span = Math.max(b[1][0] - b[0][0], (b[1][1] - b[0][1]) * 1.4, 0.002);
+  return Math.max(8, Math.min(16, Math.log2(360 / span) - 0.6));
+}
+
+/** Righe di uno strato filtrate per categoria (per accendere e spegnere le categorie). */
+export function withCategories(d: Dataset, keep: Set<string> | null): Dataset {
+  if (!keep || !d.category_column || !isRows(d.rows)) return d;
+  return { ...d, rows: d.rows.filter((r) => keep.has(String(r[d.category_column!] ?? ""))) };
 }
 
 /** Valori distinti di una colonna, con quante volte compaiono. */

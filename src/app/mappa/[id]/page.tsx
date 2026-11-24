@@ -12,6 +12,7 @@ import { formatMeters } from "@/domain/walk";
 import { explain, loadPublicMap, mediaUrl, type PublicMap } from "@/lib/data";
 import { backdrop } from "@/studio/shared";
 import { Spark } from "@/ui/charts";
+import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import MapView, { type MapMode } from "@/ui/MapView";
 import { Button, cx, Empty, Label, LinkButton, Logo, Notice, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
 
@@ -32,7 +33,9 @@ export default function Mappa() {
   const [map, setMap] = useState<PublicMap | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [on, setOn] = useState<Set<Layer>>(new Set(["territorio", "siti", "luoghi", "contributi", "dati"]));
-  const [toast, setToast] = useState<string | null>(null);
+  const layerState = useLayers(map?.datasets ?? []);
+  const [point, setPoint] = useState<PointRef | null>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
   const [mode, setMode] = useState<MapMode>("2d");
   const [item, setItem] = useState<Item | null>(null);
   const [list, setList] = useState(false);
@@ -80,8 +83,8 @@ export default function Mappa() {
         onObservationClick={(oid) => { const o = map.observations.find((x) => x.id === oid); if (o) setItem({ kind: "obs", o }); }}
         onContributionClick={(cid) => { const x = map.contributions.find((y) => y.id === cid); if (x) setItem({ kind: "contrib", c: x }); }}
         onPlaceClick={(pid) => { const p = place(pid); if (p) setItem({ kind: "place", p }); }}
-        layers={on.has("dati") ? map.datasets.filter((d) => d.kind === "punti" || d.kind === "linee") : []}
-        onLayerPointClick={(x) => setToast(`${x.label}${x.category && x.category !== x.label ? `, ${x.category}` : ""} (${x.dataset})`)}
+        layers={on.has("dati") ? layerState.layers : []}
+        onLayerPointClick={(x) => setPoint({ datasetId: x.datasetId, index: x.index })}
         onAreaClick={(aid) => { const a = map.areas.find((x) => x.id === aid); if (a) setItem({ kind: "area", name: a.name }); }}
       />
 
@@ -116,18 +119,19 @@ export default function Mappa() {
         </div>
       </div>
 
-      {toast && (
-        <button onClick={() => setToast(null)} className="glass-ink absolute inset-x-0 bottom-24 z-20 mx-auto w-fit max-w-[calc(100vw-1.5rem)] rounded-full px-4 py-2 text-sm">{toast}</button>
-      )}
 
       {/* ---------------------------------------------------------------- dock */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="glass pointer-events-auto flex items-center gap-1.5 rounded-full p-1.5">
           <Button variant="ghost" onClick={() => setList(true)}>Elenco – {entries.length}</Button>
+          {layerState.all.length > 0 && <Button variant="ghost" className="!px-3.5" onClick={() => setLayersOpen(true)} aria-label="Strati di dati"><LayersIcon /><span className="hidden sm:inline">Strati</span></Button>}
           {map.datasets.length > 0 && <Button variant="ghost" onClick={() => setItem({ kind: "area", name: "" })}>Fonti</Button>}
           {c.contributions_open && <LinkButton href={`/contribuisci/${id}`} prefetch={false} variant="glow">Contribuisci</LinkButton>}
         </div>
       </div>
+
+      <Sheet open={layersOpen} onClose={() => setLayersOpen(false)} kicker={c.name} title="Strati di dati"><LayersPanel state={layerState} /></Sheet>
+      <PointSheet point={point} datasets={map.datasets} onClose={() => setPoint(null)} />
 
       {/* ------------------------------------------------------------- elenco */}
       <Sheet open={list} onClose={() => setList(false)} kicker={c.name} title="Che cosa è emerso" wide>

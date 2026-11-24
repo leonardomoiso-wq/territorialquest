@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
-  classify, compare, distinct, formatValue, isRows, nameFromFile, parseGeoJSON, pointsOf, series, SERIES,
+  classify, compare, distinct, formatValue, guessSource, isRows, layersBounds, nameFromFile, parseGeoJSON, pointsOf, series, SERIES, zoomFor,
   type Column, type Dataset, type DatasetKind, type Draft, type GeoImport, type Row,
 } from "@/domain/datasets";
 import { PLACE_CATEGORIES, type PlaceCategory } from "@/domain/types";
-import { deleteDataset, insertAreas, insertPlaces, saveDataset } from "@/lib/data";
+import { deleteDataset, insertAreas, insertPlaces, saveDataset, updateCampaign } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
 import { Bars, Lines, ValueTable } from "@/ui/charts";
 import { Area, Button, Card, cx, Empty, Field, Label, Notice, PlusIcon, SectionTitle, Segmented, Select, Sheet, Tag } from "@/ui/kit";
@@ -41,7 +41,7 @@ export default function Fonti({ data, refresh }: Ctx) {
           const geo = parseGeoJSON(text);
           out.push({ type: "geo", file: f.name, geo, nameKey: geo.nameKeys[0] ?? "", text });
         } else {
-          out.push({ type: "csv", file: f.name, draft: { ...classify(f.name, text), source: "", licence: "", note: "", public: true } });
+          out.push({ type: "csv", file: f.name, draft: { ...classify(f.name, text), ...guessSource(f.name), note: "", public: true } });
         }
       } catch (e) {
         setError(`${f.name}: non riesco a leggerlo (${(e as Error).message}).`);
@@ -61,6 +61,7 @@ export default function Fonti({ data, refresh }: Ctx) {
   const saveAll = () => run(async () => {
     const csv = pending.filter((p): p is Extract<Pending, { type: "csv" }> => p.type === "csv");
     for (const [i, p] of csv.entries()) await saveCsv(p, i);
+    await centerOn(csv.filter((p) => p.draft.kind === "punti").map((p) => ({ kind: "punti" as const, columns: p.draft.columns, rows: p.draft.rows })));
     setPending((list) => list.filter((p) => p.type !== "csv"));
     await refresh();
   });
@@ -69,6 +70,14 @@ export default function Fonti({ data, refresh }: Ctx) {
   const drop = (i: number) => setPending((list) => list.filter((_, n) => n !== i));
 
   const byKind = (k: DatasetKind) => data.datasets.filter((d) => d.kind === k);
+
+  /** Una campagna senza aree prende come vista di partenza l'estensione dei primi dati georeferenziati. */
+  const centerOn = async (ds: Partial<Dataset>[]) => {
+    if (data.areas.length) return;
+    const b = layersBounds(ds as Dataset[]);
+    if (!b) return;
+    await updateCampaign(c.id, { center_lng: (b[0][0] + b[1][0]) / 2, center_lat: (b[0][1] + b[1][1]) / 2, zoom: zoomFor(b) });
+  };
 
   return (
     <div className="space-y-10">
@@ -100,6 +109,7 @@ export default function Fonti({ data, refresh }: Ctx) {
                   })}
                   onLines={() => run(async () => {
                     await saveDataset({ campaign_id: c.id, name: nameFromFile(p.file), kind: "linee", rows: p.geo.lines, columns: [], public: true, color: "#a8651c" });
+                    await centerOn([{ kind: "linee", rows: p.geo.lines, columns: [] }]);
                     await refresh();
                   })}
                   onPoints={() => run(async () => {

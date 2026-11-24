@@ -9,6 +9,7 @@ import MapView from "@/ui/MapView";
 import { Area, Button, Card, cx, Empty, Field, Label, Notice, PlusIcon, Segmented, Sheet, Tag } from "@/ui/kit";
 import { backdrop, PALETTE, Swatches, type Ctx } from "./shared";
 import SurveyEditor from "./SurveyEditor";
+import { PointSheet, type PointRef } from "@/ui/Layers";
 
 type PlaceDraft = Omit<Place, "id" | "campaign_id" | "created_at"> & { id?: string };
 type RouteDraft = { id?: string; name: string; description: string; color: string; stops: string[] };
@@ -38,6 +39,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
   const [uploading, setUploading] = useState(false);
   /** Luogo importato senza coordinate che si sta posizionando. */
   const [placing, setPlacing] = useState<Place | null>(null);
+  const [point, setPoint] = useState<PointRef | null>(null);
   const unplaced = data.places.filter((p) => p.placed === false);
   const placedPlaces = data.places.filter((p) => p.placed !== false);
 
@@ -123,7 +125,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
       <div className="relative h-[76dvh] min-h-[480px] overflow-hidden rounded-panel border hairline">
         <MapView
           className="size-full" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} fit {...backdrop(c)}
-          places={data.places} routes={shownRoutes} layers={data.datasets.filter((d) => d.kind === "punti" || d.kind === "linee")} activeRouteId={route ? route.id ?? "nuovo" : null}
+          places={data.places} routes={shownRoutes} layers={data.datasets.filter((d) => d.kind === "punti" || d.kind === "linee")} onLayerPointClick={(x) => setPoint({ datasetId: x.datasetId, index: x.index })} activeRouteId={route ? route.id ?? "nuovo" : null}
           selectedPlaceId={place?.id ?? selected} reached={[...visitsBy.keys()]}
           pin={place && !place.id ? [place.lng, place.lat] : null}
           onClick={onMapClick} onPlaceClick={onPlaceClick}
@@ -266,6 +268,8 @@ export default function Luoghi({ data, refresh }: Ctx) {
           );
         }))}
       </div>
+
+      <PointSheet point={point} datasets={data.datasets} onClose={() => setPoint(null)} />
 
       {/* ------------------------------------------------------- luogo */}
       <Sheet open={!!place && !picking} onClose={() => setPlace(null)} kicker={place?.id ? "Modifica luogo" : "Nuovo luogo"} title="Una meta da raggiungere" wide>

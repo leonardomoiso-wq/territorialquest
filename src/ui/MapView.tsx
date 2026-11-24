@@ -9,7 +9,7 @@ import { cellToLatLng } from "h3-js";
 import { useEffect, useRef } from "react";
 import { cellHeight, environmentOf, modelCells, type Environment } from "@/domain/environment";
 import { boundsOf, cellOf, cellRing, cellsOf } from "@/domain/geo";
-import { pointsOf, type Dataset } from "@/domain/datasets";
+import { categoryColors, layersBounds, pointsOf, type Dataset } from "@/domain/datasets";
 import { categoryOf, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
 
 setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -105,7 +105,7 @@ interface Props {
   onContributionClick?: (id: string) => void;
   /** Strati di riferimento dai dati del territorio (punti e linee). */
   layers?: Dataset[];
-  onLayerPointClick?: (info: { dataset: string; label: string; category: string }) => void;
+  onLayerPointClick?: (info: { datasetId: string; index: number; dataset: string; label: string; category: string }) => void;
   /** Raggio d'azione in metri attorno alla posizione del giocatore («me»). */
   reach?: number | null;
   /** Luoghi completati (arrivo e indagine confermata). */
@@ -227,7 +227,10 @@ export default function MapView(props: Props) {
 
     const layerPoints: GeoJSON.Feature[] = [], layerLines: GeoJSON.Feature[] = [];
     for (const d of p.layers ?? []) {
-      if (d.kind === "punti") for (const x of pointsOf(d)) layerPoints.push(point([x.lng, x.lat], { color: d.color, dataset: d.name, label: x.label, category: x.category }));
+      if (d.kind === "punti") {
+        const colors = categoryColors(d);
+        for (const x of pointsOf(d)) layerPoints.push(point([x.lng, x.lat], { color: colors.get(x.category) ?? d.color, datasetId: d.id, index: x.index, dataset: d.name, label: x.label, category: x.category }));
+      }
       if (d.kind === "linee" && !Array.isArray(d.rows)) for (const f of d.rows.features ?? []) layerLines.push({ ...f, properties: { ...(f.properties ?? {}), color: d.color } });
     }
     set("layer-points", fc(layerPoints));
@@ -314,8 +317,18 @@ export default function MapView(props: Props) {
       }
     }
 
-    if (p.fit && !fitted.current && p.areas?.length) {
-      const b = boundsOf(p.areas.map((a) => a.geometry));
+    // inquadratura: le aree; se non ci sono, luoghi e strati di dati
+    const placed = (p.places ?? []).filter((pl) => pl.placed !== false);
+    const dataBounds = () => {
+      const lb = layersBounds(p.layers ?? []);
+      const pts: [number, number][] = placed.map((pl) => [pl.lng, pl.lat]);
+      if (lb) pts.push(lb[0], lb[1]);
+      if (!pts.length) return null;
+      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+      return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]] as [[number, number], [number, number]];
+    };
+    if (p.fit && !fitted.current && (p.areas?.length || placed.length || p.layers?.length)) {
+      const b = p.areas?.length ? boundsOf(p.areas.map((a) => a.geometry)) : dataBounds();
       if (b) {
         fitted.current = true;
         m.fitBounds(b, { padding: Math.min(80, m.getContainer().clientWidth / 8), duration: 0, maxZoom: 16, pitch: m.getPitch(), bearing: m.getBearing() });
@@ -547,7 +560,7 @@ export default function MapView(props: Props) {
         // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick(lngLat(e));
         const lp = hit(e, "layer-points");
-        if (lp && cur.onLayerPointClick) return cur.onLayerPointClick({ dataset: String(lp.properties.dataset), label: String(lp.properties.label), category: String(lp.properties.category) });
+        if (lp && cur.onLayerPointClick) return cur.onLayerPointClick({ datasetId: String(lp.properties.datasetId), index: Number(lp.properties.index), dataset: String(lp.properties.dataset), label: String(lp.properties.label), category: String(lp.properties.category) });
         const ct = hit(e, "contribs");
         if (ct && cur.onContributionClick) return cur.onContributionClick(String(ct.properties.id));
         const pl = hit(e, "places-halo") ?? hit(e, "places");

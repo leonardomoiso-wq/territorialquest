@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classify, compare, figuresFor, labelFor, nameFromFile, parseCSV, parseGeoJSON, pointsOf, series, type Dataset, type Draft } from "./datasets";
+import { categoryColors, classify, compare, guessSource, layersBounds, SERIES, withCategories, figuresFor, labelFor, nameFromFile, parseCSV, parseGeoJSON, pointsOf, series, type Dataset, type Draft } from "./datasets";
 
 const asDataset = (d: Draft): Dataset => ({ id: "d", source: "", licence: "", note: "", color: "#000", public: true, ...d });
 
@@ -58,6 +58,23 @@ describe("classificazione", () => {
     const d = classify("accoglienza.csv", "tappa,localita,comune,struttura\n19,Cella,Noceto,Comunità di Betania\n");
     expect(d.kind).toBe("tabella");
     expect(d.label_column).toBe("struttura");
+  });
+});
+
+describe("fonti e strati", () => {
+  it("riconosce fonte e licenza dal nome del file", () => {
+    expect(guessSource("9181fee3-osm_accoglienza_2026.csv")).toEqual({ source: "OpenStreetMap", licence: "ODbL" });
+    expect(guessSource("luoghi_wikidata_2026.csv").licence).toBe("CC0");
+    expect(guessSource("tappe.csv").source).toBe("");
+  });
+
+  it("colora le categorie in ordine fisso e calcola l'estensione degli strati", () => {
+    const d = asDataset(classify("servizi.csv", "tipo,nome,lat,lon\nbar,A,44.5,10.0\nbar,B,44.7,10.2\nfarmacia,C,44.6,10.1\n"));
+    const colors = categoryColors(d);
+    expect(colors.get("bar")).toBe(SERIES[0]);
+    expect(colors.get("farmacia")).toBe(SERIES[1]);
+    expect(layersBounds([d])).toEqual([[10.0, 44.5], [10.2, 44.7]]);
+    expect(withCategories(d, new Set(["farmacia"])).rows).toHaveLength(1);
   });
 });
 

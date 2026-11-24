@@ -6,10 +6,11 @@ import { ago, isOnline, remaining } from "@/domain/time";
 import { announce } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
 import MapView, { type MapMode, type MapPlayer } from "@/ui/MapView";
-import { Area, Button, Card, Dot, Label, Meter, Notice, Ring, Segmented, Select } from "@/ui/kit";
+import { Area, Button, Card, Dot, Label, Meter, Notice, Ring, Segmented, Select, Sheet } from "@/ui/kit";
 import { FormTag } from "@/campo/Collect";
 import { summary } from "@/domain/forms";
 import { formatMeters } from "@/domain/walk";
+import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import { backdrop, nameOf, teamOf, type Ctx } from "./shared";
 
 export default function Regia({ data, me, now }: Ctx) {
@@ -26,6 +27,9 @@ export default function Regia({ data, me, now }: Ctx) {
   const pending = data.observations.filter((o) => o.status === "pending").length;
 
   const [mode, setMode] = useState<MapMode>("2d");
+  const layerState = useLayers(data.datasets);
+  const [point, setPoint] = useState<PointRef | null>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
   const [body, setBody] = useState("");
   const [target, setTarget] = useState("");
   const { busy, error, run } = useAction();
@@ -41,8 +45,13 @@ export default function Regia({ data, me, now }: Ctx) {
         <div className="relative h-[62dvh] min-h-[420px] overflow-hidden rounded-panel border hairline">
           <MapView
             className="size-full" center={[data.campaign.center_lng, data.campaign.center_lat]} zoom={data.campaign.zoom}
-            areas={data.areas} observations={data.observations} players={onMap} grid fit mode={mode} walked={ind.walkedCells} places={data.places} routes={data.routes} layers={data.datasets.filter((d) => d.kind === "linee")} reached={[...ind.places.values()].filter((p) => p.reached.size).map((p) => p.place.id)} {...backdrop(data.campaign)}
+            areas={data.areas} observations={data.observations} players={onMap} grid fit mode={mode} walked={ind.walkedCells} places={data.places} routes={data.routes} layers={layerState.layers} onLayerPointClick={(x) => setPoint({ datasetId: x.datasetId, index: x.index })} reached={[...ind.places.values()].filter((p) => p.reached.size).map((p) => p.place.id)} {...backdrop(data.campaign)}
           />
+          {layerState.all.length > 0 && (
+            <button onClick={() => setLayersOpen(true)} className="glass absolute top-28 left-4 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-medium">
+              <LayersIcon /> Strati {layerState.layers.length}/{layerState.all.length}
+            </button>
+          )}
           <div className="glass absolute top-16 left-4 rounded-full p-1">
             <Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "3d", label: "3D reale" }, { id: "model", label: "Modello" }]} />
           </div>
@@ -85,6 +94,8 @@ export default function Regia({ data, me, now }: Ctx) {
         </Card>
       </div>
 
+      <Sheet open={layersOpen} onClose={() => setLayersOpen(false)} kicker="Sulla mappa" title="Strati di dati"><LayersPanel state={layerState} /></Sheet>
+      <PointSheet point={point} datasets={data.datasets} onClose={() => setPoint(null)} />
       <div className="space-y-4">
         <div className="on-ink rounded-panel p-6">
           <Label>Punteggio collettivo</Label>

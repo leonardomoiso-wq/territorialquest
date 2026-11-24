@@ -9,7 +9,7 @@ import Story from "@/campo/Story";
 import Survey, { SurveyAnswers, type SurveyResult } from "@/campo/Survey";
 import { useWalk, vibrate } from "@/campo/useWalk";
 import { formOf, kindOf, lensLabel, pathLength, summary, type Form } from "@/domain/forms";
-import { figuresFor, formatValue, pointsOf } from "@/domain/datasets";
+import { categoryColors, figuresFor, formatValue, pointsOf } from "@/domain/datasets";
 import { areaAt, cellOf } from "@/domain/geo";
 import { BASE, indicators, MISSION_KIND, missionProgress, novelty, scoreObservations } from "@/domain/scoring";
 import { ago, areaOpen, isOnline, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
@@ -17,6 +17,7 @@ import { categoryOf, FIELD_ROLES, type FieldRole, type Observation, type Place }
 import { bearing, formatDuration, formatMeters, metersBetween, nearestDark, windOf } from "@/domain/walk";
 import { routeLength, routeMinutes } from "@/studio/Luoghi";
 import { Spark } from "@/ui/charts";
+import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import { addObservation, checkIn, uploadMedia, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
 import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
 import { useAction, useNow } from "@/lib/hooks";
@@ -24,7 +25,7 @@ import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
 
-type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers";
 type LngLat = [number, number];
 
 const NEAR = 80; // metri: «sei sul posto»
@@ -84,6 +85,8 @@ export default function Campo() {
   const lastBeat = useRef(0);
 
   const me = data?.members.find((m) => m.user_id === user?.id);
+  const layerState = useLayers(data?.datasets ?? []);
+  const [point, setPoint] = useState<PointRef | null>(null);
   const ind = useMemo(() => (data ? indicators(data) : null), [data]);
   /** Celle già accese da qualcuno: attraversate oppure osservate. */
   const lit = useMemo(() => {
@@ -194,7 +197,7 @@ export default function Campo() {
   const figures = hereNow ? figuresFor(data.datasets, hereNow.name) : [];
   const placesAround = position ? data.places.filter((p) => p.placed !== false).map((p) => ({ p, m: metersBetween(position, [p.lng, p.lat]) })).filter((x) => x.m <= AROUND).sort((a, b) => a.m - b.m) : [];
   const toValidateAround = toValidate.filter((o) => distance(o) <= AROUND);
-  const layerAround = position ? data.datasets.filter((d) => d.kind === "punti").flatMap((d) => pointsOf(d).map((x) => ({ ...x, dataset: d.name, color: d.color, m: metersBetween(position, [x.lng, x.lat]) }))).filter((x) => x.m <= AROUND).sort((a, b) => a.m - b.m) : [];
+  const layerAround = position ? layerState.layers.filter((d) => d.kind === "punti").flatMap((d) => { const colors = categoryColors(d); return pointsOf(d).map((x) => ({ ...x, datasetId: d.id, dataset: d.name, color: colors.get(x.category) ?? d.color, m: metersBetween(position, [x.lng, x.lat]) })); }).filter((x) => x.m <= AROUND).sort((a, b) => a.m - b.m) : [];
   const aroundCount = placesAround.length + toValidateAround.length;
   /** Luoghi completati dal mio team: arrivo e rilievo confermato. */
   const completed = [...ind.places.values()].filter((x) => [...x.detailed].some((k) => k === me.team_id || k === `persona:${me.user_id}`) && reached.has(x.place.id)).map((x) => x.place.id);
@@ -326,8 +329,8 @@ export default function Campo() {
           ...(position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#2b2118", lng: position[0], lat: position[1], online: true }] : []),
         ]}
         reach={position && canCollect ? NEAR : null} completed={completed}
-        layers={data.datasets.filter((d) => d.kind === "punti" || d.kind === "linee")}
-        onLayerPointClick={(x) => setToast(`${x.label}${x.category && x.category !== x.label ? `, ${x.category}` : ""} (${x.dataset})`)}
+        layers={layerState.layers}
+        onLayerPointClick={(x) => setPoint({ datasetId: x.datasetId, index: x.index })}
         onClick={picking ? (p) => (tracing ? setPath((ps) => [...ps, p]) : setPin(p)) : undefined}
         onObservationClick={(oid) => { const o = data.observations.find((x) => x.id === oid); if (o) { setDetail(o); setPanel("detail"); } }}
       />
@@ -403,6 +406,9 @@ export default function Campo() {
         {toast && <div className="glass-ink pointer-events-auto animate-rise rounded-full px-4 py-2 text-sm" role="status">{toast}</div>}
       </div>
 
+      {layerState.all.length > 0 && !picking && (
+        <IconButton label="Strati di dati" onClick={() => setPanel("layers")} className="absolute top-1/2 right-3 z-20 !size-11 -translate-y-1/2"><LayersIcon /></IconButton>
+      )}
       {walking && !follow && !picking && position && (
         <IconButton label="Torna alla mia posizione" onClick={() => setFollow(true)} className="absolute right-3 bottom-24 z-20 !size-12"><Icon d={ICON.target} /></IconButton>
       )}
@@ -453,6 +459,9 @@ export default function Campo() {
         </div>
       </div>
 
+      <Sheet open={openPanel === "layers"} onClose={() => setPanel(null)} kicker="Sulla mappa" title="Strati di dati"><LayersPanel state={layerState} /></Sheet>
+      <PointSheet point={point} datasets={data.datasets} position={position} onClose={() => setPoint(null)} />
+
       {/* ----------------------------------------------------- vicino a te */}
       <Sheet open={openPanel === "near"} onClose={() => setPanel(null)} kicker={`Entro ${AROUND} m`} title="Vicino a te" wide>
         {!position ? <Empty title="Posizione non disponibile.">Consenti la posizione al browser per vedere che cosa hai intorno.</Empty> : (
@@ -502,11 +511,11 @@ export default function Campo() {
                 <Label className="mb-2 block">Servizi e punti utili – {layerAround.length}</Label>
                 <ul className="divide-y divide-line">
                   {layerAround.slice(0, 12).map((x, i) => (
-                    <li key={i} className="flex items-center gap-3 py-2 text-sm">
+                    <li key={i}><button className="flex w-full items-center gap-3 py-2 text-left text-sm" onClick={() => setPoint({ datasetId: x.datasetId, index: x.index })}>
                       <span className="size-2.5 shrink-0 rounded-full" style={{ background: x.color }} />
                       <span className="min-w-0 flex-1 truncate">{x.label}{x.category && x.category !== x.label ? <span className="soft">, {x.category}</span> : null}</span>
                       <span className="soft">{formatMeters(x.m)}</span>
-                    </li>
+                    </button></li>
                   ))}
                 </ul>
               </section>
