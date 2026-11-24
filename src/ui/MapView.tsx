@@ -152,7 +152,7 @@ export default function MapView(props: Props) {
   const ready = useRef(false);
   const latest = useRef(props);
   const fitted = useRef(false);
-  const applied = useRef({ mode: "" as string, raster: "", overlay: "", focus: "" });
+  const applied = useRef({ mode: "" as string, raster: "", overlay: "", focus: "", place: "" });
 
   /** Ultimi ingressi di ogni sorgente: si ridisegna solo ciò che è cambiato. */
   const lastDeps = useRef(new Map<string, unknown[]>());
@@ -237,12 +237,13 @@ export default function MapView(props: Props) {
 
     set("pin", fc(p.pin ? [point(p.pin)] : []));
 
-    put("layers", [p.layers], () => {
+    put("layers", [p.layers, p.places], () => {
+    const asPlace = new Set((p.places ?? []).filter((pl) => pl.placed !== false).map((pl) => `${pl.lng.toFixed(5)},${pl.lat.toFixed(5)}`));
     const layerPoints: GeoJSON.Feature[] = [], layerLines: GeoJSON.Feature[] = [];
     for (const d of p.layers ?? []) {
       if (d.kind === "punti") {
         const colors = categoryColors(d);
-        for (const x of pointsOf(d)) layerPoints.push(point([x.lng, x.lat], { color: colors.get(x.category) ?? d.color, datasetId: d.id, index: x.index, dataset: d.name, label: x.label, category: x.category }));
+        for (const x of pointsOf(d)) if (!asPlace.has(`${x.lng.toFixed(5)},${x.lat.toFixed(5)}`)) layerPoints.push(point([x.lng, x.lat], { color: colors.get(x.category) ?? d.color, datasetId: d.id, index: x.index, dataset: d.name, label: x.label, category: x.category }));
       }
       if (d.kind === "linee" && !Array.isArray(d.rows)) for (const f of d.rows.features ?? []) layerLines.push({ ...f, properties: { ...(f.properties ?? {}), color: d.color } });
     }
@@ -319,6 +320,12 @@ export default function MapView(props: Props) {
       else m.easeTo({ ...camera, duration: 900 });
     }
 
+    const sel = p.selectedPlaceId ? (p.places ?? []).find((pl) => pl.id === p.selectedPlaceId && pl.placed !== false) : null;
+    if ((sel?.id ?? "") !== applied.current.place) {
+      applied.current.place = sel?.id ?? "";
+      if (sel) m.easeTo({ center: [sel.lng, sel.lat], zoom: Math.max(m.getZoom(), 15), duration: 700 });
+    }
+
     const focus = p.focus ? p.focus.map((v) => v.toFixed(5)).join(",") : "";
     if (focus !== applied.current.focus) {
       applied.current.focus = focus;
@@ -351,7 +358,7 @@ export default function MapView(props: Props) {
     if (!el.current) return;
     let cancelled = false;
     const p = latest.current;
-    applied.current = { mode: "", raster: "", overlay: "", focus: "" };
+    applied.current = { mode: "", raster: "", overlay: "", focus: "", place: "" };
     lastDeps.current = new Map();
     fitted.current = false;
 
@@ -374,7 +381,10 @@ export default function MapView(props: Props) {
         // rilievi, contributi e strati di punti si raggruppano: sotto lo zoom 16 i punti vicini diventano un grappolo
         const CLUSTERED = new Set(["observations", "contribs", "layer-points"]);
         for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) {
-          m.addSource(id, CLUSTERED.has(id) ? { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 15 } : { type: "geojson", data: empty });
+          // i luoghi sono mete: si raggruppano solo da lontano (scala di vallata), da vicino restano singoli
+          m.addSource(id, CLUSTERED.has(id) ? { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 15 }
+            : id === "places" ? { type: "geojson", data: empty, cluster: true, clusterRadius: 36, clusterMaxZoom: 12 }
+            : { type: "geojson", data: empty });
         }
         const single = ["!", ["has", "point_count"]] as const;
         const grouped = ["has", "point_count"] as const;
@@ -434,7 +444,7 @@ export default function MapView(props: Props) {
         m.addLayer({ id: "routes", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: {
           "line-color": ["get", "color"], "line-width": 3.5, "line-dasharray": [1.2, 1.4], "line-opacity": ["case", ["get", "active"], 1, 0.3],
         } });
-        m.addLayer({ id: "places-radius", type: "circle", source: "places", paint: {
+        m.addLayer({ id: "places-radius", type: "circle", source: "places", minzoom: 14, filter: ["!", ["has", "point_count"]], paint: {
           "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 0, ["get", "r0"], 22, ["get", "r22"]],
           "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "selected"], 0.16, 0.07],
           "circle-stroke-color": ["get", "color"], "circle-stroke-width": 1, "circle-stroke-opacity": 0.5,
@@ -467,19 +477,27 @@ export default function MapView(props: Props) {
           "circle-color": "#ffffff", "circle-stroke-color": ["get", "color"], "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 16, 3.5],
           "circle-opacity": ["case", ["get", "pending"], 0.6, 1], "circle-stroke-opacity": ["case", ["get", "pending"], 0.5, 1],
         } });
-        m.addLayer({ id: "places-halo", type: "circle", source: "places", paint: {
-          "circle-radius": ["case", ["get", "selected"], 20, 15],
+        // grappolo di luoghi: cartello chiaro con bordo, distinto dai grappoli dei servizi
+        m.addLayer({ id: "places-cluster", type: "circle", source: "places", filter: grouped as never, paint: {
+          "circle-color": "#f5f1e6", "circle-stroke-color": "#a8473a", "circle-stroke-width": 2.5,
+          "circle-radius": ["step", ["get", "point_count"], 14, 10, 18, 40, 23] as unknown as number,
+        } });
+        if (glyphs) clusterCount("places-cluster-count", "places", "#2b2118");
+        else m.addLayer({ id: "places-cluster-dot", type: "circle", source: "places", filter: grouped as never, paint: { "circle-radius": 5, "circle-color": "#a8473a" } });
+        m.addLayer({ id: "places-halo", type: "circle", source: "places", filter: single as never, paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["case", ["get", "selected"], 10, 6], 13, ["case", ["get", "selected"], 15, 10], 16, ["case", ["get", "selected"], 20, 15]],
           "circle-color": ["case", ["get", "done"], "#d6993e", "#ffffff"], "circle-opacity": 0.95,
           "circle-stroke-color": ["case", ["get", "done"], "#2b2118", ["get", "reached"], "#4a6b43", "#2b2118"],
-          "circle-stroke-width": ["case", ["get", "reached"], 3, 1.5],
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 9, 1, 14, ["case", ["get", "reached"], 3, 1.5]],
         } });
-        m.addLayer({ id: "places", type: "circle", source: "places", paint: {
-          "circle-radius": ["case", ["get", "selected"], 12, 9], "circle-color": ["get", "color"],
-          "circle-stroke-color": "#ffffff", "circle-stroke-width": ["case", ["get", "reached"], 3, 0],
+        m.addLayer({ id: "places", type: "circle", source: "places", filter: single as never, paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["case", ["get", "selected"], 7, 4], 13, ["case", ["get", "selected"], 10, 7], 16, ["case", ["get", "selected"], 12, 9]],
+          "circle-color": ["get", "color"],
+          "circle-stroke-color": "#ffffff", "circle-stroke-width": ["case", ["get", "reached"], 2, 0],
         } });
         if (m.getStyle().glyphs) {
           try {
-            m.addLayer({ id: "places-label", type: "symbol", source: "places", minzoom: 13.5, layout: {
+            m.addLayer({ id: "places-label", type: "symbol", source: "places", minzoom: 14, filter: single as never, layout: {
               "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-offset": [0, 1.7], "text-anchor": "top", "text-max-width": 9,
             }, paint: { "text-color": "#2b2118", "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
           } catch { /* caratteri non disponibili: restano i simboli */ }
@@ -584,7 +602,7 @@ export default function MapView(props: Props) {
         if (cur.edit || cur.onPaint) return;
         // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick(lngLat(e));
-        const cl = hit(e, "layer-cluster") ?? hit(e, "obs-cluster") ?? hit(e, "contribs-cluster");
+        const cl = hit(e, "places-cluster") ?? hit(e, "layer-cluster") ?? hit(e, "obs-cluster") ?? hit(e, "contribs-cluster");
         if (cl) {
           const src = m.getSource(cl.layer.source) as GeoJSONSource;
           const center = (cl.geometry as GeoJSON.Point).coordinates as [number, number];

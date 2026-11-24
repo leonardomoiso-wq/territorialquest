@@ -204,7 +204,8 @@ export default function Aree({ data, now, refresh }: Ctx) {
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* colonna laterale: su schermi larghi scorre da sola, alta quanto la mappa che resta ferma */}
+      <div className="space-y-3 lg:sticky lg:top-28 lg:-m-2 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-2">
         <div className="flex items-end justify-between">
           <div>
             <Label>Territorio</Label>

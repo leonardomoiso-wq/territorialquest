@@ -42,6 +42,10 @@ export default function Luoghi({ data, refresh }: Ctx) {
   const [point, setPoint] = useState<PointRef | null>(null);
   const unplaced = data.places.filter((p) => p.placed === false);
   const placedPlaces = data.places.filter((p) => p.placed !== false);
+  const [query, setQuery] = useState("");
+  const [cat, setCat] = useState<string>("");
+  const shownPlaces = placedPlaces.filter((p) => (!cat || p.category === cat) && (!query.trim() || p.name.toLowerCase().includes(query.trim().toLowerCase())));
+  const catsUsed = PLACE_CATEGORIES.filter((x) => placedPlaces.some((p) => p.category === x.id));
 
   const visitsBy = useMemo(() => {
     const m = new Map<string, number>();
@@ -160,7 +164,8 @@ export default function Luoghi({ data, refresh }: Ctx) {
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* colonna laterale: su schermi larghi scorre da sola, alta quanto la mappa che resta ferma */}
+      <div className="space-y-3 lg:sticky lg:top-28 lg:-m-2 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-2">
         <div className="flex items-end justify-between gap-3">
           <div>
             <Label>Esplorazione</Label>
@@ -191,7 +196,23 @@ export default function Luoghi({ data, refresh }: Ctx) {
         )}
         {tab === "luoghi" && (placedPlaces.length === 0 ? (
           unplaced.length > 0 ? null : <Empty title="Nessun luogo, per ora.">Un luogo è una meta: un ponte storico, un giardino, un murale, un&apos;ansa del fiume. Raggiungerlo e raccogliere lì un rilievo vale punti per tutti.</Empty>
-        ) : placedPlaces.map((pl) => {
+        ) : (<>
+          {placedPlaces.length > 8 && (
+            <div className="sticky top-0 z-10 -mx-2 space-y-2 bg-paper/95 px-2 pt-1 pb-2 backdrop-blur">
+              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Cerca tra ${placedPlaces.length} luoghi`} aria-label="Cerca un luogo"
+                className="h-10 w-full rounded-full border hairline bg-card px-4 text-sm outline-none focus:border-leaf" />
+              {catsUsed.length > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {catsUsed.map((x) => (
+                    <button key={x.id} onClick={() => setCat(cat === x.id ? "" : x.id)} aria-pressed={cat === x.id}
+                      className={cx("h-7 rounded-full border px-2.5 text-[12px]", cat === x.id ? "border-ink bg-ink text-paper" : "hairline")}>{x.label}</button>
+                  ))}
+                </div>
+              )}
+              {(query || cat) && <p className="soft text-xs">{shownPlaces.length} di {placedPlaces.length}</p>}
+            </div>
+          )}
+          {shownPlaces.map((pl) => {
           const cat = categoryOf(pl.category), cover = mediaUrl(pl.images[0] ?? null);
           return (
             <Card key={pl.id} className={cx("flex cursor-pointer gap-3 !p-3 transition", selected === pl.id && "!border-ink shadow-soft")} onClick={() => setSelected(pl.id === selected ? null : pl.id)}>
@@ -211,7 +232,8 @@ export default function Luoghi({ data, refresh }: Ctx) {
               </div>
             </Card>
           );
-        }))}
+        })}
+        </>))}
 
         {tab === "percorsi" && route && (
           <Card className="space-y-3">
