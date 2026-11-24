@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { categoryColors, distinct, formatValue, isRows, withCategories, type Dataset } from "@/domain/datasets";
 import { metersBetween, formatMeters } from "@/domain/walk";
+import type { Contribution } from "@/domain/types";
+import { Community, contributionsFor, type Target } from "@/ui/Contribute";
 import { cx, Label, Sheet } from "@/ui/kit";
 
 /** Strati di dati del territorio da mostrare sulla mappa: punti e linee, accendibili per file e per categoria. */
@@ -82,8 +84,13 @@ export function LayersPanel({ state }: { state: LayerState }) {
 export interface PointRef { datasetId: string; index: number }
 
 /** Scheda di un punto: tutte le colonne con etichette leggibili, fonte e distanza. */
-export function PointSheet({ point, datasets, position, onClose }: {
+export function PointSheet({ point, datasets, position, onClose, contributions, campaignId, onContribute }: {
   point: PointRef | null; datasets: Dataset[]; position?: [number, number] | null; onClose: () => void;
+  /** Contributi approvati della campagna: quelli del punto compaiono nella scheda. */
+  contributions?: Contribution[];
+  campaignId?: string;
+  /** Apre il modulo per aggiungere foto, dati e informazioni al punto. */
+  onContribute?: (t: Target) => void;
 }) {
   const d = point ? datasets.find((x) => x.id === point.datasetId) : null;
   const row = d && isRows(d.rows) ? d.rows[point!.index] : null;
@@ -110,6 +117,10 @@ export function PointSheet({ point, datasets, position, onClose }: {
             ))}
           </dl>
           {at && <p className="num soft text-xs">{at[1].toFixed(5)}, {at[0].toFixed(5)}</p>}
+          {contributions && (
+            <Community items={contributionsFor(contributions, { dataset_id: d.id, row_index: point!.index })}
+              onAdd={onContribute && campaignId && at ? () => onContribute({ campaignId, name: title, at, dataset_id: d.id, row_index: point!.index, columns: d.columns, values: row as Record<string, unknown> }) : undefined} />
+          )}
           <div>
             <Label className="block">Fonte</Label>
             <p className="mt-1 text-sm">{d.source || "non indicata"}{d.licence ? `, licenza ${d.licence}` : ""}</p>

@@ -23,7 +23,7 @@ Tutto in `public`, regole di accesso con RLS. Funzioni di ruolo: `is_member(c)`,
 | `visits` | arrivo a un luogo, unico per persona | solo `check_in()` |
 | `recovery` | domanda segreta e risposta cifrata, tentativi | solo funzioni |
 | `datasets` | dati del territorio: `kind` indicatori/punti/linee/tabella, colonne chiave/tempo/categoria/etichetta, `columns` [{key,label,type,unit}], `rows` jsonb (per le linee una FeatureCollection), fonte, licenza, `public` | staff; pubblico tramite `public_datasets(c)` |
-| `contributions` | contributo individuale: forma, testo, foto, posizione, `display_name`, `status` pending/approved/rejected, nota di revisione | autore (pending), staff (revisione) |
+| `contributions` | contributo individuale: forma (anche `correzione`, con `data` = {column, label, old, new}), testo, foto, posizione, `display_name`, `status` pending/approved/rejected, nota di revisione; facoltativamente legato a un punto con `place_id` oppure `dataset_id` + `row_index` | autore (pending; i membri anche a contributi chiusi), staff (revisione); i membri leggono gli approvati |
 
 Storage: bucket pubblico `media` (foto di rilievi, luoghi, indagini, contributi, sfondi).
 

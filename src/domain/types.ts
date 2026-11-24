@@ -213,7 +213,11 @@ export interface Contribution {
   campaign_id: string;
   user_id?: string;
   display_name: string;
-  form: "immagine" | "percezione" | "dato" | "informazione" | "idea";
+  form: "immagine" | "percezione" | "dato" | "informazione" | "idea" | "correzione";
+  /** Punto a cui si riferisce: un luogo del gioco oppure una riga di uno strato di dati. */
+  place_id?: string | null;
+  dataset_id?: string | null;
+  row_index?: number | null;
   title: string;
   note: string;
   feeling: string | null;

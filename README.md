@@ -70,6 +70,16 @@ Si trascinano nella sezione **Fonti** della regia più file insieme. Ognuno vien
 Le etichette delle colonne sono ricavate dai nomi (con un dizionario per Istat, ISPRA, MEF, OSM)
 e si correggono prima di salvare. Fonte e licenza compaiono nella mappa pubblica.
 
+## Punti sulla mappa e contributi sui punti
+
+- Strati di punti, rilievi e contributi si raggruppano in **grappoli** con il numero dei punti; un
+  tocco sul grappolo avvicina la mappa. I luoghi del gioco restano sempre singoli.
+- Dalla scheda di un luogo o di un punto di uno strato chiunque abbia un profilo può aggiungere
+  **foto, informazioni, dati o correzioni** a un valore del file. Passa tutto dalla regia
+  (sezione Pubblico). Una correzione approvata si può applicare al file con un tocco. I contributi
+  approvati compaiono nella scheda del punto, in «Dalla comunità». Chi partecipa alla campagna può
+  contribuire anche quando i contributi pubblici sono chiusi.
+
 ## Accesso di regia e accesso giocatori
 
 Ci sono due ingressi separati:

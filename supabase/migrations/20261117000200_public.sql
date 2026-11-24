@@ -78,7 +78,8 @@ begin
       order by o.created_at desc) from observations o where visible and o.campaign_id = c and o.status = 'validated'), '[]'),
     'contributions', coalesce((select jsonb_agg(jsonb_build_object(
       'id', x.id, 'form', x.form, 'title', x.title, 'note', x.note, 'feeling', x.feeling, 'media_path', x.media_path,
-      'data', x.data, 'lng', x.lng, 'lat', x.lat, 'display_name', x.display_name, 'created_at', x.created_at)
+      'data', x.data, 'lng', x.lng, 'lat', x.lat, 'display_name', x.display_name, 'created_at', x.created_at,
+      'place_id', to_jsonb(x) -> 'place_id', 'dataset_id', to_jsonb(x) -> 'dataset_id', 'row_index', to_jsonb(x) -> 'row_index')
       order by x.created_at desc) from contributions x where visible and x.campaign_id = c and x.status = 'approved'), '[]'),
     'stats', jsonb_build_object(
       'walked_m', coalesce((select sum(distance_m) from walks w where w.campaign_id = c), 0),

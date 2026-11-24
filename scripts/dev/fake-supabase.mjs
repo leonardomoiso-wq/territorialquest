@@ -122,7 +122,7 @@ http.createServer(async (req, res) => {
       if (sel.includes("campaign:campaigns")) out = out.map((r) => ({ role: r.role, campaign: db.campaigns.find((x) => x.id === r.campaign_id) }));
       return send(res, 200, object ? out[0] ?? null : out);
     }
-    if (req.method === "POST") { const list = (Array.isArray(body) ? body : [body]).map((r) => ({ id: randomUUID(), created_at: new Date().toISOString(), status: table === "observations" ? "pending" : table === "campaigns" ? "draft" : undefined, ...r })); if (table === "campaigns") { list.forEach((c) => { Object.assign(c, { center_lng: 7.6869, center_lat: 45.0703, zoom: 12.5 }); db.memberships.push({ id: randomUUID(), campaign_id: c.id, user_id: uid, team_id: null, role: "master", status: "active", joined_at: c.created_at }); }); } rows.unshift(...list); return send(res, 201, object ? list[0] : list); }
+    if (req.method === "POST") { const list = (Array.isArray(body) ? body : [body]).map((r) => ({ id: randomUUID(), created_at: new Date().toISOString(), status: table === "observations" || table === "contributions" ? "pending" : table === "campaigns" ? "draft" : undefined, ...r })); if (table === "campaigns") { list.forEach((c) => { Object.assign(c, { center_lng: 7.6869, center_lat: 45.0703, zoom: 12.5 }); db.memberships.push({ id: randomUUID(), campaign_id: c.id, user_id: uid, team_id: null, role: "master", status: "active", joined_at: c.created_at }); }); } rows.unshift(...list); return send(res, 201, object ? list[0] : list); }
     if (req.method === "PATCH") { const hit = rows.filter(match); hit.forEach((r) => Object.assign(r, body)); return send(res, 200, object ? hit[0] : hit); }
     if (req.method === "DELETE") { db[table] = rows.filter((r) => !match(r)); return send(res, 204); }
   }

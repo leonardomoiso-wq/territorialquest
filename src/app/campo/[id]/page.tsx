@@ -17,6 +17,7 @@ import { categoryOf, FIELD_ROLES, type FieldRole, type Observation, type Place }
 import { bearing, formatDuration, formatMeters, metersBetween, nearestDark, windOf } from "@/domain/walk";
 import { routeLength, routeMinutes } from "@/studio/Luoghi";
 import { Spark } from "@/ui/charts";
+import { Community, ContributeSheet, contributionsFor, type Target } from "@/ui/Contribute";
 import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import { addObservation, checkIn, uploadMedia, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
 import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
@@ -87,6 +88,7 @@ export default function Campo() {
   const me = data?.members.find((m) => m.user_id === user?.id);
   const layerState = useLayers(data?.datasets ?? []);
   const [point, setPoint] = useState<PointRef | null>(null);
+  const [contribTarget, setContribTarget] = useState<Target | null>(null);
   const ind = useMemo(() => (data ? indicators(data) : null), [data]);
   /** Celle già accese da qualcuno: attraversate oppure osservate. */
   const lit = useMemo(() => {
@@ -461,7 +463,9 @@ export default function Campo() {
       </div>
 
       <Sheet open={openPanel === "layers"} onClose={() => setPanel(null)} kicker="Sulla mappa" title="Strati di dati"><LayersPanel state={layerState} /></Sheet>
-      <PointSheet point={point} datasets={data.datasets} position={position} onClose={() => setPoint(null)} />
+      <PointSheet point={point} datasets={data.datasets} position={position} onClose={() => setPoint(null)}
+        contributions={data.contributions} campaignId={c.id} onContribute={(t) => { setPoint(null); setContribTarget(t); }} />
+      <ContributeSheet target={contribTarget} onClose={() => setContribTarget(null)} onDone={refresh} />
 
       {/* ----------------------------------------------------- vicino a te */}
       <Sheet open={openPanel === "near"} onClose={() => setPanel(null)} kicker={`Entro ${AROUND} m`} title="Vicino a te" wide>
@@ -568,6 +572,8 @@ export default function Campo() {
                   <p className="num soft text-xs">+{Math.round(p.points / 2)} pt</p>
                 </div>
               </div>
+              <Community items={contributionsFor(data.contributions, { place_id: p.id })}
+                onAdd={() => { setPanel(null); setContribTarget({ campaignId: c.id, name: p.name, at: [p.lng, p.lat], place_id: p.id }); }} />
               <p className="soft text-xs">Arrivo entro {p.radius_m} m. {prog ? `${prog.reached.size} ${prog.reached.size === 1 ? "team è passato" : "team sono passati"} di qui.` : ""}</p>
               {actionError && <Notice tone="error">{actionError}</Notice>}
               <div className="flex flex-wrap gap-2">

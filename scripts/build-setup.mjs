@@ -27,14 +27,15 @@ writeFileSync("supabase/setup.sql", [
 const update = readdirSync(dir).filter((f) => f.endsWith(".sql") && f >= UPDATE_FROM).sort()
   .map((f) => `\n-- ================================================================ ${f}\n${readFileSync(`${dir}/${f}`, "utf8")}`);
 writeFileSync("supabase/update.sql", [
-  "-- Territorial Quest — aggiornamento: dati del territorio (indicatori, strati, tabelle) e luoghi importati.",
+  "-- Territorial Quest — aggiornamento: dati del territorio, luoghi importati, contributi sui punti esistenti.",
   "-- Per un database già installato. Supabase → SQL Editor → New query → incolla tutto → Run.",
   "-- Generato da scripts/build-setup.mjs: non modificarlo a mano.",
   ...update,
   "",
   "-- ================================================================ esito",
-  "select case when count(*) = 4 then 'Aggiornamento completato: apri /stato sul sito'",
-  "            else 'Aggiornamento incompleto: mancano ' || (4 - count(*)) || ' tabelle' end as esito",
-  "from information_schema.tables where table_schema = 'public' and table_name in ('organizers', 'settings', 'organizer_attempts', 'datasets');",
+  "select case when count(*) = 5 then 'Aggiornamento completato: apri /stato sul sito'",
+  "            else 'Aggiornamento incompleto: mancano ' || (5 - count(*)) || ' parti' end as esito",
+  "from (select table_name from information_schema.tables where table_schema = 'public' and table_name in ('organizers', 'settings', 'organizer_attempts', 'datasets')",
+  "      union all select column_name from information_schema.columns where table_schema = 'public' and table_name = 'contributions' and column_name = 'row_index') x;",
   "",
 ].join("\n"));

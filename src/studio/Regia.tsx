@@ -95,7 +95,7 @@ export default function Regia({ data, me, now }: Ctx) {
       </div>
 
       <Sheet open={layersOpen} onClose={() => setLayersOpen(false)} kicker="Sulla mappa" title="Strati di dati"><LayersPanel state={layerState} /></Sheet>
-      <PointSheet point={point} datasets={data.datasets} onClose={() => setPoint(null)} />
+      <PointSheet point={point} datasets={data.datasets} onClose={() => setPoint(null)} contributions={data.contributions.filter((x) => x.status === "approved")} />
       <div className="space-y-4">
         <div className="on-ink rounded-panel p-6">
           <Label>Punteggio collettivo</Label>

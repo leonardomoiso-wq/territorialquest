@@ -5,7 +5,8 @@ import { FormTag } from "@/campo/Collect";
 import { formOf } from "@/domain/forms";
 import { ago } from "@/domain/time";
 import type { Contribution, ContributionStatus } from "@/domain/types";
-import { deleteContribution, mediaUrl, reviewContribution, updateCampaign } from "@/lib/data";
+import { isRows } from "@/domain/datasets";
+import { deleteContribution, mediaUrl, reviewContribution, saveDataset, updateCampaign } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
 import MapView from "@/ui/MapView";
 import { Area, Button, Card, cx, Empty, Label, Notice, SectionTitle, Segmented, Tag } from "@/ui/kit";
@@ -39,6 +40,26 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
   ];
   const copy = async (id: string, url: string) => { await navigator.clipboard?.writeText(url); setCopied(id); setTimeout(() => setCopied(null), 2000); };
   const set = (patch: Parameters<typeof updateCampaign>[1]) => run(async () => { await updateCampaign(c.id, patch); await refresh(); });
+  /** Nome del punto a cui si riferisce un contributo. */
+  const targetName = (x: Contribution) => {
+    if (x.place_id) return data.places.find((p) => p.id === x.place_id)?.name ?? "luogo eliminato";
+    if (x.dataset_id) {
+      const d = data.datasets.find((y) => y.id === x.dataset_id);
+      const r = d && isRows(d.rows) && x.row_index != null ? d.rows[x.row_index] : null;
+      return r ? `${String((d!.label_column && r[d!.label_column]) || (d!.category_column && r[d!.category_column]) || "punto")}, ${d!.name}` : "punto eliminato";
+    }
+    return null;
+  };
+  /** Una correzione approvata si può scrivere nel file: il valore nuovo sostituisce quello vecchio. */
+  const applyCorrection = (x: Contribution) => run(async () => {
+    const d = data.datasets.find((y) => y.id === x.dataset_id);
+    const col = String(x.data?.column ?? "");
+    if (!d || !isRows(d.rows) || x.row_index == null || !col) throw new Error("Non trovo il dato da correggere.");
+    const rows = d.rows.map((r, i) => (i === x.row_index ? { ...r, [col]: x.data?.new as string | number } : r));
+    await saveDataset({ id: d.id, campaign_id: d.campaign_id ?? c.id, name: d.name, kind: d.kind, rows });
+    await reviewContribution(x.id, me.user_id, "approved", [notes[x.id]?.trim(), "Applicata al dato."].filter(Boolean).join(" "));
+    await refresh();
+  });
   const review = (x: Contribution, status: ContributionStatus) =>
     run(async () => { await reviewContribution(x.id, me.user_id, status, notes[x.id]?.trim() || null); await refresh(); setFocus(null); });
 
@@ -98,7 +119,9 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
                       {img ? /* eslint-disable-next-line @next/next/no-img-element */ <a href={img} target="_blank" rel="noreferrer"><img src={img} alt="" className="size-24 shrink-0 rounded-2xl object-cover" /></a>
                         : <span className="size-24 shrink-0 rounded-2xl" style={{ background: `color-mix(in srgb, ${formOf(x.form).color} 16%, transparent)` }} />}
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5"><FormTag form={x.form} /><span className="soft text-[13px]">{x.display_name} – {ago(x.created_at, now)}</span></div>
+                        <div className="flex flex-wrap items-center gap-1.5"><FormTag form={x.form === "correzione" ? "flusso" : x.form} /><span className="soft text-[13px]">{x.display_name} – {ago(x.created_at, now)}</span></div>
+                        {targetName(x) && <p className="mt-1 text-[13px]">Su: <b className="font-medium">{targetName(x)}</b></p>}
+                        {x.form === "correzione" && <p className="mt-1 text-sm"><b className="font-medium">{String(x.data?.label ?? x.data?.column)}</b>: <span className="soft line-through">{String(x.data?.old ?? "—")}</span> → <b className="font-medium">{String(x.data?.new ?? "")}</b></p>}
                         <h3 className="mt-1.5 text-[17px] tracking-[-0.02em]">{x.title}</h3>
                         {x.feeling && <p className="serif text-lg italic">«{x.feeling}»</p>}
                         {typeof x.data?.value === "number" && <p className="num text-sm">{String(x.data.value)} {String(x.data.unit ?? "")}</p>}
@@ -111,6 +134,9 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
                       <input aria-label="Nota per chi ha contribuito" value={notes[x.id] ?? ""} onChange={(e) => setNotes({ ...notes, [x.id]: e.target.value })} maxLength={200}
                         placeholder="Nota per chi ha contribuito (facoltativa)" className="h-9 min-w-48 flex-1 rounded-full border hairline bg-transparent px-3.5 text-[13px] outline-none focus:border-leaf" />
                       {tab !== "approved" && <Button size="sm" variant="glow" disabled={busy} onClick={() => review(x, "approved")}>Pubblica</Button>}
+                      {x.form === "correzione" && x.dataset_id && !String(x.review_note ?? "").includes("Applicata") && (
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => applyCorrection(x)}>{tab === "approved" ? "Applica al dato" : "Pubblica e applica al dato"}</Button>
+                      )}
                       {tab !== "rejected" && <Button size="sm" variant="outline" disabled={busy} onClick={() => review(x, "rejected")}>{tab === "approved" ? "Ritira" : "Non pubblicare"}</Button>}
                       <Button size="sm" variant="danger" disabled={busy} onClick={() => confirm("Eliminare definitivamente il contributo?") && run(async () => { await deleteContribution(x.id); await refresh(); })}>Elimina</Button>
                     </div>

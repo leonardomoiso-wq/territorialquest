@@ -269,7 +269,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
         }))}
       </div>
 
-      <PointSheet point={point} datasets={data.datasets} onClose={() => setPoint(null)} />
+      <PointSheet point={point} datasets={data.datasets} onClose={() => setPoint(null)} contributions={data.contributions.filter((x) => x.status === "approved")} />
 
       {/* ------------------------------------------------------- luogo */}
       <Sheet open={!!place && !picking} onClose={() => setPlace(null)} kicker={place?.id ? "Modifica luogo" : "Nuovo luogo"} title="Una meta da raggiungere" wide>

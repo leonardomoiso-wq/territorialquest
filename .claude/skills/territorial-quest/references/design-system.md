@@ -33,3 +33,5 @@ Componenti di dominio riutilizzabili: `FormTag`, `FormIcon` (`src/campo/Collect.
 - Niente «3D reale» (rilievo del terreno ed edifici): era pesante sui telefoni e poco utile alla ricerca. Il «Modello» a celle resta solo nell'editor delle aree e come vista facoltativa in regia e sulla mappa pubblica, mai sul campo.
 - `MapView` confronta gli ingressi di ogni sorgente (`put`) e ricalcola solo ciò che è cambiato: passa array stabili (memo) e non oggetti ricreati a ogni render.
 - La griglia del territorio non supera circa 12.000 celle (griglia adattiva). I calcoli H3 hanno una cache in `cellsOf`.
+- Rilievi, contributi e strati di punti usano sorgenti a grappolo (`cluster: true`, raggio 44, fino allo zoom 15): un tocco sul grappolo chiama `getClusterExpansionZoom`. I numeri sui grappoli richiedono i caratteri della mappa di base. I luoghi non si raggruppano.
+- `PointSheet` (`src/ui/Layers.tsx`) e le schede dei luoghi includono `Community` e aprono `ContributeSheet` (`src/ui/Contribute.tsx`).

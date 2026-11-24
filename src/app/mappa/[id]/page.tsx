@@ -12,6 +12,7 @@ import { formatMeters } from "@/domain/walk";
 import { explain, loadPublicMap, mediaUrl, type PublicMap } from "@/lib/data";
 import { backdrop } from "@/studio/shared";
 import { Spark } from "@/ui/charts";
+import { Community, ContributeSheet, contributionsFor, type Target } from "@/ui/Contribute";
 import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import MapView, { type MapMode } from "@/ui/MapView";
 import { Button, cx, Empty, Label, LinkButton, Logo, Notice, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
@@ -36,6 +37,7 @@ export default function Mappa() {
   const layerState = useLayers(map?.datasets ?? []);
   const [point, setPoint] = useState<PointRef | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
+  const [target, setTarget] = useState<Target | null>(null);
   const [mode, setMode] = useState<MapMode>("2d");
   const [item, setItem] = useState<Item | null>(null);
   const [list, setList] = useState(false);
@@ -46,7 +48,8 @@ export default function Mappa() {
   }, [id]);
 
   const obs = useMemo(() => (map?.observations ?? []).filter((o) => (o.form === "indagine" ? on.has("siti") : on.has("territorio"))), [map, on]);
-  const contribs = on.has("contributi") ? map?.contributions ?? [] : [];
+  // i contributi su un punto esistente stanno nella sua scheda, non come segnaposto a sé
+  const contribs = on.has("contributi") ? (map?.contributions ?? []).filter((x) => !x.place_id && !x.dataset_id) : [];
 
   if (map === undefined) return <main className="on-ink min-h-dvh"><Spinner label="Apro la mappa" /></main>;
   if (!map) {
@@ -131,7 +134,9 @@ export default function Mappa() {
       </div>
 
       <Sheet open={layersOpen} onClose={() => setLayersOpen(false)} kicker={c.name} title="Strati di dati"><LayersPanel state={layerState} /></Sheet>
-      <PointSheet point={point} datasets={map.datasets} onClose={() => setPoint(null)} />
+      <PointSheet point={point} datasets={map.datasets} onClose={() => setPoint(null)}
+        contributions={map.contributions} campaignId={c.id} onContribute={(t) => { setPoint(null); setTarget(t); }} />
+      <ContributeSheet target={target} onClose={() => setTarget(null)} />
 
       {/* ------------------------------------------------------------- elenco */}
       <Sheet open={list} onClose={() => setList(false)} kicker={c.name} title="Che cosa è emerso" wide>
@@ -200,6 +205,8 @@ export default function Mappa() {
               </div>
             )}
             {item.p.description && <p className="text-[15px] leading-snug">{item.p.description}</p>}
+            <Community items={contributionsFor(map.contributions, { place_id: item.p.id })}
+              onAdd={() => { const p = item.p; setItem(null); setTarget({ campaignId: c.id, name: p.name, at: [p.lng, p.lat], place_id: p.id }); }} />
             {(() => {
               const found = map.observations.filter((o) => o.place_id === item.p.id);
               return found.length > 0 && (

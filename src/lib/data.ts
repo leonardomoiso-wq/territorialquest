@@ -337,6 +337,7 @@ export async function loadPublicMap(id: string): Promise<PublicMap | null> {
 export async function addContribution(campaignId: string, userId: string, input: {
   display_name: string; form: Contribution["form"]; title: string; note: string; feeling: string | null;
   data: Record<string, unknown>; lng: number; lat: number; file: File | null;
+  place_id?: string | null; dataset_id?: string | null; row_index?: number | null;
 }) {
   const { file, ...rest } = input;
   const media_path = file ? await uploadMedia(campaignId, file) : null;

@@ -312,7 +312,7 @@ export default function MapView(props: Props) {
       const first = applied.current.mode === "";
       applied.current.mode = mode;
       const flat = mode !== "model";
-      for (const id of ["cells-fill", "cells-fog", "cells-line", "areas-fill", "flows", "obs"]) show(id, flat);
+      for (const id of ["cells-fill", "cells-fog", "cells-line", "areas-fill", "flows", "obs", "obs-cluster", "obs-cluster-count"]) show(id, flat);
       show("model", !flat);
       const camera = mode === "2d" ? { pitch: 0, bearing: 0 } : { pitch: 55, bearing: -18 };
       if (first) m.jumpTo(camera);
@@ -371,7 +371,27 @@ export default function MapView(props: Props) {
 
       m.on("load", () => {
         const empty = fc([]);
-        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) m.addSource(id, { type: "geojson", data: empty });
+        // rilievi, contributi e strati di punti si raggruppano: sotto lo zoom 16 i punti vicini diventano un grappolo
+        const CLUSTERED = new Set(["observations", "contribs", "layer-points"]);
+        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) {
+          m.addSource(id, CLUSTERED.has(id) ? { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 15 } : { type: "geojson", data: empty });
+        }
+        const single = ["!", ["has", "point_count"]] as const;
+        const grouped = ["has", "point_count"] as const;
+        /** Cerchio di un grappolo: più grande quanti più punti contiene. */
+        const clusterPaint = (fill: string) => ({
+          "circle-color": fill, "circle-opacity": 0.92, "circle-stroke-color": "#fbf8f0", "circle-stroke-width": 3,
+          "circle-radius": ["step", ["get", "point_count"], 13, 10, 17, 50, 22, 200, 28] as unknown as number,
+        });
+        const glyphs = !!m.getStyle().glyphs;
+        const clusterCount = (id: string, source: string, color: string) => {
+          if (!glyphs) return;
+          try {
+            m.addLayer({ id, type: "symbol", source, filter: grouped as never, layout: {
+              "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-allow-overlap": true,
+            }, paint: { "text-color": color } });
+          } catch { /* senza caratteri il grappolo mostra solo la grandezza */ }
+        };
 
         m.addLayer({ id: "tq-veil", type: "background", paint: { "background-color": PAPER, "background-opacity": 0 } });
         m.addLayer({ id: "cells-fill", type: "fill", source: "cells", paint: {
@@ -402,9 +422,11 @@ export default function MapView(props: Props) {
         m.addLayer({ id: "layer-lines", type: "line", source: "layer-lines", layout: { "line-cap": "round", "line-join": "round" }, paint: {
           "line-color": ["get", "color"], "line-width": 4.5, "line-dasharray": [0, 2],
         } });
-        m.addLayer({ id: "layer-points", type: "circle", source: "layer-points", paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 2.5, 16, 5.5], "circle-color": ["get", "color"],
-          "circle-stroke-color": "#f5f1e6", "circle-stroke-width": 1.5, "circle-opacity": 0.9,
+        m.addLayer({ id: "layer-cluster", type: "circle", source: "layer-points", filter: grouped as never, paint: clusterPaint("#5c4a36") });
+        clusterCount("layer-cluster-count", "layer-points", "#f5f1e6");
+        m.addLayer({ id: "layer-points", type: "circle", source: "layer-points", filter: single as never, paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 14, 5, 18, 8], "circle-color": ["get", "color"],
+          "circle-stroke-color": "#f5f1e6", "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 16, 2], "circle-opacity": 0.95,
         } });
         m.addLayer({ id: "routes-casing", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: {
           "line-color": "#ffffff", "line-width": 7, "line-opacity": ["case", ["get", "active"], 0.85, 0.25],
@@ -417,8 +439,10 @@ export default function MapView(props: Props) {
           "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "selected"], 0.16, 0.07],
           "circle-stroke-color": ["get", "color"], "circle-stroke-width": 1, "circle-stroke-opacity": 0.5,
         } });
-        m.addLayer({ id: "obs", type: "circle", source: "observations", paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 16, 7],
+        m.addLayer({ id: "obs-cluster", type: "circle", source: "observations", filter: grouped as never, paint: clusterPaint("#4a6b43") });
+        clusterCount("obs-cluster-count", "observations", "#f5f1e6");
+        m.addLayer({ id: "obs", type: "circle", source: "observations", filter: single as never, paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3.5, 14, 5, 18, 9],
           "circle-color": ["case", ["==", ["get", "status"], "flagged"], "#8a7d68", ["get", "color"]],
           "circle-opacity": ["case", ["==", ["get", "status"], "validated"], 1, 0.45],
           "circle-stroke-color": "#fbf8f0", "circle-stroke-width": 1.5,
@@ -436,7 +460,9 @@ export default function MapView(props: Props) {
           "circle-stroke-color": "#2b2118", "circle-stroke-width": 2,
         } });
         // contributi individuali: anello bianco, nucleo colorato; in revisione tratteggiati dalla trasparenza
-        m.addLayer({ id: "contribs", type: "circle", source: "contribs", paint: {
+        m.addLayer({ id: "contribs-cluster", type: "circle", source: "contribs", filter: grouped as never, paint: clusterPaint("#7a5c9a") });
+        clusterCount("contribs-cluster-count", "contribs", "#f5f1e6");
+        m.addLayer({ id: "contribs", type: "circle", source: "contribs", filter: single as never, paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 4, 16, 8],
           "circle-color": "#ffffff", "circle-stroke-color": ["get", "color"], "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 16, 3.5],
           "circle-opacity": ["case", ["get", "pending"], 0.6, 1], "circle-stroke-opacity": ["case", ["get", "pending"], 0.5, 1],
@@ -558,6 +584,14 @@ export default function MapView(props: Props) {
         if (cur.edit || cur.onPaint) return;
         // In disegno o scelta del punto, il tocco serve a posizionare.
         if (cur.onClick) return cur.onClick(lngLat(e));
+        const cl = hit(e, "layer-cluster") ?? hit(e, "obs-cluster") ?? hit(e, "contribs-cluster");
+        if (cl) {
+          const src = m.getSource(cl.layer.source) as GeoJSONSource;
+          const center = (cl.geometry as GeoJSON.Point).coordinates as [number, number];
+          Promise.resolve(src.getClusterExpansionZoom(Number(cl.properties.cluster_id)))
+            .then((z) => m.easeTo({ center, zoom: Math.min(Number(z) + 0.3, 18), duration: 600 }), () => m.easeTo({ center, zoom: m.getZoom() + 2 }));
+          return;
+        }
         const lp = hit(e, "layer-points");
         if (lp && cur.onLayerPointClick) return cur.onLayerPointClick({ datasetId: String(lp.properties.datasetId), index: Number(lp.properties.index), dataset: String(lp.properties.dataset), label: String(lp.properties.label), category: String(lp.properties.category) });
         const ct = hit(e, "contribs");

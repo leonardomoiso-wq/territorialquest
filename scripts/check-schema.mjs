@@ -19,7 +19,8 @@ const recovery = readFileSync("supabase/migrations/20261117000100_recovery.sql",
 const pub = readFileSync("supabase/migrations/20261117000200_public.sql", "utf8");
 const orgs = readFileSync("supabase/migrations/20261118000000_organizers.sql", "utf8");
 const ds = readFileSync("supabase/migrations/20261123000000_datasets.sql", "utf8");
-for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); await db.exec(pub); await db.exec(orgs); await db.exec(ds); } // due passate: idempotenza
+const pc = readFileSync("supabase/migrations/20261124000000_point_contributions.sql", "utf8");
+for (let i = 0; i < 2; i++) { await db.exec(sql); await db.exec(forms); await db.exec(places); await db.exec(recovery); await db.exec(pub); await db.exec(orgs); await db.exec(ds); await db.exec(pc); } // due passate: idempotenza
 
 const as = async (uid, q, params) => {
   await db.exec(`set role authenticated; select set_config('app.uid', '${uid}', false);`);
@@ -146,4 +147,14 @@ console.log("dati pubblici da fuori:", one(await asAnon(`select jsonb_array_leng
 const hidden = one(await as(master, `insert into places (campaign_id, name, lng, lat, placed, category, attributes, source) values ($1, 'Ostello da posizionare', 7.68, 45.07, false, 'ospitalita', '{"posti":"21"}', 'accoglienza.csv') returning id`, [camp])).id;
 await fails("non si arriva a un luogo da posizionare", () => as(anna, `select check_in($1, 7.68, 45.07)`, [hidden]));
 console.log("luogo da posizionare nascosto al pubblico:", !one(await asAnon(`select public_map($1) m`, [camp])).m.places.some((p) => p.id === hidden));
+// contributi su punti esistenti
+await as(master, `update campaigns set contributions_open = false, public_map = true where id = $1`, [camp]);
+const dsId = one(await as(master, `select id from datasets where campaign_id = $1 limit 1`, [camp])).id;
+const corr = one(await as(anna, `insert into contributions (campaign_id, user_id, form, title, lng, lat, dataset_id, row_index, data) values ($1, $2, 'correzione', 'Quota della sede', 9.99, 44.5, $3, 0, '{"column":"alt_sede","old":808,"new":810}') returning id`, [camp, anna, dsId])).id;
+console.log("un membro corregge un punto anche a contributi chiusi:", !!corr);
+await fails("un esterno no, a contributi chiusi", () => as(outsider, `insert into contributions (campaign_id, user_id, form, title, lng, lat, place_id) values ($1, $2, 'immagine', 'Foto', 7.68, 45.07, $3)`, [camp, outsider, place]));
+await as(master, `update contributions set status = 'approved' where id = $1`, [corr]);
+console.log("un altro membro vede il contributo approvato:", one(await as(bruno, `select count(*)::int n from contributions where id = $1`, [corr])).n);
+const pmc = one(await asAnon(`select public_map($1) m`, [camp])).m.contributions.find((x) => x.dataset_id);
+console.log("sulla mappa pubblica, legato al punto:", pmc?.dataset_id === dsId, pmc?.row_index);
 console.log("SCHEMA OK");
