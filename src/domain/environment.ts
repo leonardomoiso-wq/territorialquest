@@ -62,11 +62,11 @@ export interface ModelCell {
 }
 
 /** Celle del modello: ogni area contribuisce le proprie, con l'ambiente dipinto o quello prevalente. */
-export function modelCells(areas: Pick<Area, "id" | "geometry" | "environment" | "terrain">[]): ModelCell[] {
+export function modelCells(areas: Pick<Area, "id" | "geometry" | "environment" | "terrain">[], res = 10): ModelCell[] {
   const seen = new Set<string>();
   const out: ModelCell[] = [];
   for (const a of areas) {
-    for (const cell of cellsOf(a.geometry)) {
+    for (const cell of cellsOf(a.geometry, res)) {
       if (seen.has(cell)) continue;
       seen.add(cell);
       out.push({ cell, areaId: a.id, environment: environmentOf(a.terrain?.[cell] ?? a.environment).id });

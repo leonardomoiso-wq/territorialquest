@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cellOf, cellsOf, closeRing, pointInPolygon } from "./geo";
+import { cellOf, cellsOf, closeRing, gridResolution, MAX_CELLS, pointInPolygon, toRes } from "./geo";
 import { indicators, missionProgress, novelty, placeProgress, scoreObservations } from "./scoring";
 import { phaseOf } from "./time";
 import { toCSV, toGeoJSON } from "./export";
@@ -198,5 +198,26 @@ describe("indagine sul sito", () => {
     expect(surveyLine({ survey, answers })).toContain("Stato di conservazione: 4/5 – Materiali prevalenti: Pietra, Ferro");
     expect(formatAnswer(survey[3], false)).toBe("no");
     expect(toCSV(base([o])).split("\n")[1]).toContain("Stato di conservazione: 4/5");
+  });
+});
+
+describe("griglia adattiva", () => {
+  // rettangolo di circa lato × lato km attorno a Fornovo
+  const box = (km: number) => closeRing([[10.1, 44.69], [10.1 + km / 79, 44.69], [10.1 + km / 79, 44.69 + km / 111], [10.1, 44.69 + km / 111]]);
+
+  it("usa celle da 65 m su un quartiere e celle più grandi su un territorio vasto", () => {
+    expect(gridResolution([{ geometry: box(2) }])).toBe(10);
+    expect(gridResolution([{ geometry: box(23) }])).toBe(9); // ~525 km², come i sei Comuni del tratto
+    expect(gridResolution([{ geometry: box(59) }])).toBe(8); // ~3.450 km², come la provincia
+    expect(cellsOf(box(23), 9).length).toBeLessThanOrEqual(MAX_CELLS);
+  });
+
+  it("conta la copertura alla risoluzione della griglia", () => {
+    const area = { id: "a", campaign_id: "c", team_id: null, name: "Tratto", color: "#000", geometry: box(23), opens_at: null, closes_at: null };
+    const o = obs({ lng: 10.2, lat: 44.75, cell: cellOf(10.2, 44.75), status: "validated", quality: 2 });
+    const i = indicators({ ...base([o]), areas: [area] });
+    expect(i.resolution).toBe(9);
+    expect(i.cellsCovered).toBe(1);
+    expect(i.territory.has(toRes(o.cell, 9))).toBe(true);
   });
 });

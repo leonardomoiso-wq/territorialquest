@@ -1,4 +1,4 @@
-import { cellToBoundary, latLngToCell, polygonToCells } from "h3-js";
+import { cellToBoundary, cellToParent, getResolution, isValidCell, latLngToCell, polygonToCells } from "h3-js";
 import type { Area, Polygon } from "./types";
 
 /** Risoluzione H3 della griglia di copertura (esagoni di circa 65 m di lato). */
@@ -20,13 +20,45 @@ export function pointInPolygon(lng: number, lat: number, polygon: Polygon): bool
 export const areaAt = (lng: number, lat: number, areas: Area[]) =>
   areas.find((a) => pointInPolygon(lng, lat, a.geometry)) ?? null;
 
-/** Celle della griglia contenute in un poligono. */
-export function cellsOf(polygon: Polygon): string[] {
+/** Superficie media di una cella H3 in km², per risoluzione. */
+const CELL_KM2: Record<number, number> = { 10: 0.015, 9: 0.105, 8: 0.737, 7: 5.16, 6: 36.1 };
+/** Oltre questo numero di celle la griglia diventa illeggibile e pesante: si passa a celle più grandi. */
+export const MAX_CELLS = 12000;
+
+/**
+ * Risoluzione della griglia del territorio: celle di circa 65 m su un quartiere,
+ * più grandi su territori vasti, così da restare sotto MAX_CELLS.
+ * I rilievi si salvano sempre a risoluzione 10 e si riportano a questa quando serve.
+ */
+export function gridResolution(areas: { geometry: Polygon }[]): number {
+  const km2 = areas.reduce((s, a) => s + hectares(a.geometry) / 100, 0);
+  for (const r of [10, 9, 8, 7]) if (km2 / CELL_KM2[r] <= MAX_CELLS) return r;
+  return 6;
+}
+
+/** Porta una cella alla risoluzione della griglia (la cella che la contiene). */
+export function toRes(cell: string, res: number): string {
+  if (!cell || !isValidCell(cell)) return cell;
+  return getResolution(cell) > res ? cellToParent(cell, res) : cell;
+}
+
+const cellCache = new Map<string, string[]>();
+
+/** Celle della griglia contenute in un poligono, con una piccola cache: il calcolo è costoso. */
+export function cellsOf(polygon: Polygon, res = CELL_RESOLUTION): string[] {
+  const ring = polygon.coordinates[0] ?? [];
+  const key = `${res}|${ring.length}|${ring[0]}|${ring[Math.floor(ring.length / 3)]}|${ring[Math.floor((ring.length * 2) / 3)]}`;
+  const hit = cellCache.get(key);
+  if (hit) return hit;
+  let cells: string[] = [];
   try {
-    return polygonToCells(polygon.coordinates, CELL_RESOLUTION, true);
+    cells = polygonToCells(polygon.coordinates, res, true);
   } catch {
-    return [];
+    cells = [];
   }
+  if (cellCache.size > 300) cellCache.clear();
+  cellCache.set(key, cells);
+  return cells;
 }
 
 /** Contorno di una cella come anello GeoJSON chiuso [lng, lat]. */

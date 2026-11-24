@@ -115,7 +115,7 @@ export default function Mappa() {
               <span className="size-2.5 rounded-full" style={{ background: on.has(l.id) ? l.color : "transparent", boxShadow: `inset 0 0 0 1.5px ${l.color}` }} />{l.label}
             </button>
           ))}
-          <div className="glass shrink-0 rounded-full p-0.5"><Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "3d", label: "3D" }, { id: "model", label: "Modello" }]} /></div>
+          <div className="glass shrink-0 rounded-full p-0.5"><Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "model", label: "Modello" }]} /></div>
         </div>
       </div>
 

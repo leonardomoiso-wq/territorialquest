@@ -18,7 +18,7 @@ Linguaggio **carta e mappa** dalla skill `slide-html-territorio` (mappe dei parc
 
 `Button`/`LinkButton` (primary, glow, ghost, outline, danger; sm/md/lg; a pillola, comode al pollice), `Kick`, `IconButton`, `Label`, `Tag` (colorato), `Dot` (con `live`), `Card`, `SectionTitle`, `Stat`, `Meter`, `Ring`, `Field`, `Area`, `Select`, `Segmented`, `Dock` (barra flottante in basso: l'azione primaria vive lì), `Sheet` (foglio dal basso su telefono, centrato su desktop; in un portale su `document.body`, sopra ogni intestazione; Esc chiude), `Empty` (titolo in serif corsivo che spiega che cosa fare), `Notice` (info, ok, error), `Spinner`.
 
-Componenti di dominio riutilizzabili: `FormTag`, `FormIcon` (`src/campo/Collect.tsx`), `SurveyAnswers` (`src/campo/Survey.tsx`), `KindTag`, `Swatches`, `backdrop()` (`src/studio/shared.tsx`), `MapView` (props per aree, rilievi, flussi, luoghi, percorsi, contributi, giocatori, nebbia e celle accese, modalità 2d/3d/model, disegno, modifica vertici, pennello, sfondi).
+Componenti di dominio riutilizzabili: `FormTag`, `FormIcon` (`src/campo/Collect.tsx`), `SurveyAnswers` (`src/campo/Survey.tsx`), `KindTag`, `Swatches`, `backdrop()` (`src/studio/shared.tsx`), `MapView` (props per aree, rilievi, flussi, luoghi, percorsi, contributi, strati, giocatori, raggio d'azione, nebbia e celle accese, modalità `2d` o `model`, disegno, modifica vertici, pennello, sfondi; ridisegna solo le sorgenti i cui ingressi sono cambiati).
 
 ## Pattern
 
@@ -27,3 +27,9 @@ Componenti di dominio riutilizzabili: `FormTag`, `FormIcon` (`src/campo/Collect.
 - **Soglie** (accesso, regia, racconto, riepilogo): fondo inchiostro, titolo serif grande, un solo pulsante.
 - Colore per significato: Field/Desk/Feel e forme hanno colori fissi ovunque (mappa, tag, grafici); categorie dei luoghi da `PLACE_CATEGORIES`.
 - Mobile prima di tutto: controlla sempre 390×844; niente scroll orizzontale della pagina; bersagli tattili ≥ 40px.
+
+## Prestazioni della mappa
+
+- Niente «3D reale» (rilievo del terreno ed edifici): era pesante sui telefoni e poco utile alla ricerca. Il «Modello» a celle resta solo nell'editor delle aree e come vista facoltativa in regia e sulla mappa pubblica, mai sul campo.
+- `MapView` confronta gli ingressi di ogni sorgente (`put`) e ricalcola solo ciò che è cambiato: passa array stabili (memo) e non oggetti ricreati a ogni render.
+- La griglia del territorio non supera circa 12.000 celle (griglia adattiva). I calcoli H3 hanno una cache in `cellsOf`.

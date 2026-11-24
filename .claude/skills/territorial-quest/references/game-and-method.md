@@ -11,6 +11,7 @@ qualità: 0 finché non è validato · bassa 0.5 · media 1 · alta 1.5
 
 - **Luoghi**: per ciascun team valgono `points/2` all'arrivo e `points/2` al primo rilievo raccolto lì e confermato (l'indagine sul sito o un rilievo libero).
 - **Camminare** accende le celle ma non dà punti: i punti restano legati a ciò che viene confermato.
+- **Griglia adattiva** (`gridResolution` in `src/domain/geo.ts`): i rilievi si salvano sempre in celle H3 di risoluzione 10 (circa 65 m), ma copertura, nebbia e modello usano una risoluzione unica per campagna scelta perché il territorio resti sotto 12.000 celle (10 su un quartiere, 9 sui sei Comuni di un tratto, 8 su una provincia). Le celle fini si riportano a quella grande con `toRes`.
 - **Indicatori collettivi**: Copertura (celle del territorio con almeno un rilievo), Equilibrio (min/max tra Field, Desk, Feel), Affidabilità (quota validata), Scambio (validazioni fatte da un team diverso dall'autore).
 - **Missioni**: traguardi comuni a tempo — raccolta (n rilievi), esplorazione (n celle), verifica (n validati), scambio (n validazioni tra team) — con filtri per tema e area; alla scadenza si chiudono.
 - Il contributo di un team (`byTeam`) si mostra come «punti portati al totale», mai in classifica.

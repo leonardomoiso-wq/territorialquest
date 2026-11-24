@@ -10,7 +10,7 @@ import Survey, { SurveyAnswers, type SurveyResult } from "@/campo/Survey";
 import { useWalk, vibrate } from "@/campo/useWalk";
 import { formOf, kindOf, lensLabel, pathLength, summary, type Form } from "@/domain/forms";
 import { categoryColors, figuresFor, formatValue, pointsOf } from "@/domain/datasets";
-import { areaAt, cellOf } from "@/domain/geo";
+import { areaAt, cellOf, toRes } from "@/domain/geo";
 import { BASE, indicators, MISSION_KIND, missionProgress, novelty, scoreObservations } from "@/domain/scoring";
 import { ago, areaOpen, isOnline, phaseOf, PHASE_LABEL, remaining } from "@/domain/time";
 import { categoryOf, FIELD_ROLES, type FieldRole, type Observation, type Place } from "@/domain/types";
@@ -183,7 +183,8 @@ export default function Campo() {
   const showNotice = notice && notice.id !== seenNotice && now.getTime() - new Date(notice.created_at).getTime() < 6 * 3600000;
 
   // la prossima zona spenta dà una direzione a chi cammina
-  const litNow = new Set([...lit, ...(walk?.cells ?? [])]);
+  // accese alla risoluzione della griglia (su territori vasti le celle sono più grandi)
+  const litNow = new Set([...lit, ...(walk?.cells ?? [])].map((c) => toRes(c, ind.resolution)));
   const activeRoute = data.routes.find((r) => r.id === routeId) ?? null;
   const stops = (activeRoute?.stops ?? []).map((sid) => data.places.find((p) => p.id === sid)).filter((p): p is Place => !!p);
   const nextStop = stops.find((p) => !reached.has(p.id)) ?? null;

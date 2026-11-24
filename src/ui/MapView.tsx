@@ -8,7 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { cellToLatLng } from "h3-js";
 import { useEffect, useRef } from "react";
 import { cellHeight, environmentOf, modelCells, type Environment } from "@/domain/environment";
-import { boundsOf, cellOf, cellRing, cellsOf } from "@/domain/geo";
+import { boundsOf, cellOf, cellRing, cellsOf, gridResolution, toRes } from "@/domain/geo";
 import { categoryColors, layersBounds, pointsOf, type Dataset } from "@/domain/datasets";
 import { categoryOf, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
 
@@ -17,7 +17,6 @@ setWorkerUrl("/maplibre-gl-worker.mjs");
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 const SATELLITE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const SATELLITE_CREDIT = "Immagini © Esri, Maxar, Earthstar Geographics";
-const DEM_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 const PAPER = "#ebe6d8";
 
 /** Stile di riserva se le tessere non sono raggiungibili: restano visibili i dati. */
@@ -30,8 +29,8 @@ const BLANK: StyleSpecification = {
 const KIND_COLOR = { field: "#4a6b43", desk: "#3d6f99", feel: "#b8573f" };
 const CONTRIB_COLOR: Record<string, string> = { immagine: "#4a6b43", percezione: "#b8573f", dato: "#3d6f99", informazione: "#7a5c9a", idea: "#d6993e" };
 
-/** Piano, 3D reale (edifici e rilievo) oppure modello a celle. */
-export type MapMode = "2d" | "3d" | "model";
+/** Piano oppure modello a celle in rilievo (solo per dipingere gli ambienti e per lo schermo grande). */
+export type MapMode = "2d" | "model";
 type Ring = [number, number][];
 type Corners = Overlay["coordinates"];
 
@@ -155,52 +154,65 @@ export default function MapView(props: Props) {
   const fitted = useRef(false);
   const applied = useRef({ mode: "" as string, raster: "", overlay: "", focus: "" });
 
+  /** Ultimi ingressi di ogni sorgente: si ridisegna solo ciò che è cambiato. */
+  const lastDeps = useRef(new Map<string, unknown[]>());
+
   const sync = () => {
     const m = map.current;
     if (!m || !ready.current) return;
     const p = latest.current;
     const mode = p.mode ?? "2d";
-    const set = (id: string, data: FC) => (m.getSource(id) as GeoJSONSource | undefined)?.setData(data);
+    const res = gridResolution(p.areas ?? []);
+    const write = (id: string, data: FC) => (m.getSource(id) as GeoJSONSource | undefined)?.setData(data);
+    /** Aggiorna una sorgente solo se i suoi ingressi sono cambiati. */
+    const put = (id: string, deps: unknown[], build: () => FC) => {
+      const prev = lastDeps.current.get(id);
+      if (prev && prev.length === deps.length && prev.every((d, i) => d === deps[i])) return;
+      lastDeps.current.set(id, deps);
+      write(id, build());
+    };
+    const set = (id: string, data: FC) => { lastDeps.current.delete(id); write(id, data); };
+    const keyOf = (it?: Iterable<string>) => (it ? [...it].join(",") : "");
     const show = (id: string, on: boolean) => m.getLayer(id) && m.setLayoutProperty(id, "visibility", on ? "visible" : "none");
 
     /* ---------------------------------------------------------------- dati */
-    set("areas", fc((p.areas ?? []).map((a) => ({
+    put("areas", [p.areas, p.selectedAreaId], () => fc((p.areas ?? []).map((a) => ({
       type: "Feature", id: a.id, geometry: a.geometry,
       properties: { id: a.id, name: a.name, color: a.color, selected: a.id === p.selectedAreaId },
     }))));
 
-    const counts = new Map<string, number>();
-    for (const o of p.observations ?? []) if (o.cell && o.status !== "flagged") counts.set(o.cell, (counts.get(o.cell) ?? 0) + 1);
-
-    const walked = new Set(p.walked ?? []);
-
-    if (mode === "model") {
-      set("cells", fc([]));
-      set("model", fc(modelCells(p.areas ?? []).map(({ cell, environment }) => {
-        const env = environmentOf(environment);
-        const n = counts.get(cell) ?? 0;
-        return {
-          type: "Feature", geometry: { type: "Polygon", coordinates: [cellRing(cell)] },
-          properties: { cell, h: cellHeight(env, cell), color: p.vivid || n > 0 ? env.color : walked.has(cell) ? blend(env.tint, env.color) : env.tint },
-        };
-      })));
-    } else {
-      set("model", fc([]));
+    // conteggi e celle percorse portati alla risoluzione della griglia
+    const walkedKey = keyOf(p.walked);
+    put(mode === "model" ? "model" : "cells", [mode, p.areas, p.observations, walkedKey, p.grid, p.fog, p.vivid, res], () => {
+      const counts = new Map<string, number>();
+      for (const o of p.observations ?? []) if (o.cell && o.status !== "flagged") { const c = toRes(o.cell, res); counts.set(c, (counts.get(c) ?? 0) + 1); }
+      const walked = new Set([...(p.walked ?? [])].map((c) => toRes(c, res)));
+      if (mode === "model") {
+        return fc(modelCells(p.areas ?? [], res).map(({ cell, environment }) => {
+          const env = environmentOf(environment);
+          const n = counts.get(cell) ?? 0;
+          return {
+            type: "Feature", geometry: { type: "Polygon", coordinates: [cellRing(cell)] },
+            properties: { cell, h: cellHeight(env, cell) * (res < 10 ? 2 : 1), color: p.vivid || n > 0 ? env.color : walked.has(cell) ? blend(env.tint, env.color) : env.tint },
+          };
+        }));
+      }
       const cells = new Set<string>();
-      if (p.grid) for (const a of p.areas ?? []) for (const c of cellsOf(a.geometry)) cells.add(c);
+      if (p.grid) for (const a of p.areas ?? []) for (const c of cellsOf(a.geometry, res)) cells.add(c);
       for (const c of counts.keys()) cells.add(c);
       for (const c of walked) cells.add(c);
-      set("cells", fc([...cells].map((c) => {
+      return fc([...cells].map((c) => {
         const n = counts.get(c) ?? 0;
         return {
           type: "Feature", geometry: { type: "Polygon", coordinates: [cellRing(c)] },
           properties: { n, dark: !!p.fog && n === 0 && !walked.has(c) },
         };
-      })));
-    }
+      }));
+    });
+    if (mode === "model") put("cells", ["vuoto"], () => fc([])); else put("model", ["vuoto"], () => fc([]));
 
-    set("observations", fc((p.observations ?? []).map((o) => point([o.lng, o.lat], { id: o.id, color: KIND_COLOR[o.kind], status: o.status }))));
-    set("flows", fc((p.observations ?? []).filter((o) => o.path && o.path.length > 1 && o.status !== "flagged").map((o) => ({
+    put("observations", [p.observations], () => fc((p.observations ?? []).map((o) => point([o.lng, o.lat], { id: o.id, color: KIND_COLOR[o.kind], status: o.status }))));
+    put("flows", [p.observations], () => fc((p.observations ?? []).filter((o) => o.path && o.path.length > 1 && o.status !== "flagged").map((o) => ({
       type: "Feature", geometry: { type: "LineString", coordinates: o.path! },
       properties: { id: o.id, intensity: Number((o.data as { intensity?: number } | undefined)?.intensity ?? 2), status: o.status },
     }))));
@@ -225,6 +237,7 @@ export default function MapView(props: Props) {
 
     set("pin", fc(p.pin ? [point(p.pin)] : []));
 
+    put("layers", [p.layers], () => {
     const layerPoints: GeoJSON.Feature[] = [], layerLines: GeoJSON.Feature[] = [];
     for (const d of p.layers ?? []) {
       if (d.kind === "punti") {
@@ -233,8 +246,10 @@ export default function MapView(props: Props) {
       }
       if (d.kind === "linee" && !Array.isArray(d.rows)) for (const f of d.rows.features ?? []) layerLines.push({ ...f, properties: { ...(f.properties ?? {}), color: d.color } });
     }
-    set("layer-points", fc(layerPoints));
-    set("layer-lines", fc(layerLines));
+    write("layer-points", fc(layerPoints));
+    write("layer-lines", fc(layerLines));
+    return fc([]);
+    });
     const me = (p.players ?? []).find((u) => u.id === "me");
     set("reach", fc(me && p.reach ? [point([me.lng, me.lat], { r0: p.reach / (156543.03 * Math.cos((me.lat * Math.PI) / 180)) })] : []));
 
@@ -245,7 +260,7 @@ export default function MapView(props: Props) {
     /* ------------------------------------------------------ luoghi e percorsi */
     const reached = new Set(p.reached ?? []);
     const completed = new Set(p.completed ?? []);
-    set("places", fc((p.places ?? []).filter((pl) => pl.placed !== false).map((pl) => {
+    put("places", [p.places, keyOf(p.reached), keyOf(p.completed), p.selectedPlaceId], () => fc((p.places ?? []).filter((pl) => pl.placed !== false).map((pl) => {
       // raggio in pixel a zoom 0: si scala con lo zoom nella regola del livello
       const r0 = pl.radius_m / (156543.03 * Math.cos((pl.lat * Math.PI) / 180));
       return point([pl.lng, pl.lat], {
@@ -254,7 +269,7 @@ export default function MapView(props: Props) {
       });
     })));
     const byId = new Map((p.places ?? []).map((pl) => [pl.id, pl]));
-    set("routes", fc((p.routes ?? []).flatMap((r) => {
+    put("routes", [p.routes, p.places, p.activeRouteId], () => fc((p.routes ?? []).flatMap((r) => {
       const coords = r.stops.map((id) => byId.get(id)).filter((x): x is Place => !!x).map((x) => [x.lng, x.lat]);
       if (coords.length < 2) return [];
       const active = p.activeRouteId ? r.id === p.activeRouteId : true;
@@ -299,11 +314,7 @@ export default function MapView(props: Props) {
       const flat = mode !== "model";
       for (const id of ["cells-fill", "cells-fog", "cells-line", "areas-fill", "flows", "obs"]) show(id, flat);
       show("model", !flat);
-      show("tq-buildings", mode === "3d");
-      try {
-        m.setTerrain(mode === "3d" && m.getSource("tq-dem") ? { source: "tq-dem", exaggeration: 1.3 } : null);
-      } catch { /* rilievo non disponibile */ }
-      const camera = mode === "2d" ? { pitch: 0, bearing: 0 } : { pitch: 58, bearing: -18 };
+      const camera = mode === "2d" ? { pitch: 0, bearing: 0 } : { pitch: 55, bearing: -18 };
       if (first) m.jumpTo(camera);
       else m.easeTo({ ...camera, duration: 900 });
     }
@@ -341,6 +352,7 @@ export default function MapView(props: Props) {
     let cancelled = false;
     const p = latest.current;
     applied.current = { mode: "", raster: "", overlay: "", focus: "" };
+    lastDeps.current = new Map();
     fitted.current = false;
 
     const start = (style: StyleSpecification | string) => {
@@ -374,19 +386,6 @@ export default function MapView(props: Props) {
         m.addLayer({ id: "areas-line", type: "line", source: "areas", paint: {
           "line-color": ["get", "color"], "line-width": ["case", ["get", "selected"], 3, 1.6], "line-dasharray": [2, 1.5],
         } });
-
-        // Edifici e rilievo reali, se lo sfondo vettoriale li offre.
-        const vector = Object.entries(m.getStyle().sources ?? {}).find(([, s]) => s.type === "vector")?.[0];
-        if (vector) {
-          m.addLayer({ id: "tq-buildings", type: "fill-extrusion", source: vector, "source-layer": "building", minzoom: 13, layout: { visibility: "none" }, paint: {
-            "fill-extrusion-color": "#dcdbd5", "fill-extrusion-opacity": 0.9,
-            "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
-            "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-          } });
-        }
-        try {
-          m.addSource("tq-dem", { type: "raster-dem", tiles: [DEM_URL], tileSize: 256, maxzoom: 14, encoding: "terrarium", attribution: "Rilievo © Mapzen, AWS Terrain Tiles" });
-        } catch { /* senza rilievo la mappa resta piana */ }
 
         m.addLayer({ id: "model", type: "fill-extrusion", source: "model", layout: { visibility: "none" }, paint: {
           "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": ["get", "h"], "fill-extrusion-opacity": 0.94,
@@ -480,12 +479,12 @@ export default function MapView(props: Props) {
           classify: (cells) => {
             const out: Record<string, Environment> = {};
             const { clientWidth: w, clientHeight: h } = m.getContainer();
-            const ours = new Set(["model", "cells-fill", "cells-line", "areas-fill", "areas-line", "tq-buildings"]);
+            const ours = new Set(["model", "cells-fill", "cells-fog", "cells-line", "areas-fill", "areas-line", "layer-points", "layer-lines"]);
             for (const cell of cells) {
               const [lat, lng] = cellToLatLng(cell);
               const px = m.project([lng, lat]);
               if (px.x < 0 || px.y < 0 || px.x > w || px.y > h) continue;
-              const env = environmentFrom(m.queryRenderedFeatures(px).filter((f) => !ours.has(f.layer.id) || f.layer.id === "tq-buildings"));
+              const env = environmentFrom(m.queryRenderedFeatures(px).filter((f) => !ours.has(f.layer.id)));
               if (env) out[cell] = env;
             }
             return out;
@@ -501,7 +500,7 @@ export default function MapView(props: Props) {
       let drag: { i: number; ring: Ring } | null = null;
 
       const paintAt = (e: Pointer) => {
-        const cell = String(hit(e, "model")?.properties?.cell ?? cellOf(e.lngLat.lng, e.lngLat.lat));
+        const cell = String(hit(e, "model")?.properties?.cell ?? toRes(cellOf(e.lngLat.lng, e.lngLat.lat), gridResolution(latest.current.areas ?? [])));
         if (cell === lastCell) return;
         lastCell = cell;
         latest.current.onPaint?.(cell);

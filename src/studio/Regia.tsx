@@ -53,7 +53,7 @@ export default function Regia({ data, me, now }: Ctx) {
             </button>
           )}
           <div className="glass absolute top-16 left-4 rounded-full p-1">
-            <Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "3d", label: "3D reale" }, { id: "model", label: "Modello" }]} />
+            <Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "model", label: "Modello" }]} />
           </div>
           <div className="glass absolute top-4 left-4 flex items-center gap-4 rounded-full py-2 pr-5 pl-4">
             <Dot color="var(--color-leaf)" live={online.length > 0} />

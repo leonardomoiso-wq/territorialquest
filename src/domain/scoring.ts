@@ -1,4 +1,4 @@
-import { cellsOf } from "./geo";
+import { cellsOf, gridResolution, toRes } from "./geo";
 import type { CampaignData, Mission, Observation, ObservationKind, Place, Visit } from "./types";
 
 /**
@@ -88,8 +88,10 @@ export interface Indicators {
   walkedCells: Set<string>;
   /** Metri percorsi insieme. */
   walkedMeters: number;
-  /** Celle del territorio. */
+  /** Celle del territorio, alla risoluzione della griglia. */
   territory: Set<string>;
+  /** Risoluzione H3 della griglia del territorio (10 = circa 65 m). */
+  resolution: number;
   /** Punti portati dai luoghi (già compresi in score). */
   placeScore: number;
   /** Luoghi raggiunti da almeno un team, sul totale. */
@@ -130,10 +132,11 @@ export function indicators(
   }
   score += placeScore;
 
+  const resolution = gridResolution(data.areas);
   const territory = new Set<string>();
-  for (const a of data.areas) for (const c of cellsOf(a.geometry)) territory.add(c);
+  for (const a of data.areas) for (const c of cellsOf(a.geometry, resolution)) territory.add(c);
   let cellsCovered = 0;
-  if (territory.size) for (const c of coveredCells.keys()) if (territory.has(c)) cellsCovered++;
+  if (territory.size) for (const c of new Set([...coveredCells.keys()].map((x) => toRes(x, resolution)))) if (territory.has(c)) cellsCovered++;
   const cellsTotal = territory.size;
 
   const total = active.length;
@@ -162,6 +165,7 @@ export function indicators(
     walkedCells: new Set((data.walks ?? []).flatMap((w) => w.cells ?? [])),
     walkedMeters: (data.walks ?? []).reduce((s, w) => s + (w.distance_m ?? 0), 0),
     territory,
+    resolution,
     placeScore: Math.round(placeScore),
     placesReached: [...places.values()].filter((p) => p.reached.size > 0).length,
     placesTotal: places.size,

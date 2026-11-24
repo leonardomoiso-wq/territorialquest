@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ENVIRONMENTS, environmentOf, modelCells, type Environment } from "@/domain/environment";
-import { cellsOf, closeRing, hectares } from "@/domain/geo";
+import { cellsOf, closeRing, gridResolution, hectares } from "@/domain/geo";
 import { areaOpen, fromLocalInput, toLocalInput } from "@/domain/time";
 import type { Area as AreaT, Basemap, Overlay, Polygon } from "@/domain/types";
 import { deleteArea, paintArea, saveArea, updateCampaign, uploadMedia } from "@/lib/data";
@@ -72,7 +72,8 @@ export default function Aree({ data, now, refresh }: Ctx) {
   const setAndSave = (patch: Partial<typeof bg>) => { const next = { ...bg, ...patch }; setBg(next); saveBg(next); };
 
   // anteprima: aree con le celle appena dipinte
-  const cellArea = useMemo(() => new Map(modelCells(data.areas).map((m) => [m.cell, m.areaId])), [data.areas]);
+  const res = useMemo(() => gridResolution(data.areas), [data.areas]);
+  const cellArea = useMemo(() => new Map(modelCells(data.areas, res).map((m) => [m.cell, m.areaId])), [data.areas, res]);
   const areas: AreaT[] = useMemo(
     () => data.areas.map((a) => {
       const mine = Object.entries(painted).filter(([cell]) => cellArea.get(cell) === a.id);
@@ -148,7 +149,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
 
         <div className="pointer-events-none absolute inset-x-0 top-4 flex flex-wrap items-start gap-2 px-4">
           <div className="glass pointer-events-auto rounded-full p-1">
-            <Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "3d", label: "3D reale" }, { id: "model", label: "Modello" }]} />
+            <Segmented className="!border-0 !p-0" value={mode} onChange={setMode} options={[{ id: "2d", label: "Piano" }, { id: "model", label: "Modello" }]} />
           </div>
           <button onClick={() => setSheet(true)} className="glass pointer-events-auto inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-medium">
             <svg viewBox="0 0 16 16" className="size-4" aria-hidden><path d="M8 1.5 14.5 5 8 8.5 1.5 5zM1.5 8 8 11.5 14.5 8M1.5 11 8 14.5 14.5 11" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>
@@ -232,7 +233,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
               <div className="soft mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
                 <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: env.color }} />{env.label}</span>
                 <span>{hectares(a.geometry).toFixed(1)} ha</span>
-                <span>{cellsOf(a.geometry).length} celle</span>
+                <span>{cellsOf(a.geometry, res).length} celle{res < 10 ? " grandi" : ""}</span>
                 <span>{count} rilievi</span>
                 <span>{team ? team.name : "tutti i team"}</span>
               </div>
