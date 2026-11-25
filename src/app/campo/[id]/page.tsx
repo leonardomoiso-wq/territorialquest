@@ -26,6 +26,7 @@ import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
 import { useAction, useNow } from "@/lib/hooks";
 import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
+import { Icon, type IconName } from "@/ui/icons";
 import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
 import { BASE as TONE, FORM_COLOR, HUE, INDICATOR } from "@/domain/palette";
 
@@ -34,33 +35,19 @@ type LngLat = [number, number];
 
 const NEAR = 80; // metri: «sei sul posto»
 
-const Icon = ({ d, className }: { d: string; className?: string }) => (
-  <svg viewBox="0 0 24 24" className={cx("size-5", className)} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
-);
-const ICON = {
-  camera: "M4 8h3l1.500-2h7L17 8h3v11H4zM12 16.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
-  check: "M5 12.500 10 17.500 19 7",
-  tray: "M4 13l2.500-7h11L20 13v5H4zM4 13h5l1 2h4l1-2h5",
-  near: "M12 21s-6.500-5.600-6.500-11A6.500 6.500 0 0 1 18.500 10c0 5.400-6.500 11-6.500 11zM12 12.500a2.500 2.500 0 1 0 0-5 2.500 2.500 0 0 0 0 5z",
-  walk: "M13 4.500a1.500 1.500 0 1 0 0-.010M9 21l2-6-2.500-2.500L10 8l3 1 2 3h3M11 15l3 2 1 4",
-  target: "M12 3v3M12 18v3M3 12h3M18 12h3M12 15.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
-  route: "M6 19a2 2 0 1 0 0-.010M18 7a2 2 0 1 0 0-.010M6 17V11a4 4 0 0 1 4-4h6",
-  view: "M3 17 12 21l9-4M3 12l9 4 9-4M12 3 3 7.500l9 4 9-4z",
-  help: "M9.500 9a2.500 2.500 0 1 1 3.500 2.300c-.700.300-1 .900-1 1.700M12 17v.010",
-};
 
 /** Mirino con un punto rosso: la posizione non è arrivata, tocca per sapere perché. */
 const GeoAlert = () => (
-  <span className="relative"><Icon d={ICON.target} /><span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-feel ring-2 ring-paper" /></span>
+  <span className="relative"><Icon name="target" /><span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-feel ring-2 ring-paper" /></span>
 );
 
 /** Pulsante tondo con etichetta sotto, per le colonne ai lati della vista esplora. */
-function SideButton({ label, d, count, onClick, children }: { label: string; d?: string; count?: number; onClick: () => void; children?: React.ReactNode }) {
+function SideButton({ label, icon, count, onClick, children }: { label: string; icon?: IconName; count?: number; onClick: () => void; children?: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick} aria-label={`${label}${count ? `: ${count}` : ""}`}
       className="pointer-events-auto flex w-16 flex-col items-center gap-1 transition active:scale-95">
       <span className="glass relative grid size-12 place-items-center rounded-full">
-        {children ?? (d && <Icon d={d} />)}
+        {children ?? (icon && <Icon name={icon} />)}
         {!!count && <span className="num absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-ink px-1 text-center text-[11px] leading-5 text-paper">{count}</span>}
       </span>
       <span className="rounded-full bg-paper/85 px-1.5 text-[11px] leading-4 font-medium whitespace-nowrap backdrop-blur">{label}</span>
@@ -69,11 +56,11 @@ function SideButton({ label, d, count, onClick, children }: { label: string; d?:
 }
 
 /** Pulsante a icona con contatore, per il dock in cammino. */
-function Counter({ label, d, count, onClick }: { label: string; d: string; count: number; onClick: () => void }) {
+function Counter({ label, icon, count, onClick }: { label: string; icon: IconName; count: number; onClick: () => void }) {
   return (
     <button type="button" aria-label={`${label}${count ? `: ${count}` : ""}`} title={label} onClick={onClick}
       className="relative grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95">
-      <Icon d={d} />
+      <Icon name={icon} />
       {count > 0 && <span className="num absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-ink px-1 text-center text-[11px] leading-4 text-paper">{count}</span>}
     </button>
   );
@@ -448,7 +435,7 @@ export default function Campo() {
         )}
         {walking && !picking && nearby.length > 0 && (
           <button onClick={() => setPanel("validate")} className="glass pointer-events-auto flex max-w-md animate-rise items-center gap-3 rounded-3xl px-4 py-2.5 text-left">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-paper"><Icon d={ICON.check} /></span>
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-paper"><Icon name="check" /></span>
             <span className="min-w-0"><span className="label soft block">Sei sul posto – conferma</span><span className="block truncate text-sm">{nearby[0].title}{nearby.length > 1 ? ` e altri ${nearby.length - 1}` : ""}</span></span>
           </button>
         )}
@@ -456,7 +443,7 @@ export default function Campo() {
           <button onClick={() => { if (nextStop) { setPlaceId(nextStop.id); setPanel("place"); } else setPanel("routes"); }}
             className="glass pointer-events-auto flex max-w-[calc(100vw-1.5rem)] items-center gap-3 rounded-full py-2 pr-4 pl-2.5 text-left text-sm">
             <span className="grid size-8 shrink-0 place-items-center rounded-full text-white" style={{ background: activeRoute.color, transform: stopTarget ? `rotate(${stopTarget.bearing}deg)` : undefined }} aria-hidden>
-              {nextStop ? <svg viewBox="0 0 16 16" className="size-4"><path d="M8 2 13 13 8 10.500 3 13z" fill="currentColor" /></svg> : <Icon d={ICON.check} className="!size-4" />}
+              {nextStop ? <svg viewBox="0 0 16 16" className="size-4"><path d="M8 2 13 13 8 10.500 3 13z" fill="currentColor" /></svg> : <Icon name="check" className="!size-4" />}
             </span>
             <span className="min-w-0 truncate">
               {nextStop
@@ -491,7 +478,7 @@ export default function Campo() {
       {!picking && !walking && (
         <button type="button" onClick={locate} aria-label="Dove sono"
           className="glass absolute right-3 bottom-24 z-20 flex h-11 items-center gap-2 rounded-full pr-4 pl-3 text-sm transition active:scale-95">
-          {geoError ? <GeoAlert /> : <Icon d={ICON.target} />}{locating ? "Cerco…" : "Dove sono"}
+          {geoError ? <GeoAlert /> : <Icon name="target" />}{locating ? "Cerco…" : "Dove sono"}
         </button>
       )}
       {layerState.all.length > 0 && !picking && !walking && (
@@ -501,10 +488,10 @@ export default function Campo() {
       {walking && !picking && (
         <>
           <div className="pointer-events-none absolute bottom-36 left-2 z-20 flex flex-col gap-2.5 sm:left-4">
-            <SideButton label="Conferma" d={ICON.check} count={toValidate.length} onClick={() => setPanel("validate")} />
-            {drafts.length > 0 && <SideButton label="Foto" d={ICON.tray} count={drafts.length} onClick={() => setPanel("drafts")} />}
-            {data.places.length > 0 && <SideButton label="Percorsi" d={ICON.route} onClick={() => setPanel("routes")} />}
-            <SideButton label="Come" d={ICON.help} onClick={() => setStory(true)} />
+            <SideButton label="Conferma" icon="check" count={toValidate.length} onClick={() => setPanel("validate")} />
+            {drafts.length > 0 && <SideButton label="Foto" icon="tray" count={drafts.length} onClick={() => setPanel("drafts")} />}
+            {data.places.length > 0 && <SideButton label="Percorsi" icon="route" onClick={() => setPanel("routes")} />}
+            <SideButton label="Come" icon="help" onClick={() => setStory(true)} />
           </div>
           <div className="pointer-events-none absolute right-2 bottom-36 z-20 flex flex-col gap-2.5 sm:right-4">
             {exploring && (
@@ -514,9 +501,9 @@ export default function Campo() {
                 </svg>
               </SideButton>
             )}
-            <SideButton label="Vista" d={ICON.view} onClick={() => setPanel("view")} />
+            <SideButton label="Vista" icon="view" onClick={() => setPanel("view")} />
             {layerState.all.length > 0 && <SideButton label="Strati" onClick={() => setPanel("layers")}><LayersIcon /></SideButton>}
-            <SideButton label={locating ? "Cerco" : "Dove sono"} d={ICON.target} onClick={locate}>{geoError ? <GeoAlert /> : undefined}</SideButton>
+            <SideButton label={locating ? "Cerco" : "Dove sono"} icon="target" onClick={locate}>{geoError ? <GeoAlert /> : undefined}</SideButton>
           </div>
         </>
       )}
@@ -562,7 +549,7 @@ export default function Campo() {
                     <span className="flex flex-col items-center gap-0.5"><PlusIcon /><span className="text-[11px] font-medium tracking-wide">Raccogli</span></span>
                   </button>
                   <label className={cx("absolute -top-2 -right-4 grid size-11 cursor-pointer place-items-center rounded-full bg-paper text-ink shadow-[var(--shadow-soft)] transition active:scale-95", !canCollect && "pointer-events-none opacity-40")} title="Scatto rapido">
-                    <Icon d={ICON.camera} />
+                    <Icon name="camera" />
                     <span className="sr-only">Scatto rapido</span>
                     <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={!canCollect} onChange={(e) => { snap(e.target.files?.[0]); e.target.value = ""; }} />
                   </label>
@@ -570,21 +557,21 @@ export default function Campo() {
 
                 {/* vicino a te: i prossimi luoghi da raggiungere */}
                 <button type="button" onClick={() => setPanel("near")} className="glass mb-3 flex h-12 w-24 items-center justify-center gap-1.5 rounded-full px-3 transition active:scale-95" aria-label={`Vicino a te: ${aroundCount}`}>
-                  {nearestPlaces.length ? nearestPlaces.map(({ p }) => <span key={p.id} className="size-3 rounded-full ring-2 ring-paper" style={{ background: categoryOf(p.category).color }} />) : <Icon d={ICON.near} />}
+                  {nearestPlaces.length ? nearestPlaces.map(({ p }) => <span key={p.id} className="size-3 rounded-full ring-2 ring-paper" style={{ background: categoryOf(p.category).color }} />) : <Icon name="pin" />}
                   <span className="min-w-0 truncate text-[12px] leading-tight">{nearestPlaces[0] ? formatMeters(nearestPlaces[0].m) : "Vicino"}</span>
                 </button>
               </div>
             ) : (
             <>
-              <Button variant="glow" className="h-12 !px-5" disabled={!canCollect} onClick={begin}><Icon d={ICON.walk} /> Inizia un&apos;uscita</Button>
+              <Button variant="glow" className="h-12 !px-5" disabled={!canCollect} onClick={begin}><Icon name="walk" /> Inizia un&apos;uscita</Button>
               <button type="button" aria-label="Nuovo rilievo" title="Nuovo rilievo" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }}
                 className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95 disabled:opacity-40">
                 <PlusIcon />
               </button>
-              <Counter label="Conferma i rilievi degli altri" d={ICON.check} count={toValidate.length} onClick={() => setPanel("validate")} />
-              {drafts.length > 0 && <Counter label="Foto da completare" d={ICON.tray} count={drafts.length} onClick={() => setPanel("drafts")} />}
-              <Counter label="Vicino a te" d={ICON.near} count={aroundCount} onClick={() => setPanel("near")} />
-              {data.places.length > 0 && <Counter label="Luoghi e percorsi" d={ICON.route} count={0} onClick={() => setPanel("routes")} />}
+              <Counter label="Conferma i rilievi degli altri" icon="check" count={toValidate.length} onClick={() => setPanel("validate")} />
+              {drafts.length > 0 && <Counter label="Foto da completare" icon="tray" count={drafts.length} onClick={() => setPanel("drafts")} />}
+              <Counter label="Vicino a te" icon="pin" count={aroundCount} onClick={() => setPanel("near")} />
+              {data.places.length > 0 && <Counter label="Luoghi e percorsi" icon="route" count={0} onClick={() => setPanel("routes")} />}
               <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="hidden size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6 sm:grid">?</button>
             </>
             )

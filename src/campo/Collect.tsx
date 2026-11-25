@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/ui/icons";
 import { FEELINGS, FLOW_MODES, FORMS, formOf, INTENSITY, LENSES, perHour, SENSES, type Form, type FormData, type Lens } from "@/domain/forms";
 import type { Theme } from "@/domain/types";
 import { Area, Button, cx, Field, Label, Notice, PlusIcon, Sheet } from "@/ui/kit";
@@ -23,9 +24,7 @@ export const emptyEntry = (form: Form, keep?: Partial<Entry>): Entry => ({
 
 export function FormIcon({ form, className }: { form: string | null | undefined; className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={cx("size-5", className)} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d={formOf(form).icon} />
-    </svg>
+    <Icon name={`forma-${formOf(form).id}`} className={className} strokeWidth={1.6} />
   );
 }
 
