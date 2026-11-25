@@ -76,6 +76,10 @@ riscrive i token `--color-*` di `src/app/globals.css`. Il test `palette.test.ts`
 o se compare un colore esadecimale scritto a mano fuori dalla palette.
 Le illustrazioni si generano in scala di grigi e prendono i colori da qui (vedi `docs/ASSET-GEMINI.md`).
 
+Le immagini generate vanno in `asset-sorgenti/`; `npm run assets` toglie lo sfondo verde, le porta in grigio,
+le salva in WebP in `public/assets/` e aggiorna l'elenco `src/domain/assets.generated.ts`.
+Nell'interfaccia si mostrano con `<Tinted name="toppe/fiume" accent={colore} />`, che le ricolora con inchiostro, accento e carta.
+
 ## Luoghi, percorsi e indagini sul sito
 
 - **Luoghi** (sezione Luoghi della regia): punti di interesse storici, naturalistici, culturali,

@@ -1,0 +1,104 @@
+// Prepara le illustrazioni generate (vedi docs/ASSET-GEMINI.md) per l'app.
+//
+// Uso:  npm run assets              (legge asset-sorgenti/)
+//       npm run assets -- cartella  (legge un'altra cartella)
+//
+// Per ogni immagine:
+// 1. toglie lo sfondo verde pieno (#00FF00) e il riflesso verde sui bordi (oggetti ritagliati);
+// 2. la porta in scala di grigi e ne stira i toni (il più scuro diventa nero, il più chiaro bianco),
+//    così l'app può ricolorarla con inchiostro, accento e carta del tema;
+// 3. ritaglia i bordi vuoti, centra gli oggetti in un quadrato con margine;
+// 4. salva WebP nelle misure d'uso in public/assets/<gruppo>/;
+// 5. riscrive src/domain/assets.generated.ts con l'elenco degli asset disponibili.
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { basename, extname, join } from "node:path";
+import sharp from "sharp";
+
+const SRC = process.argv[2] ?? "asset-sorgenti";
+const OUT = process.env.TQ_ASSETS_OUT ?? "public/assets";
+const REGISTRY = process.env.TQ_ASSETS_REGISTRY ?? "src/domain/assets.generated.ts";
+
+/** Gruppo, misure e trattamento per prefisso del nome del file. */
+const RULES = [
+  { prefix: "atlante-", group: "atlante", sizes: [512, 256], cutout: true, square: true },
+  { prefix: "toppa-", group: "toppe", sizes: [512, 256], cutout: true, square: true },
+  { prefix: "stemma-", group: "toppe", sizes: [512, 256], cutout: true, square: true },
+  { prefix: "texture-strappo", group: "texture", sizes: [2048], cutout: true, square: false },
+  { prefix: "texture-", group: "texture", sizes: [1024], cutout: false, square: false, tile: true },
+  { prefix: "icone-", group: null },
+  { prefix: "", group: "scene", sizes: [1600, 800], cutout: false, square: false },
+];
+
+if (!existsSync(SRC)) {
+  console.error(`Cartella ${SRC} non trovata. Metti lì le immagini generate con i nomi di docs/ASSET-GEMINI.md.`);
+  process.exit(1);
+}
+
+const done = [];
+for (const file of readdirSync(SRC).sort()) {
+  if (!/\.(png|jpe?g|webp)$/i.test(file)) continue;
+  const name = basename(file, extname(file)).toLowerCase();
+  const rule = RULES.find((r) => name.startsWith(r.prefix));
+  if (!rule.group) { console.log(`– ${file}: solo riferimento, non pubblicato`); continue; }
+
+  const { data, info } = await sharp(join(SRC, file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const px = info.width * info.height;
+  const lum = new Float32Array(px);
+  const alpha = new Uint8ClampedArray(px);
+
+  for (let i = 0; i < px; i++) {
+    let r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2], a = data[i * 4 + 3];
+    if (rule.cutout) {
+      // quanto il pixel è «verde sfondo»: verde molto più forte di rosso e blu
+      const green = g - Math.max(r, b);
+      if (green > 90) a = 0;
+      else if (green > 30) a = Math.round(a * (1 - (green - 30) / 60));
+      if (green > 0) g = Math.max(r, b); // toglie il riflesso verde sui bordi
+    }
+    lum[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    alpha[i] = a;
+  }
+
+  // livelli: percentili 1% e 99% dei pixel visibili diventano nero e bianco
+  const visible = [];
+  for (let i = 0; i < px; i += 3) if (alpha[i] > 200) visible.push(lum[i]);
+  visible.sort((x, y) => x - y);
+  const lo = visible[Math.floor(visible.length * 0.01)] ?? 0;
+  const hi = visible[Math.floor(visible.length * 0.99)] ?? 255;
+  const span = Math.max(1, hi - lo);
+
+  const out = Buffer.alloc(px * 2);
+  for (let i = 0; i < px; i++) {
+    out[i * 2] = Math.max(0, Math.min(255, Math.round(((lum[i] - lo) / span) * 255)));
+    out[i * 2 + 1] = alpha[i];
+  }
+
+  let img = sharp(out, { raw: { width: info.width, height: info.height, channels: 2 } });
+  if (rule.cutout) img = sharp(await img.png().toBuffer()).trim({ threshold: 1 });
+  let base = await img.png().toBuffer();
+  if (rule.square) {
+    const meta = await sharp(base).metadata();
+    const side = Math.round(Math.max(meta.width, meta.height) * 1.12);
+    base = await sharp({ create: { width: side, height: side, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input: base, gravity: "centre" }]).png().toBuffer();
+  }
+
+  const dir = join(OUT, rule.group);
+  mkdirSync(dir, { recursive: true });
+  // atlante-forma-idea → atlante/forma-idea; toppa-fiume → toppe/fiume; texture-carta → texture/carta; stemma-base resta
+  const slug = name.replace(/^(atlante|toppa|texture)-/, "");
+  for (const size of rule.sizes) {
+    const resized = sharp(base).resize(rule.tile ? { width: size, height: size, fit: "cover" } : { width: size, height: rule.square ? size : undefined, fit: "inside", withoutEnlargement: true });
+    const target = join(dir, rule.sizes.length > 1 && size !== rule.sizes[0] ? `${slug}-${size}.webp` : `${slug}.webp`);
+    await resized.webp({ quality: 86, alphaQuality: 90 }).toFile(target);
+  }
+  done.push(`${rule.group}/${slug}`);
+  console.log(`✓ ${file} → ${rule.group}/${slug}.webp (toni ${Math.round(lo)}–${Math.round(hi)})`);
+}
+
+const list = [...new Set(done)].sort();
+writeFileSync(REGISTRY, `// Generato da scripts/assets.mjs: non modificare a mano.
+/** Illustrazioni disponibili in public/assets (gruppo/nome, senza estensione). */
+export const ASSETS: ReadonlySet<string> = new Set(${JSON.stringify(list, null, 2)});
+`);
+console.log(`\n${list.length} asset pronti in ${OUT}, elenco in ${REGISTRY}`);
