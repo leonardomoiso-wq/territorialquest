@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SKY } from "@/domain/palette";
 
 /** Qualità della vista esplora: automatica misura il telefono e decide. */
 export type Quality = "auto" | "ricca" | "essenziale";
@@ -120,8 +121,8 @@ export function useWakeLock(active: boolean) {
 /** Colori del cielo secondo l'ora: alba, giorno, tramonto, sera. */
 export function skyAt(date: Date) {
   const h = date.getHours() + date.getMinutes() / 60;
-  if (h >= 6 && h < 8.5) return { sky: "#e9c9a4", horizon: "#f4e2c8", fog: "#efe4d2" };
-  if (h >= 8.5 && h < 17.5) return { sky: "#b9d0d6", horizon: "#e9eee6", fog: "#ebe6d8" };
-  if (h >= 17.5 && h < 20.5) return { sky: "#d9a184", horizon: "#f0d3b4", fog: "#e9dcc8" };
-  return { sky: "#4b5566", horizon: "#9aa0a6", fog: "#c9c4b8" };
+  if (h >= 6 && h < 8.5) return SKY.alba;
+  if (h >= 8.5 && h < 17.5) return SKY.giorno;
+  if (h >= 17.5 && h < 20.5) return SKY.tramonto;
+  return SKY.sera;
 }

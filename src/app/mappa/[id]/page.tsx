@@ -16,16 +16,17 @@ import { Community, ContributeSheet, contributionsFor, type Target } from "@/ui/
 import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import MapView, { type MapMode } from "@/ui/MapView";
 import { Button, cx, Empty, Label, LinkButton, Logo, Notice, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
+import { PUBLIC_LAYER } from "@/domain/palette";
 
 type Layer = "territorio" | "siti" | "luoghi" | "contributi" | "dati";
 type Item = { kind: "obs"; o: Observation } | { kind: "contrib"; c: Contribution } | { kind: "place"; p: Place } | { kind: "area"; name: string };
 
 const LAYERS: { id: Layer; label: string; color: string }[] = [
-  { id: "territorio", label: "Territorio", color: "#4a6b43" },
-  { id: "siti", label: "Indagini sui siti", color: "#b5643c" },
-  { id: "luoghi", label: "Luoghi e percorsi", color: "#e8a81c" },
-  { id: "contributi", label: "Contributi", color: "#7a63d2" },
-  { id: "dati", label: "Dati del territorio", color: "#a8651c" },
+  { id: "territorio", label: "Territorio", color: PUBLIC_LAYER.territorio },
+  { id: "siti", label: "Indagini sui siti", color: PUBLIC_LAYER.siti },
+  { id: "luoghi", label: "Luoghi e percorsi", color: PUBLIC_LAYER.luoghi },
+  { id: "contributi", label: "Contributi", color: PUBLIC_LAYER.contributi },
+  { id: "dati", label: "Dati del territorio", color: PUBLIC_LAYER.dati },
 ];
 const date = (iso: string) => new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
 

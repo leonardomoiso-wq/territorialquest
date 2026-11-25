@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { cellHeight, environmentOf, modelCells, type Environment } from "@/domain/environment";
 import { boundsOf, cellOf, cellRing, cellsOf, gridResolution, toRes } from "@/domain/geo";
 import { categoryColors, layersBounds, pointsOf, type Dataset } from "@/domain/datasets";
+import { BASE, FORM_COLOR, HUE, MAP, ROLE } from "@/domain/palette";
 import { categoryOf, PLACE_CATEGORIES, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
 
 setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -17,7 +18,7 @@ setWorkerUrl("/maplibre-gl-worker.mjs");
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 const SATELLITE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const SATELLITE_CREDIT = "Immagini © Esri, Maxar, Earthstar Geographics";
-const PAPER = "#ebe6d8";
+const PAPER = BASE.paper;
 
 /**
  * Stile di riserva se la mappa vettoriale non risponde: una mappa a immagini chiara,
@@ -38,8 +39,8 @@ const BLANK: StyleSpecification = {
   ],
 };
 
-const KIND_COLOR = { field: "#4a6b43", desk: "#3d6f99", feel: "#b8573f" };
-const CONTRIB_COLOR: Record<string, string> = { immagine: "#4a6b43", percezione: "#b8573f", dato: "#3d6f99", informazione: "#7a5c9a", idea: "#d6993e" };
+const KIND_COLOR = { field: ROLE.field, desk: ROLE.desk, feel: ROLE.feel };
+const CONTRIB_COLOR: Record<string, string> = FORM_COLOR;
 
 /** Piano oppure modello a celle in rilievo (solo per dipingere gli ambienti e per lo schermo grande). */
 export type MapMode = "2d" | "model";
@@ -177,7 +178,7 @@ function ensureImage(m: MLMap, id: string) {
   if (kind === "fig") m.addImage(id, figureImage(color), { pixelRatio: PX });
 }
 const PX = 2;
-const INK = "#2b2118";
+const INK = BASE.ink;
 const canvas = (w: number, h: number) => {
   const c = document.createElement("canvas");
   c.width = w * PX; c.height = h * PX;
@@ -202,8 +203,8 @@ function signImage(color: string, state: string) {
     g.fillStyle = fill;
     g.beginPath(); g.roundRect(4 + inset, 3 + inset, W - 8 - inset * 2, 26 - inset * 2, 4 - inset / 2); g.fill();
   };
-  board(0, INK); board(1.6, "#fbf8f0"); board(3.6, color);
-  g.strokeStyle = "#fbf8f0"; g.lineWidth = 2.4; g.lineJoin = "round"; g.lineCap = "round";
+  board(0, INK); board(1.6, BASE.edge); board(3.6, color);
+  g.strokeStyle = BASE.edge; g.lineWidth = 2.4; g.lineJoin = "round"; g.lineCap = "round";
   if (state === "da") {
     // freccia di sentiero: meta da raggiungere
     g.beginPath(); g.moveTo(13, 16); g.lineTo(26, 16); g.moveTo(22, 11.5); g.lineTo(26.5, 16); g.lineTo(22, 20.5); g.stroke();
@@ -212,7 +213,7 @@ function signImage(color: string, state: string) {
   }
   if (state === "done") {
     // timbro del team: luogo completato
-    g.fillStyle = "#d6993e"; g.strokeStyle = INK; g.lineWidth = 1.6;
+    g.fillStyle = HUE.glow; g.strokeStyle = INK; g.lineWidth = 1.6;
     g.beginPath(); g.arc(W - 7, 7, 6.5, 0, Math.PI * 2); g.fill(); g.stroke();
     g.fillStyle = INK; g.beginPath(); g.arc(W - 7, 7, 2, 0, Math.PI * 2); g.fill();
   }
@@ -231,7 +232,7 @@ function figureImage(color: string) {
   body.roundRect(W / 2 + 1.4, 36, 5.6, 17, 2.6);
   // bordo di carta bianca, poi il colore: effetto ritaglio
   g.save(); g.translate(1.5, 1.5); g.fillStyle = "rgba(43,33,24,0.25)"; g.fill(body); g.restore();
-  g.strokeStyle = "#fbf8f0"; g.lineWidth = 5; g.lineJoin = "round"; g.stroke(body);
+  g.strokeStyle = BASE.edge; g.lineWidth = 5; g.lineJoin = "round"; g.stroke(body);
   g.fillStyle = color; g.fill(body);
   g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke(body);
   return asImage(c);
@@ -370,7 +371,7 @@ export default function MapView(props: Props) {
     set("reach", fc(me && p.reach ? [point([me.lng, me.lat], { r0: p.reach / (156543.03 * Math.cos((me.lat * Math.PI) / 180)) })] : []));
 
     set("contribs", fc((p.contributions ?? []).map((x) => point([x.lng, x.lat], {
-      id: x.id, color: CONTRIB_COLOR[x.form] ?? "#7a63d2", pending: x.status === "pending",
+      id: x.id, color: CONTRIB_COLOR[x.form] ?? HUE.violet, pending: x.status === "pending",
     }))));
 
     /* ------------------------------------------------------ luoghi e percorsi */
@@ -454,7 +455,7 @@ export default function MapView(props: Props) {
       show("tq-buildings", on && !!ex?.rich);
       // nebbia di carta: le zone mai attraversate restano coperte da una velatura chiara
       // sempre leggera: strade ed edifici della mappa di riferimento devono restare leggibili
-      m.setPaintProperty("cells-fog", "fill-color", on ? "#f3eee2" : "#3a2a1c");
+      m.setPaintProperty("cells-fog", "fill-color", on ? MAP.fogPaper : BASE["ink-2"]);
       m.setPaintProperty("cells-fog", "fill-opacity", ["case", ["get", "dark"], on ? 0.38 : 0.16, 0]);
       m.setPaintProperty("cells-fill", "fill-opacity", on
         ? ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.22, 6, 0.4]
@@ -541,7 +542,7 @@ export default function MapView(props: Props) {
         const grouped = ["has", "point_count"] as const;
         /** Cerchio di un grappolo: più grande quanti più punti contiene. */
         const clusterPaint = (fill: string) => ({
-          "circle-color": fill, "circle-opacity": 0.92, "circle-stroke-color": "#fbf8f0", "circle-stroke-width": 3,
+          "circle-color": fill, "circle-opacity": 0.92, "circle-stroke-color": BASE.edge, "circle-stroke-width": 3,
           "circle-radius": ["step", ["get", "point_count"], 13, 10, 17, 50, 22, 200, 28] as unknown as number,
         });
         const glyphs = !!m.getStyle().glyphs;
@@ -556,11 +557,11 @@ export default function MapView(props: Props) {
 
         m.addLayer({ id: "tq-veil", type: "background", paint: { "background-color": PAPER, "background-opacity": 0 } });
         m.addLayer({ id: "cells-fill", type: "fill", source: "cells", paint: {
-          "fill-color": ["interpolate", ["linear"], ["get", "n"], 0, "#b4c49c", 1, "#9fb98a", 6, "#4a6b43"],
+          "fill-color": ["interpolate", ["linear"], ["get", "n"], 0, HUE.sage, 1, HUE["sage-2"], 6, HUE.leaf],
           "fill-opacity": ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.5, 6, 0.78],
         } });
-        m.addLayer({ id: "cells-fog", type: "fill", source: "cells", paint: { "fill-color": "#3a2a1c", "fill-opacity": ["case", ["get", "dark"], 0.16, 0] } });
-        m.addLayer({ id: "cells-line", type: "line", source: "cells", paint: { "line-color": "#2b2118", "line-opacity": 0.1, "line-width": 0.6 } });
+        m.addLayer({ id: "cells-fog", type: "fill", source: "cells", paint: { "fill-color": BASE["ink-2"], "fill-opacity": ["case", ["get", "dark"], 0.16, 0] } });
+        m.addLayer({ id: "cells-line", type: "line", source: "cells", paint: { "line-color": BASE.ink, "line-opacity": 0.1, "line-width": 0.6 } });
         m.addLayer({ id: "areas-fill", type: "fill", source: "areas", paint: {
           "fill-color": ["get", "color"], "fill-opacity": ["case", ["get", "selected"], 0.16, 0.05],
         } });
@@ -572,38 +573,38 @@ export default function MapView(props: Props) {
         if (m.getStyle().sources?.openmaptiles) {
           try {
             m.addLayer({ id: "tq-buildings", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 14, layout: { visibility: "none" }, paint: {
-              "fill-extrusion-color": "#e6dfcf",
+              "fill-extrusion-color": MAP.building,
               "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
               "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
               "fill-extrusion-opacity": 0.85,
             } });
           } catch { /* mappa di base senza edifici */ }
         }
-        m.addLayer({ id: "flash", type: "fill", source: "flash", paint: { "fill-color": "#e3b04b", "fill-opacity": 0 } });
+        m.addLayer({ id: "flash", type: "fill", source: "flash", paint: { "fill-color": HUE.honey, "fill-opacity": 0 } });
 
         m.addLayer({ id: "model", type: "fill-extrusion", source: "model", layout: { visibility: "none" }, paint: {
           "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": ["get", "h"], "fill-extrusion-opacity": 0.94,
         } });
 
         m.addLayer({ id: "flows", type: "line", source: "flows", layout: { "line-cap": "round", "line-join": "round" }, paint: {
-          "line-color": "#3d6f99", "line-width": ["interpolate", ["linear"], ["get", "intensity"], 1, 2, 5, 8],
+          "line-color": HUE.river, "line-width": ["interpolate", ["linear"], ["get", "intensity"], 1, 2, 5, 8],
           "line-opacity": ["case", ["==", ["get", "status"], "validated"], 0.9, 0.5],
         } });
         m.addLayer({ id: "layer-lines-casing", type: "line", source: "layer-lines", layout: { "line-cap": "round", "line-join": "round" }, paint: {
-          "line-color": "#f5f1e6", "line-width": 7, "line-opacity": 0.9,
+          "line-color": BASE.card, "line-width": 7, "line-opacity": 0.9,
         } });
         // sentiero a puntini, come nelle mappe dei parchi
         m.addLayer({ id: "layer-lines", type: "line", source: "layer-lines", layout: { "line-cap": "round", "line-join": "round" }, paint: {
           "line-color": ["get", "color"], "line-width": 4.5, "line-dasharray": [0, 2],
         } });
-        m.addLayer({ id: "layer-cluster", type: "circle", source: "layer-points", filter: grouped as never, paint: clusterPaint("#5c4a36") });
-        clusterCount("layer-cluster-count", "layer-points", "#f5f1e6");
+        m.addLayer({ id: "layer-cluster", type: "circle", source: "layer-points", filter: grouped as never, paint: clusterPaint(BASE.graphite) });
+        clusterCount("layer-cluster-count", "layer-points", BASE.card);
         m.addLayer({ id: "layer-points", type: "circle", source: "layer-points", filter: single as never, paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 14, 5, 18, 8], "circle-color": ["get", "color"],
-          "circle-stroke-color": "#f5f1e6", "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 16, 2], "circle-opacity": 0.95,
+          "circle-stroke-color": BASE.card, "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 16, 2], "circle-opacity": 0.95,
         } });
         m.addLayer({ id: "routes-casing", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: {
-          "line-color": "#ffffff", "line-width": 7, "line-opacity": ["case", ["get", "active"], 0.85, 0.25],
+          "line-color": BASE.white, "line-width": 7, "line-opacity": ["case", ["get", "active"], 0.85, 0.25],
         } });
         m.addLayer({ id: "routes", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: {
           "line-color": ["get", "color"], "line-width": 3.5, "line-dasharray": [1.2, 1.4], "line-opacity": ["case", ["get", "active"], 1, 0.3],
@@ -613,29 +614,29 @@ export default function MapView(props: Props) {
           "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "selected"], 0.16, 0.07],
           "circle-stroke-color": ["get", "color"], "circle-stroke-width": 1, "circle-stroke-opacity": 0.5,
         } });
-        m.addLayer({ id: "obs-cluster", type: "circle", source: "observations", filter: grouped as never, paint: clusterPaint("#4a6b43") });
-        clusterCount("obs-cluster-count", "observations", "#f5f1e6");
+        m.addLayer({ id: "obs-cluster", type: "circle", source: "observations", filter: grouped as never, paint: clusterPaint(HUE.leaf) });
+        clusterCount("obs-cluster-count", "observations", BASE.card);
         m.addLayer({ id: "obs", type: "circle", source: "observations", filter: single as never, paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3.5, 14, 5, 18, 9],
-          "circle-color": ["case", ["==", ["get", "status"], "flagged"], "#8a7d68", ["get", "color"]],
+          "circle-color": ["case", ["==", ["get", "status"], "flagged"], BASE.mute, ["get", "color"]],
           "circle-opacity": ["case", ["==", ["get", "status"], "validated"], 1, 0.45],
-          "circle-stroke-color": "#fbf8f0", "circle-stroke-width": 1.5,
+          "circle-stroke-color": BASE.edge, "circle-stroke-width": 1.5,
         } });
         // raggio d'azione: entro questo cerchio luoghi e rilievi si possono toccare
         m.addLayer({ id: "reach", type: "circle", source: "reach", paint: {
           "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 0, ["get", "r0"], 22, ["*", ["get", "r0"], 4194304]],
-          "circle-color": "#d6993e", "circle-opacity": 0.08, "circle-stroke-color": "#d6993e", "circle-stroke-width": 2, "circle-stroke-opacity": 0.55,
+          "circle-color": HUE.glow, "circle-opacity": 0.08, "circle-stroke-color": HUE.glow, "circle-stroke-width": 2, "circle-stroke-opacity": 0.55,
         } });
         m.addLayer({ id: "players-halo", type: "circle", source: "players", paint: {
           "circle-radius": 14, "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "online"], 0.22, 0.06],
         } });
         m.addLayer({ id: "players", type: "circle", source: "players", paint: {
           "circle-radius": 6, "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "online"], 1, 0.4],
-          "circle-stroke-color": "#2b2118", "circle-stroke-width": 2,
+          "circle-stroke-color": BASE.ink, "circle-stroke-width": 2,
         } });
         // vista esplora: ombra a terra e sagoma di carta in piedi per chi cammina
         m.addLayer({ id: "players-shadow", type: "circle", source: "players", layout: { visibility: "none" }, paint: {
-          "circle-radius": ["case", ["get", "me"], 10, 7], "circle-color": "#2b2118", "circle-opacity": 0.16, "circle-blur": 0.4,
+          "circle-radius": ["case", ["get", "me"], 10, 7], "circle-color": BASE.ink, "circle-opacity": 0.16, "circle-blur": 0.4,
           "circle-pitch-alignment": "map",
         } });
         m.addLayer({ id: "players-fig", type: "symbol", source: "players", layout: {
@@ -644,30 +645,30 @@ export default function MapView(props: Props) {
           "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport", "symbol-sort-key": ["case", ["get", "me"], 1, 0],
         } });
         // contributi individuali: anello bianco, nucleo colorato; in revisione tratteggiati dalla trasparenza
-        m.addLayer({ id: "contribs-cluster", type: "circle", source: "contribs", filter: grouped as never, paint: clusterPaint("#7a5c9a") });
-        clusterCount("contribs-cluster-count", "contribs", "#f5f1e6");
+        m.addLayer({ id: "contribs-cluster", type: "circle", source: "contribs", filter: grouped as never, paint: clusterPaint(HUE.plum) });
+        clusterCount("contribs-cluster-count", "contribs", BASE.card);
         m.addLayer({ id: "contribs", type: "circle", source: "contribs", filter: single as never, paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 4, 16, 8],
-          "circle-color": "#ffffff", "circle-stroke-color": ["get", "color"], "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 16, 3.5],
+          "circle-color": BASE.white, "circle-stroke-color": ["get", "color"], "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 16, 3.5],
           "circle-opacity": ["case", ["get", "pending"], 0.6, 1], "circle-stroke-opacity": ["case", ["get", "pending"], 0.5, 1],
         } });
         // grappolo di luoghi: cartello chiaro con bordo, distinto dai grappoli dei servizi
         m.addLayer({ id: "places-cluster", type: "circle", source: "places", filter: grouped as never, paint: {
-          "circle-color": "#f5f1e6", "circle-stroke-color": "#a8473a", "circle-stroke-width": 2.5,
+          "circle-color": BASE.card, "circle-stroke-color": HUE.brick, "circle-stroke-width": 2.5,
           "circle-radius": ["step", ["get", "point_count"], 14, 10, 18, 40, 23] as unknown as number,
         } });
-        if (glyphs) clusterCount("places-cluster-count", "places", "#2b2118");
-        else m.addLayer({ id: "places-cluster-dot", type: "circle", source: "places", filter: grouped as never, paint: { "circle-radius": 5, "circle-color": "#a8473a" } });
+        if (glyphs) clusterCount("places-cluster-count", "places", BASE.ink);
+        else m.addLayer({ id: "places-cluster-dot", type: "circle", source: "places", filter: grouped as never, paint: { "circle-radius": 5, "circle-color": HUE.brick } });
         m.addLayer({ id: "places-halo", type: "circle", source: "places", filter: single as never, paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["case", ["get", "selected"], 10, 6], 13, ["case", ["get", "selected"], 15, 10], 16, ["case", ["get", "selected"], 20, 15]],
-          "circle-color": ["case", ["get", "done"], "#d6993e", "#ffffff"], "circle-opacity": 0.95,
-          "circle-stroke-color": ["case", ["get", "done"], "#2b2118", ["get", "reached"], "#4a6b43", "#2b2118"],
+          "circle-color": ["case", ["get", "done"], HUE.glow, BASE.white], "circle-opacity": 0.95,
+          "circle-stroke-color": ["case", ["get", "done"], BASE.ink, ["get", "reached"], HUE.leaf, BASE.ink],
           "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 9, 1, 14, ["case", ["get", "reached"], 3, 1.5]],
         } });
         m.addLayer({ id: "places", type: "circle", source: "places", filter: single as never, paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["case", ["get", "selected"], 7, 4], 13, ["case", ["get", "selected"], 10, 7], 16, ["case", ["get", "selected"], 12, 9]],
           "circle-color": ["get", "color"],
-          "circle-stroke-color": "#ffffff", "circle-stroke-width": ["case", ["get", "reached"], 2, 0],
+          "circle-stroke-color": BASE.white, "circle-stroke-width": ["case", ["get", "reached"], 2, 0],
         } });
         // vista esplora: cartelli in piedi, più grandi da vicino; i più vicini coprono i lontani
         m.addLayer({ id: "places-sign", type: "symbol", source: "places", filter: single as never, layout: {
@@ -679,18 +680,18 @@ export default function MapView(props: Props) {
           try {
             m.addLayer({ id: "places-label", type: "symbol", source: "places", minzoom: 14, filter: single as never, layout: {
               "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-offset": [0, 1.7], "text-anchor": "top", "text-max-width": 9,
-            }, paint: { "text-color": "#2b2118", "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
+            }, paint: { "text-color": BASE.ink, "text-halo-color": BASE.white, "text-halo-width": 1.6 } });
           } catch { /* caratteri non disponibili: restano i simboli */ }
         }
-        m.addLayer({ id: "draft-fill", type: "fill", source: "draft", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#2b2118", "fill-opacity": 0.1 } });
-        m.addLayer({ id: "draft-line", type: "line", source: "draft", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#2b2118", "line-width": 2 } });
-        m.addLayer({ id: "draft-points", type: "circle", source: "draft", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": "#2b2118", "circle-stroke-width": 2 } });
-        m.addLayer({ id: "edit-fill", type: "fill", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#2b2118", "fill-opacity": 0.1 } });
-        m.addLayer({ id: "edit-line", type: "line", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": "#2b2118", "line-width": 2 } });
-        m.addLayer({ id: "edit-mid", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "mid"], paint: { "circle-radius": 4, "circle-color": "#2b2118", "circle-opacity": 0.35 } });
-        m.addLayer({ id: "edit-vertex", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "vertex"], paint: { "circle-radius": 7, "circle-color": "#ffffff", "circle-stroke-color": "#2b2118", "circle-stroke-width": 2.5 } });
-        m.addLayer({ id: "pin-halo", type: "circle", source: "pin", paint: { "circle-radius": 18, "circle-color": "#2b2118", "circle-opacity": 0.14 } });
-        m.addLayer({ id: "pin", type: "circle", source: "pin", paint: { "circle-radius": 7, "circle-color": "#2b2118", "circle-stroke-color": "#d6993e", "circle-stroke-width": 3 } });
+        m.addLayer({ id: "draft-fill", type: "fill", source: "draft", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": BASE.ink, "fill-opacity": 0.1 } });
+        m.addLayer({ id: "draft-line", type: "line", source: "draft", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": BASE.ink, "line-width": 2 } });
+        m.addLayer({ id: "draft-points", type: "circle", source: "draft", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": BASE.white, "circle-stroke-color": BASE.ink, "circle-stroke-width": 2 } });
+        m.addLayer({ id: "edit-fill", type: "fill", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": BASE.ink, "fill-opacity": 0.1 } });
+        m.addLayer({ id: "edit-line", type: "line", source: "edit", filter: ["==", ["geometry-type"], "Polygon"], paint: { "line-color": BASE.ink, "line-width": 2 } });
+        m.addLayer({ id: "edit-mid", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "mid"], paint: { "circle-radius": 4, "circle-color": BASE.ink, "circle-opacity": 0.35 } });
+        m.addLayer({ id: "edit-vertex", type: "circle", source: "edit", filter: ["==", ["get", "kind"], "vertex"], paint: { "circle-radius": 7, "circle-color": BASE.white, "circle-stroke-color": BASE.ink, "circle-stroke-width": 2.5 } });
+        m.addLayer({ id: "pin-halo", type: "circle", source: "pin", paint: { "circle-radius": 18, "circle-color": BASE.ink, "circle-opacity": 0.14 } });
+        m.addLayer({ id: "pin", type: "circle", source: "pin", paint: { "circle-radius": 7, "circle-color": BASE.ink, "circle-stroke-color": HUE.glow, "circle-stroke-width": 3 } });
 
         ready.current = true;
         m.getContainer().querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show");

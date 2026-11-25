@@ -11,6 +11,7 @@ import { useAction } from "@/lib/hooks";
 import { Bars, Lines, ValueTable } from "@/ui/charts";
 import { Area, Button, Card, cx, Empty, Field, Label, Notice, PlusIcon, SectionTitle, Segmented, Select, Sheet, Tag } from "@/ui/kit";
 import { PALETTE, type Ctx } from "./shared";
+import { HUE } from "@/domain/palette";
 
 const KINDS: { id: DatasetKind; label: string; hint: string }[] = [
   { id: "indicatori", label: "Indicatori", hint: "Valori per Comune, anche nel tempo: schede e confronti" },
@@ -108,7 +109,7 @@ export default function Fonti({ data, refresh }: Ctx) {
                     await refresh();
                   })}
                   onLines={() => run(async () => {
-                    await saveDataset({ campaign_id: c.id, name: nameFromFile(p.file), kind: "linee", rows: p.geo.lines, columns: [], public: true, color: "#a8651c" });
+                    await saveDataset({ campaign_id: c.id, name: nameFromFile(p.file), kind: "linee", rows: p.geo.lines, columns: [], public: true, color: HUE.rust });
                     await centerOn([{ kind: "linee", rows: p.geo.lines, columns: [] }]);
                     await refresh();
                   })}

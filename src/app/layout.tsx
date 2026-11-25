@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ServiceWorker from "./ServiceWorker";
+import { BASE } from "@/domain/palette";
 
 export const metadata: Metadata = {
   title: { default: "Territorial Quest", template: "%s – Territorial Quest" },
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2b2118",
+  themeColor: BASE.ink,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

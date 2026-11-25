@@ -63,6 +63,19 @@ Durante l'uscita la mappa si inclina e segue chi cammina:
 - **Dove sono**: in Campo e nei contributi; se la posizione non arriva, spiega perché (permesso, localizzazione del computer, segnale).
 - Su touch screen i pulsanti piccoli diventano alti 40 px; i pulsanti di zoom compaiono solo su schermi larghi.
 
+## Colori
+
+Tutti i colori stanno in `src/domain/palette.ts`: base (carta, inchiostro), tinte, tipi di luogo, forme, ambienti,
+serie dei grafici, squadre, cielo della vista esplora, mappa. Dopo una modifica:
+
+```bash
+npm run palette
+```
+
+riscrive i token `--color-*` di `src/app/globals.css`. Il test `palette.test.ts` fallisce se CSS e palette non coincidono
+o se compare un colore esadecimale scritto a mano fuori dalla palette.
+Le illustrazioni si generano in scala di grigi e prendono i colori da qui (vedi `docs/ASSET-GEMINI.md`).
+
 ## Luoghi, percorsi e indagini sul sito
 
 - **Luoghi** (sezione Luoghi della regia): punti di interesse storici, naturalistici, culturali,

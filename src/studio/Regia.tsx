@@ -12,6 +12,7 @@ import { summary } from "@/domain/forms";
 import { formatMeters } from "@/domain/walk";
 import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import { backdrop, nameOf, teamOf, type Ctx } from "./shared";
+import { INDICATOR, MAP } from "@/domain/palette";
 
 export default function Regia({ data, me, now }: Ctx) {
   const ind = useMemo(() => indicators(data), [data]);
@@ -20,7 +21,7 @@ export default function Regia({ data, me, now }: Ctx) {
   const onMap: MapPlayer[] = data.members
     .filter((m) => m.last_lng != null && m.last_lat != null)
     .map((m) => ({
-      id: m.id, name: m.profile?.display_name ?? "", color: teamOf(data, m.team_id)?.color ?? "#3d4046",
+      id: m.id, name: m.profile?.display_name ?? "", color: teamOf(data, m.team_id)?.color ?? MAP.noTeam,
       lng: m.last_lng!, lat: m.last_lat!, online: isOnline(m.last_seen_at, now),
     }));
   const missions = data.missions.map((m) => missionProgress(m, data, now)).filter((p) => p.state === "active" || p.state === "done");
@@ -107,9 +108,9 @@ export default function Regia({ data, me, now }: Ctx) {
           <div className="mt-6 grid grid-cols-4 gap-2 text-center">
             {[
               ["Copertura", ind.coverage, "var(--color-glow)"],
-              ["Equilibrio", ind.balance, "#8fb3d1"],
-              ["Affidabilità", ind.reliability, "#e08a6e"],
-              ["Scambio", ind.exchange, "#e8c07a"],
+              ["Equilibrio", ind.balance, INDICATOR.balance],
+              ["Affidabilità", ind.reliability, INDICATOR.reliability],
+              ["Scambio", ind.exchange, INDICATOR.exchange],
             ].map(([label, v, color]) => (
               <div key={label as string}>
                 <Ring value={v as number} color={color as string} size={58} />

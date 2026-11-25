@@ -27,6 +27,7 @@ import { useAction, useNow } from "@/lib/hooks";
 import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
+import { BASE as TONE, FORM_COLOR, HUE, INDICATOR } from "@/domain/palette";
 
 type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers" | "view";
 type LngLat = [number, number];
@@ -50,19 +51,19 @@ const ICON = {
 
 /** Mirino con un punto rosso: la posizione non è arrivata, tocca per sapere perché. */
 const GeoAlert = () => (
-  <span className="relative"><Icon d={ICON.target} /><span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-[#b8573f] ring-2 ring-paper" /></span>
+  <span className="relative"><Icon d={ICON.target} /><span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-feel ring-2 ring-paper" /></span>
 );
 
 /** Pulsante tondo con etichetta sotto, per le colonne ai lati della vista esplora. */
 function SideButton({ label, d, count, onClick, children }: { label: string; d?: string; count?: number; onClick: () => void; children?: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick} aria-label={`${label}${count ? `: ${count}` : ""}`}
-      className="pointer-events-auto flex w-14 flex-col items-center gap-1 transition active:scale-95">
+      className="pointer-events-auto flex w-16 flex-col items-center gap-1 transition active:scale-95">
       <span className="glass relative grid size-12 place-items-center rounded-full">
         {children ?? (d && <Icon d={d} />)}
         {!!count && <span className="num absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-ink px-1 text-center text-[11px] leading-5 text-paper">{count}</span>}
       </span>
-      <span className="rounded-full bg-paper/85 px-1.5 text-[11px] leading-4 font-medium backdrop-blur">{label}</span>
+      <span className="rounded-full bg-paper/85 px-1.5 text-[11px] leading-4 font-medium whitespace-nowrap backdrop-blur">{label}</span>
     </button>
   );
 }
@@ -365,7 +366,7 @@ export default function Campo() {
     const d = await addDraft(id, file, position ?? [c.center_lng, c.center_lat]);
     setDrafts((list) => [...list, d]);
     vibrate(30);
-    toss("#4a6b43");
+    toss(FORM_COLOR.immagine);
     setToast("Foto salvata. La completi quando ti fermi.");
   };
   const complete = (d: Draft) => {
@@ -397,15 +398,15 @@ export default function Campo() {
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView
         className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations}
-        grid fog fit controls={false} creditsLift="7rem" walked={walked} {...backdrop(c)}
+        grid fog fit controls={false} creditsLift="6.25rem" walked={walked} {...backdrop(c)}
         places={data.places} routes={data.routes} reached={reached} activeRouteId={routeId} selectedPlaceId={placeId}
         onPlaceClick={(pid) => { setPlaceId(pid); setPanel("place"); }}
         focus={walking && follow && !picking ? position : centerOn?.at ?? null} focusNonce={centerOn?.n} onDrag={() => setFollow(false)}
         pin={(picking || panel === "new") && !tracing ? pin : null}
         draft={(picking || panel === "new") && tracing ? path : undefined} draftLine
         players={[
-          ...mates.map((m) => ({ id: m.id, name: m.profile?.display_name ?? "", color: myTeam?.color ?? "#4a6b43", lng: m.last_lng!, lat: m.last_lat!, online: true })),
-          ...(position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#2b2118", lng: position[0], lat: position[1], online: true }] : []),
+          ...mates.map((m) => ({ id: m.id, name: m.profile?.display_name ?? "", color: myTeam?.color ?? HUE.leaf, lng: m.last_lng!, lat: m.last_lat!, online: true })),
+          ...(position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? TONE.ink, lng: position[0], lat: position[1], online: true }] : []),
         ]}
         reach={position && canCollect ? NEAR : null} completed={completed}
         explore={exploring ? { heading: compassOn ? compass.heading : 0, rich, motion, sky: rich ? skyAt(now) : undefined } : null}
@@ -509,7 +510,7 @@ export default function Campo() {
             {exploring && (
               <SideButton label={compassOn ? "Bussola" : "Nord"} onClick={toggleCompass}>
                 <svg viewBox="0 0 24 24" className="size-6" style={{ transform: `rotate(${compassOn ? -(compass.heading ?? 0) : 0}deg)`, transition: motion ? "transform .3s" : undefined }} aria-hidden>
-                  <path d="M12 3 15 12h-6z" fill="#b8573f" /><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35" />
+                  <path d="M12 3 15 12h-6z" fill="var(--color-feel)" /><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35" />
                 </svg>
               </SideButton>
             )}
@@ -546,7 +547,7 @@ export default function Campo() {
                 <button key={fly?.id ?? "stemma"} type="button" onClick={() => setPanel("missions")} aria-label={`Squadra: mappa accesa al ${litPct}%`}
                   className={cx("flex w-20 flex-col items-center gap-1 transition active:scale-95", fly && "animate-thump")}>
                   <span className="grid size-14 place-items-center rounded-full p-[3px] shadow-[var(--shadow-soft)]"
-                    style={{ background: `conic-gradient(${myTeam?.color ?? "#2b2118"} ${litPct * 3.6}deg, rgb(245 241 230 / .85) 0)` }}>
+                    style={{ background: `conic-gradient(${myTeam?.color ?? TONE.ink} ${litPct * 3.6}deg, rgb(245 241 230 / .85) 0)` }}>
                     <span className="grid size-full place-items-center rounded-full bg-paper">
                       <span className="num text-[15px] font-medium leading-none">{litPct}<span className="text-[11px]">%</span></span>
                     </span>
@@ -654,7 +655,7 @@ export default function Campo() {
                 <ul className="divide-y divide-line">
                   {placesAround.map(({ p, m }) => (
                     <li key={p.id}><button className="flex w-full items-center gap-3 py-2.5 text-left" onClick={() => { setPlaceId(p.id); setPanel("place"); }}>
-                      <span className="size-3 shrink-0 rounded-full" style={{ background: categoryOf(p.category).color, boxShadow: completed.includes(p.id) ? "0 0 0 3px #d6993e" : reached.has(p.id) ? "0 0 0 3px #4a6b43" : undefined }} />
+                      <span className="size-3 shrink-0 rounded-full" style={{ background: categoryOf(p.category).color, boxShadow: completed.includes(p.id) ? `0 0 0 3px ${HUE.glow}` : reached.has(p.id) ? `0 0 0 3px ${HUE.leaf}` : undefined }} />
                       <span className="min-w-0 flex-1 truncate">{p.name}</span>
                       <span className="soft text-sm">{completed.includes(p.id) ? "completato" : reached.has(p.id) ? "raggiunto" : formatMeters(m)}</span>
                     </button></li>
@@ -857,7 +858,7 @@ export default function Campo() {
             <span className="label soft">pt di tutti – +{ind.potential} in attesa</span>
           </div>
           <div className="mt-5 grid grid-cols-4 gap-2 text-center">
-            {([["Copertura", ind.coverage, "var(--color-glow)"], ["Equilibrio", ind.balance, "#8fb3d1"], ["Affidabilità", ind.reliability, "#e08a6e"], ["Scambio", ind.exchange, "#e8c07a"]] as const).map(([l, v, col]) => (
+            {([["Copertura", ind.coverage, "var(--color-glow)"], ["Equilibrio", ind.balance, INDICATOR.balance], ["Affidabilità", ind.reliability, INDICATOR.reliability], ["Scambio", ind.exchange, INDICATOR.exchange]] as const).map(([l, v, col]) => (
               <div key={l}><Ring value={v} color={col} size={56} /><div className="label soft mt-1.5 !text-[11px]">{l}</div></div>
             ))}
           </div>

@@ -1,3 +1,7 @@
+> **Colori**: unica fonte `src/domain/palette.ts` (BASE, HUE, ON_INK, ROLE, PLACE_COLOR, FORM_COLOR, ENV_COLOR, SERIES, TEAM_COLORS,
+> INDICATOR, PUBLIC_LAYER, SKY, MAP). `npm run palette` rigenera i token CSS; il test vieta esadecimali scritti a mano altrove.
+> Illustrazioni in scala di grigi (inchiostro, accento grigio medio, carta), ricolorate dall'app.
+
 # Design system
 
 Idea guida: **il territorio è la scena**, carta che prende colore con i dati. Prima versione ispirata a why.zero.university (HUD, dock, una cosa per volta); linguaggio attuale dalla skill `slide-html-territorio`. Pagina di riferimento viva: `/design`.

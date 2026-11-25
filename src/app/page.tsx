@@ -1,6 +1,7 @@
 import HexField from "@/ui/HexField";
 import Topo from "@/ui/Topo";
 import { ArrowIcon, Dock, Kick, Label, LinkButton, Logo, Ring, Tag } from "@/ui/kit";
+import { BASE, HUE, INDICATOR, ON_INK } from "@/domain/palette";
 
 const SURFACES = [
   { n: "01", name: "Field", color: "var(--color-field)", title: "Il rilievo, in tasca.", body: "Un'osservazione in meno di trenta secondi: tema, posizione, foto, percezione. Sul territorio, dal telefono." },
@@ -9,24 +10,24 @@ const SURFACES = [
 ];
 
 const STORY = [
-  { title: "Parti", color: "#8a7d68", body: "La mappa è spenta. Inizi un'uscita: da qui l'app conta i passi e ti indica la zona non esplorata più vicina." },
-  { title: "Cammina", color: "#f1ead9", body: "Ogni zona che attraversi si accende, per te e per tutti gli altri team. Nessuno ci tornerà per niente." },
-  { title: "Osserva", color: "#d6993e", body: "Foto, flussi, percezioni, dati, informazioni, idee. Uno scatto rapido ora, la didascalia quando ti fermi." },
-  { title: "Conferma", color: "#e08a6e", body: "Passando dove ha lavorato un altro team, confermi i loro rilievi sul posto. Solo allora diventano punti di tutti." },
+  { title: "Parti", color: BASE.mute, body: "La mappa è spenta. Inizi un'uscita: da qui l'app conta i passi e ti indica la zona non esplorata più vicina." },
+  { title: "Cammina", color: ON_INK.cream, body: "Ogni zona che attraversi si accende, per te e per tutti gli altri team. Nessuno ci tornerà per niente." },
+  { title: "Osserva", color: HUE.glow, body: "Foto, flussi, percezioni, dati, informazioni, idee. Uno scatto rapido ora, la didascalia quando ti fermi." },
+  { title: "Conferma", color: ON_INK.reliability, body: "Passando dove ha lavorato un altro team, confermi i loro rilievi sul posto. Solo allora diventano punti di tutti." },
 ];
 
 const INDICATORS = [
   { label: "Copertura", v: 0.62, color: "var(--color-glow)", body: "Quanta parte del territorio è stata esplorata." },
-  { label: "Equilibrio", v: 0.78, color: "#8fb3d1", body: "Field, Desk e Feel crescono insieme." },
-  { label: "Affidabilità", v: 0.54, color: "#e08a6e", body: "Rilievi confermati da un altro team." },
-  { label: "Scambio", v: 0.41, color: "#e8c07a", body: "Validazioni che attraversano i team." },
+  { label: "Equilibrio", v: 0.78, color: INDICATOR.balance, body: "Field, Desk e Feel crescono insieme." },
+  { label: "Affidabilità", v: 0.54, color: INDICATOR.reliability, body: "Rilievi confermati da un altro team." },
+  { label: "Scambio", v: 0.41, color: INDICATOR.exchange, body: "Validazioni che attraversano i team." },
 ];
 
 export default function Home() {
   return (
     <main>
       {/* ------------------------------------------------------------ scena */}
-      <section className="relative flex min-h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,#f5f1e6_0%,#ebe6d8_50%,#e2dbc9_100%)]">
+      <section className="relative flex min-h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,var(--color-card)_0%,var(--color-paper)_50%,var(--color-paper-2)_100%)]">
         <Topo seed={2.3} cx={0.18} cy={0.12} n={12} className="absolute inset-0 size-full text-ink" opacity={0.1} />
         <HexField className="absolute inset-0 size-full [mask-image:linear-gradient(to_bottom,transparent_0%,transparent_30%,black_78%)]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[70%] bg-[radial-gradient(60%_70%_at_50%_45%,rgb(245_241_230/0.95),transparent)]" />
@@ -141,8 +142,8 @@ export default function Home() {
           <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-panel border hairline px-7 py-5">
             <Label>Valore di un rilievo</Label>
             <code className="num text-[15px]">
-              base(<span className="text-glow">tipo</span>) × <span className="text-[#7fb0ff]">novità</span> ×{" "}
-              <span className="text-[#ff9cc2]">qualità</span>
+              base(<span className="text-glow">tipo</span>) × <span className="text-sky-light">novità</span> ×{" "}
+              <span className="text-pink-light">qualità</span>
             </code>
             <span className="soft text-sm sm:ml-auto">Le regole sono pubbliche e uguali per tutti.</span>
           </div>

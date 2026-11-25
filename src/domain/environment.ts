@@ -1,6 +1,7 @@
 import { cellToLatLng } from "h3-js";
 import { cellsOf } from "./geo";
 import type { Area } from "./types";
+import { ENV_COLOR } from "@/domain/palette";
 
 /** Ambienti geografici con cui si costruisce il modello 3D del territorio. */
 export type Environment = "urbano" | "verde" | "acqua" | "rilievo" | "rurale" | "costa" | "industriale";
@@ -22,13 +23,13 @@ export interface EnvironmentSpec {
 }
 
 export const ENVIRONMENTS: EnvironmentSpec[] = [
-  { id: "urbano", label: "Urbano", hint: "Isolati, strade, edifici", color: "#d2704a", tint: "#d6d5d0", base: 10, vary: 46, smooth: 0.15 },
-  { id: "verde", label: "Verde", hint: "Parchi, boschi, giardini", color: "#2e9e6b", tint: "#cfdccf", base: 4, vary: 12, smooth: 0.6 },
-  { id: "acqua", label: "Acqua", hint: "Fiumi, laghi, canali", color: "#3b8fd8", tint: "#c8d7e2", base: 1, vary: 0, smooth: 1 },
-  { id: "rilievo", label: "Rilievo", hint: "Colline e montagne", color: "#7d6b57", tint: "#d9d2c6", base: 30, vary: 190, smooth: 1 },
-  { id: "rurale", label: "Rurale", hint: "Campi e coltivi", color: "#c2b23e", tint: "#dedcc4", base: 3, vary: 5, smooth: 0.7 },
-  { id: "costa", label: "Costa", hint: "Spiagge, rive, greti", color: "#e3c47a", tint: "#e6dfcb", base: 2, vary: 3, smooth: 0.8 },
-  { id: "industriale", label: "Industriale", hint: "Capannoni, scali, aree produttive", color: "#6f6a8c", tint: "#cfced6", base: 9, vary: 16, smooth: 0.3 },
+  { id: "urbano", label: "Urbano", hint: "Isolati, strade, edifici", ...ENV_COLOR.urbano, base: 10, vary: 46, smooth: 0.15 },
+  { id: "verde", label: "Verde", hint: "Parchi, boschi, giardini", ...ENV_COLOR.verde, base: 4, vary: 12, smooth: 0.6 },
+  { id: "acqua", label: "Acqua", hint: "Fiumi, laghi, canali", ...ENV_COLOR.acqua, base: 1, vary: 0, smooth: 1 },
+  { id: "rilievo", label: "Rilievo", hint: "Colline e montagne", ...ENV_COLOR.rilievo, base: 30, vary: 190, smooth: 1 },
+  { id: "rurale", label: "Rurale", hint: "Campi e coltivi", ...ENV_COLOR.rurale, base: 3, vary: 5, smooth: 0.7 },
+  { id: "costa", label: "Costa", hint: "Spiagge, rive, greti", ...ENV_COLOR.costa, base: 2, vary: 3, smooth: 0.8 },
+  { id: "industriale", label: "Industriale", hint: "Capannoni, scali, aree produttive", ...ENV_COLOR.industriale, base: 9, vary: 16, smooth: 0.3 },
 ];
 
 const BY_ID = new Map(ENVIRONMENTS.map((e) => [e.id, e]));

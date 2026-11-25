@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { BASE, HUE } from "@/domain/palette";
 
-const COLORS = ["#4a6b43", "#9fb98a", "#d6993e", "#3d6f99", "#b8573f", "#a8651c"];
+const COLORS = [HUE.leaf, HUE["sage-2"], HUE.glow, HUE.river, HUE.terracotta, HUE.rust];
 
 /**
  * Territorio astratto: una griglia esagonale in scala di grigi che prende
@@ -83,7 +84,7 @@ export default function HexField({ className, density = 26, dark = false }: { cl
         // lato in ombra: dà spessore al volume
         ctx.globalAlpha = dark ? 0.9 : 1;
         hex(c.x, c.y, r - 1.5);
-        ctx.fillStyle = dark ? "#21170f" : "rgba(43,33,24,0.12)";
+        ctx.fillStyle = dark ? BASE.night : "rgba(43,33,24,0.12)";
         ctx.fill();
         // faccia superiore
         hex(c.x, top, r - 1.5);

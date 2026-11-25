@@ -1,5 +1,6 @@
 import { completeness, type SurveyData } from "./survey";
 import type { Observation, ObservationKind } from "./types";
+import { FORM_COLOR } from "@/domain/palette";
 
 /**
  * Impianto di raccolta per la ricerca sul campo.
@@ -24,29 +25,29 @@ export interface FormSpec {
 }
 
 export const FORMS: FormSpec[] = [
-  { id: "immagine", label: "Immagine", prompt: "Che cosa vale la pena mostrare?", hint: "Una foto con la sua didascalia", color: "#4a6b43",
+  { id: "immagine", label: "Immagine", prompt: "Che cosa vale la pena mostrare?", hint: "Una foto con la sua didascalia", color: FORM_COLOR.immagine,
     titleLabel: "Didascalia", titlePlaceholder: "Il murale all'angolo di via Cuneo",
     icon: "M4 7h3l1.5-2h7L17 7h3v12H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" },
-  { id: "flusso", label: "Flusso", prompt: "Che cosa si muove, e da dove a dove?", hint: "Persone, mezzi, merci, acqua: si traccia e si conta", color: "#3d8a8a",
+  { id: "flusso", label: "Flusso", prompt: "Che cosa si muove, e da dove a dove?", hint: "Persone, mezzi, merci, acqua: si traccia e si conta", color: FORM_COLOR.flusso,
     titleLabel: "Che flusso è", titlePlaceholder: "Uscita dalla scuola verso la fermata",
     icon: "M3 17c4 0 4-10 9-10s5 6 9 6M17 9l4 4-4 4" },
-  { id: "percezione", label: "Percezione", prompt: "Come si sta, qui e adesso?", hint: "Atmosfera, sensazioni, sensi coinvolti", color: "#b8573f",
+  { id: "percezione", label: "Percezione", prompt: "Come si sta, qui e adesso?", hint: "Atmosfera, sensazioni, sensi coinvolti", color: FORM_COLOR.percezione,
     titleLabel: "In una frase", titlePlaceholder: "Silenzio improvviso dietro la piazza",
     icon: "M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.500-7 10-7 10z" },
-  { id: "dato", label: "Dato", prompt: "Che cosa hai misurato o contato?", hint: "Un numero con la sua unità", color: "#3d6f99",
+  { id: "dato", label: "Dato", prompt: "Che cosa hai misurato o contato?", hint: "Un numero con la sua unità", color: FORM_COLOR.dato,
     titleLabel: "Che cosa misura", titlePlaceholder: "Posti bici davanti alla biblioteca",
     icon: "M5 20V11M12 20V4M19 20v-6" },
-  { id: "informazione", label: "Informazione", prompt: "Che cosa hai saputo, e da chi?", hint: "Un fatto, una storia, una fonte", color: "#7a5c9a",
+  { id: "informazione", label: "Informazione", prompt: "Che cosa hai saputo, e da chi?", hint: "Un fatto, una storia, una fonte", color: FORM_COLOR.informazione,
     titleLabel: "Che cosa hai saputo", titlePlaceholder: "Il mercato chiuderà per lavori in primavera",
     icon: "M5 5h14v10H10l-5 4zM9 9h6M9 12h4" },
-  { id: "idea", label: "Idea", prompt: "E se qui…?", hint: "Un'opportunità o una proposta nata sul posto", color: "#d6993e",
+  { id: "idea", label: "Idea", prompt: "E se qui…?", hint: "Un'opportunità o una proposta nata sul posto", color: FORM_COLOR.idea,
     titleLabel: "E se…", titlePlaceholder: "…il cortile diventasse un'aula all'aperto?",
     icon: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.500 10.900V15h7v-1.100A6 6 0 0 0 12 3z" },
 ];
 
 /** L'indagine sul sito non si sceglie tra le forme: nasce da un luogo. */
 export const SURVEY_FORM: FormSpec = {
-  id: "indagine", label: "Indagine sul sito", prompt: "Che cosa dice questo luogo, da vicino?", hint: "Scheda di domande preparata dalla regia", color: "#b5643c",
+  id: "indagine", label: "Indagine sul sito", prompt: "Che cosa dice questo luogo, da vicino?", hint: "Scheda di domande preparata dalla regia", color: FORM_COLOR.indagine,
   titleLabel: "Titolo", titlePlaceholder: "Indagine", icon: "M9 4h6v3H9zM7 5.500H5.500V20h13V5.500H17M8.500 11h7M8.500 14.500h7M8.500 18h4",
 };
 

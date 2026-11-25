@@ -6,30 +6,47 @@
 
 /* ------------------------------------------------------------------ token */
 @theme {
+  /* palette:inizio (generato da src/domain/palette.ts con npm run palette: non modificare a mano) */
   --color-ink: #2b2118;
   --color-ink-2: #3a2a1c;
   --color-ink-3: #4a3826;
+  --color-night: #21170f;
   --color-paper: #ebe6d8;
   --color-paper-2: #e2dbc9;
   --color-card: #f5f1e6;
+  --color-edge: #fbf8f0;
+  --color-white: #ffffff;
   --color-line: #cfc5ae;
   --color-mute: #8a7d68;
   --color-graphite: #5c4a36;
-
+  --color-brown: #3a2a1c;
   --color-moss: #2f4a2c;
   --color-leaf: #4a6b43;
-  --color-glow: #d6993e;
-
   --color-sage: #b4c49c;
-  --color-brown: #3a2a1c;
-  --color-edge: #fbf8f0;
-
-  /* le tre famiglie di rilievo */
+  --color-sage-2: #9fb98a;
+  --color-glow: #d6993e;
+  --color-river: #3d6f99;
+  --color-brick: #a8473a;
+  --color-terracotta: #b8573f;
+  --color-plum: #7a5c9a;
+  --color-teal: #3d8a8a;
+  --color-copper: #b5643c;
+  --color-rust: #a8651c;
+  --color-violet: #7a63d2;
+  --color-amber: #e8a81c;
+  --color-honey: #e3b04b;
   --color-field: #4a6b43;
   --color-desk: #3d6f99;
   --color-feel: #b8573f;
   --color-sun: #d6993e;
   --color-alert: #a8473a;
+  --color-cream: #f1ead9;
+  --color-sky-light: #7fb0ff;
+  --color-pink-light: #ff9cc2;
+  --color-balance: #8fb3d1;
+  --color-reliability: #e08a6e;
+  --color-exchange: #e8c07a;
+  /* palette:fine */
 
   --font-sans: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Bricolage Grotesque Variable", "Hanken Grotesk Variable", ui-sans-serif, sans-serif;
@@ -198,7 +215,7 @@ body::after {
 }
 
 .maplibregl-map { font-family: var(--font-sans); }
-.maplibregl-ctrl-bottom-right { bottom: var(--credits-lift, 0px); transition: bottom 0.2s; }
+.maplibregl-map .maplibregl-ctrl-bottom-right { bottom: var(--credits-lift, 0px); transition: bottom 0.2s; }
 .maplibregl-ctrl-attrib { font-size: 10px; background: rgb(245 241 230 / 0.75) !important; border-radius: 2px 0 0 0; }
 .maplibregl-ctrl-group { border-radius: 3px !important; overflow: hidden; box-shadow: var(--shadow-soft) !important; }
 

@@ -1,4 +1,5 @@
 import type { Polygon } from "./types";
+import { SERIES as PALETTE_SERIES, SERIES_OTHER } from "@/domain/palette";
 
 /**
  * Dati del territorio importati da file: CSV di indicatori, punti, tabelle; GeoJSON di aree e linee.
@@ -35,7 +36,7 @@ export interface Dataset {
 }
 
 /** Palette categorica dei grafici, verificata sul fondo carta (ordine fisso, mai a rotazione). */
-export const SERIES = ["#2f8a4e", "#c98a12", "#2f78c8", "#d0483e", "#9358c8", "#a8651c"];
+export const SERIES: readonly string[] = PALETTE_SERIES;
 
 /* ---------------------------------------------------------------- CSV */
 
@@ -332,7 +333,7 @@ export function categoryColors(d: Dataset): Map<string, string> {
   if (cats.length <= 1) return new Map(cats.map((c) => [c, d.color]));
   return new Map(cats.map((c, i) => [c, i < SERIES.length ? SERIES[i] : OTHER]));
 }
-export const OTHER = "#8a7d68";
+export const OTHER: string = SERIES_OTHER;
 
 /** Estensione [ovest, sud, est, nord] di punti e linee degli strati. */
 export function layersBounds(ds: Dataset[]): [[number, number], [number, number]] | null {

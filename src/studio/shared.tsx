@@ -4,6 +4,7 @@ import type { Campaign, CampaignData, Membership, Observation } from "@/domain/t
 import { mediaUrl } from "@/lib/data";
 import { KIND_LABEL } from "@/domain/types";
 import { Tag } from "@/ui/kit";
+import { TEAM_COLORS } from "@/domain/palette";
 
 export interface Ctx {
   data: CampaignData;
@@ -12,7 +13,7 @@ export interface Ctx {
   refresh: () => Promise<void>;
 }
 
-export const PALETTE = ["#4a6b43", "#3d6f99", "#b8573f", "#d6993e", "#7a5c9a", "#a8651c", "#3d8a8a", "#5c4a36"];
+export const PALETTE: readonly string[] = TEAM_COLORS;
 export const KIND_COLOR = { field: "var(--color-field)", desk: "var(--color-desk)", feel: "var(--color-feel)" } as const;
 
 export const nameOf = (data: CampaignData, userId: string) =>

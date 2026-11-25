@@ -1,3 +1,5 @@
+import { PLACE_COLOR } from "@/domain/palette";
+
 export type CampaignStatus = "draft" | "live" | "paused" | "closed";
 export type Role = "master" | "tutor" | "player";
 export type FieldRole = "esploratore" | "verificatore" | "cartografo" | "narratore";
@@ -195,13 +197,13 @@ export interface Visit {
 }
 
 export const PLACE_CATEGORIES: { id: PlaceCategory; label: string; color: string }[] = [
-  { id: "storico", label: "Storico", color: "#a8473a" },
-  { id: "naturalistico", label: "Naturalistico", color: "#4a6b43" },
-  { id: "culturale", label: "Culturale", color: "#7a5c9a" },
-  { id: "sociale", label: "Sociale", color: "#b8573f" },
-  { id: "paesaggio", label: "Paesaggio", color: "#3d6f99" },
-  { id: "ospitalita", label: "Ospitalità", color: "#a8651c" },
-  { id: "altro", label: "Altro", color: "#5c4a36" },
+  { id: "storico", label: "Storico", color: PLACE_COLOR.storico },
+  { id: "naturalistico", label: "Naturalistico", color: PLACE_COLOR.naturalistico },
+  { id: "culturale", label: "Culturale", color: PLACE_COLOR.culturale },
+  { id: "sociale", label: "Sociale", color: PLACE_COLOR.sociale },
+  { id: "paesaggio", label: "Paesaggio", color: PLACE_COLOR.paesaggio },
+  { id: "ospitalita", label: "Ospitalità", color: PLACE_COLOR.ospitalita },
+  { id: "altro", label: "Altro", color: PLACE_COLOR.altro },
 ];
 export const categoryOf = (id: string | null | undefined) => PLACE_CATEGORIES.find((c) => c.id === id) ?? PLACE_CATEGORIES[PLACE_CATEGORIES.length - 1];
 
