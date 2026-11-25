@@ -23,8 +23,11 @@ const RULES = [
   { prefix: "atlante-", group: "atlante", sizes: [512, 256], cutout: true, square: true },
   { prefix: "toppa-", group: "toppe", sizes: [512, 256], cutout: true, square: true },
   { prefix: "stemma-", group: "toppe", sizes: [512, 256], cutout: true, square: true },
-  { prefix: "texture-strappo", group: "texture", sizes: [2048], cutout: true, square: false },
-  { prefix: "texture-", group: "texture", sizes: [1024], cutout: false, square: false, tile: true },
+  // le texture tengono i loro toni (la grana leggera non va stirata); quelle a riempimento si ripetono a specchio
+  { prefix: "texture-strappo", group: "texture", sizes: [2048], cutout: true, square: false, keepTones: true },
+  // le curve non si specchiano (diventerebbero un caleidoscopio): fondo intero, sezioni in modalità «cover»
+  { prefix: "texture-curve", group: "texture", sizes: [2000], cutout: false, square: false, keepTones: true },
+  { prefix: "texture-", group: "texture", sizes: [1024], cutout: false, square: false, tile: true, keepTones: true },
   { prefix: "icone-", group: null },
   { prefix: "", group: "scene", sizes: [1600, 800], cutout: false, square: false },
 ];
@@ -63,8 +66,8 @@ for (const file of readdirSync(SRC).sort()) {
   const visible = [];
   for (let i = 0; i < px; i += 3) if (alpha[i] > 200) visible.push(lum[i]);
   visible.sort((x, y) => x - y);
-  const lo = visible[Math.floor(visible.length * 0.01)] ?? 0;
-  const hi = visible[Math.floor(visible.length * 0.99)] ?? 255;
+  const lo = rule.keepTones ? 0 : visible[Math.floor(visible.length * 0.01)] ?? 0;
+  const hi = rule.keepTones ? 255 : visible[Math.floor(visible.length * 0.99)] ?? 255;
   const span = Math.max(1, hi - lo);
 
   const out = Buffer.alloc(px * 2);
@@ -81,6 +84,16 @@ for (const file of readdirSync(SRC).sort()) {
     const side = Math.round(Math.max(meta.width, meta.height) * 1.12);
     base = await sharp({ create: { width: side, height: side, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
       .composite([{ input: base, gravity: "centre" }]).png().toBuffer();
+  }
+
+  if (rule.tile) {
+    // ripetizione senza giunture: la metà sinistra-alta specchiata in un quadrato 2×2
+    const meta = await sharp(base).metadata();
+    const side = Math.min(meta.width, meta.height);
+    const q = await sharp(base).extract({ left: 0, top: 0, width: side, height: side }).resize(512, 512).png().toBuffer();
+    const fx = await sharp(q).flop().png().toBuffer(), fy = await sharp(q).flip().png().toBuffer(), fxy = await sharp(q).flip().flop().png().toBuffer();
+    base = await sharp({ create: { width: 1024, height: 1024, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
+      .composite([{ input: q, left: 0, top: 0 }, { input: fx, left: 512, top: 0 }, { input: fy, left: 0, top: 512 }, { input: fxy, left: 512, top: 512 }]).png().toBuffer();
   }
 
   const dir = join(OUT, rule.group);

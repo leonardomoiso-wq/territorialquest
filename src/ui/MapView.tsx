@@ -11,6 +11,7 @@ import { cellHeight, environmentOf, modelCells, type Environment } from "@/domai
 import { boundsOf, cellOf, cellRing, cellsOf, gridResolution, toRes } from "@/domain/geo";
 import { categoryColors, layersBounds, pointsOf, type Dataset } from "@/domain/datasets";
 import { BASE, FORM_COLOR, HUE, MAP, ROLE } from "@/domain/palette";
+import { ASSETS } from "@/domain/assets.generated";
 import { categoryOf, PLACE_CATEGORIES, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
 
 setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -320,7 +321,7 @@ export default function MapView(props: Props) {
         cancelAnimationFrame(flashAnim.current);
         const t0 = performance.now();
         const step = (t: number) => {
-          const k = Math.min(1, (t - t0) / 1200);
+          const k = Math.max(0, Math.min(1, (t - t0) / 1200));
           if (!map.current?.getLayer("flash")) return;
           map.current.setPaintProperty("flash", "fill-opacity", 0.85 * (1 - k) * (1 - k));
           if (k < 1) flashAnim.current = requestAnimationFrame(step);
@@ -401,7 +402,7 @@ export default function MapView(props: Props) {
       const step = (t: number) => {
         const mm = map.current;
         if (!mm?.getLayer("rise-sign")) return;
-        const k = Math.min(1, (t - t0) / 600);
+        const k = Math.max(0, Math.min(1, (t - t0) / 600));
         // uscita con un piccolo rimbalzo finale
         const e = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
         mm.setPaintProperty("rise-sign", "icon-translate", [0, 34 * (1 - e)]);
@@ -487,6 +488,8 @@ export default function MapView(props: Props) {
       // nebbia di carta: le zone mai attraversate restano coperte da una velatura chiara
       // sempre leggera: strade ed edifici della mappa di riferimento devono restare leggibili
       m.setPaintProperty("cells-fog", "fill-color", on ? MAP.fogPaper : BASE["ink-2"]);
+      // nella vista esplora la nebbia ha la grana della carta vera (se la texture è disponibile)
+      m.setPaintProperty("cells-fog", "fill-pattern", on && m.hasImage("tq-carta") ? "tq-carta" : undefined);
       m.setPaintProperty("cells-fog", "fill-opacity", ["case", ["get", "dark"], on ? 0.38 : 0.16, 0]);
       m.setPaintProperty("cells-fill", "fill-opacity", on
         ? ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.22, 6, 0.4]
@@ -567,6 +570,14 @@ export default function MapView(props: Props) {
           m.addSource(id, CLUSTERED.has(id) ? { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 15 }
             : id === "places" ? { type: "geojson", data: empty, cluster: true, clusterRadius: 36, clusterMaxZoom: 12 }
             : { type: "geojson", data: empty });
+        }
+        // grana della carta per la nebbia della vista esplora
+        if (ASSETS.has("texture/carta")) {
+          m.loadImage("/assets/texture/carta.webp").then((img) => {
+            if (!m.hasImage("tq-carta")) m.addImage("tq-carta", img.data, { pixelRatio: 2 });
+            applied.current.explore = ""; // ridisegna la vista con la grana appena caricata
+            sync();
+          }, () => undefined);
         }
         // cartelli pronti per ogni tipo di luogo e stato: le immagini create al volo possono andare perse
         for (const cat of PLACE_CATEGORIES) for (const st of ["da", "ok", "done"]) ensureImage(m, `sign|${cat.color}|${st}`);

@@ -5,6 +5,8 @@ import { formOf } from "@/domain/forms";
 import { cellRing } from "@/domain/geo";
 import { formatDuration, formatMeters } from "@/domain/walk";
 import { Icon } from "@/ui/icons";
+import { Tinted } from "@/ui/Tinted";
+import { BASE } from "@/domain/palette";
 import { Button, Sheet } from "@/ui/kit";
 
 export interface Cheer {
@@ -112,7 +114,10 @@ export function Recap({ summary, onClose, onDrafts }: { summary: WalkSummary | n
           <div className="relative overflow-hidden rounded-[3px] bg-card py-4 pr-4 pl-10 shadow-[0_0_0_1px_var(--color-line),0_10px_22px_-14px_rgb(43_33_24/.4)]"
             style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--color-river) 22%, transparent) 27px 28px)" }}>
             <span className="absolute inset-y-0 left-7 w-px bg-alert/45" aria-hidden />
-            <p className="label soft leading-7">{today}</p>
+            {/* testata strappata: un foglio di carta sovrapposto alla pagina */}
+            <Tinted name="texture/strappo" accent={BASE["paper-2"]} ink={BASE.line} paper={BASE.edge} ratio={3.34}
+              className="pointer-events-none absolute -top-1 left-0 z-10 w-full drop-shadow-[0_3px_3px_rgb(43_33_24/.18)]" />
+            <p className="label soft relative z-20 pt-1 pb-6 leading-7">{today}</p>
             {!!s.cellIds?.length && <div className="my-1"><Sketch cells={s.cellIds} color={s.color ?? "var(--color-leaf)"} places={s.placeList ?? []} /></div>}
             <p className="leading-7"><b className="num font-medium">{formatMeters(s.meters)}</b> a piedi in <b className="num font-medium">{formatDuration(s.ms)}</b>, <b className="num font-medium text-glow">{s.fresh}</b> zone accese per la prima volta.</p>
             {!!s.placeList?.length && <p className="leading-7">Raggiunti: {s.placeList.map((p) => p.name).join(", ")}.</p>}

@@ -45,3 +45,7 @@ next-env.d.ts
 
 # generato da scripts/copy-map-worker.mjs
 /public/maplibre-gl-worker.mjs
+
+# immagini sorgente generate (restano sul computer di chi le crea): si pubblicano solo quelle elaborate in public/assets
+/asset-sorgenti/*
+!/asset-sorgenti/LEGGIMI.md
