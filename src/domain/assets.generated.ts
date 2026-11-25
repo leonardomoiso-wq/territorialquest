@@ -3,7 +3,9 @@
 export const ASSETS: ReadonlySet<string> = new Set([
   "atlante/forma-dato",
   "atlante/forma-flusso",
+  "atlante/forma-idea",
   "atlante/forma-immagine",
+  "atlante/forma-indagine",
   "atlante/forma-informazione",
   "atlante/forma-percezione",
   "texture/carta",
