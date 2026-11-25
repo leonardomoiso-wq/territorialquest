@@ -5,6 +5,7 @@ import type { CampaignData } from "@/domain/types";
 import { Icon, type IconName } from "@/ui/icons";
 import { cx, Label } from "@/ui/kit";
 import { Tinted } from "@/ui/Tinted";
+import { readable } from "@/domain/palette";
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("it-IT", { day: "numeric", month: "short" });
 
@@ -22,7 +23,7 @@ function Box({ e, asset, icon }: { e: AtlasEntry; asset: string; icon: IconName 
       <div className="grid aspect-square place-items-center">
         <Tinted name={asset} accent={e.color} muted={!found} small className="w-full" fallback={fallback} alt={found ? e.label : ""} />
       </div>
-      <span className="mt-1 text-[13px] leading-tight font-medium" style={found ? { color: e.color } : undefined}>{e.label}</span>
+      <span className="mt-1 text-[13px] leading-tight font-medium" style={found ? { color: readable(e.color) } : undefined}>{e.label}</span>
       {found
         ? <span className="soft text-[11px] leading-snug">×{e.count} – dal {day(e.first!)}</span>
         : <span className="soft line-clamp-2 text-[11px] leading-snug">{e.hint}</span>}

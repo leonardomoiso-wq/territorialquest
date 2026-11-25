@@ -12,6 +12,7 @@ import { deleteObservation, deleteTheme, mediaUrl, saveTheme, validateObservatio
 import { useAction } from "@/lib/hooks";
 import { Button, Card, Dot, Empty, Field, Label, Notice, SectionTitle, Segmented, Select, Tag } from "@/ui/kit";
 import { KindTag, nameOf, PALETTE, teamOf, themeOf, type Ctx } from "./shared";
+import { readable } from "@/domain/palette";
 
 const QUALITY = [[1, "Bassa"], [2, "Media"], [3, "Alta"]] as const;
 
@@ -71,7 +72,7 @@ export function Rilievi({ data, now, refresh }: Ctx) {
                     {s && s.novelty < 1 && <Tag>doppione ×{s.novelty}</Tag>}
                   </div>
                   <h3 className="mt-2 truncate text-[17px] tracking-[-0.02em]">{o.title}</h3>
-                  {summary(o) && <p className="mt-0.5 text-sm" style={{ color: formOf(o.form).color }}>{summary(o)}</p>}
+                  {summary(o) && <p className="mt-0.5 text-sm" style={{ color: readable(formOf(o.form).color) }}>{summary(o)}</p>}
                   {o.note && <p className="soft mt-0.5 line-clamp-2 text-sm">{o.note}</p>}
                   {o.form === "indagine" && <details className="mt-2"><summary className="cursor-pointer text-sm">Vedi le risposte</summary><div className="mt-2"><SurveyAnswers data={o.data} mediaUrl={mediaUrl} /></div></details>}
                   <div className="soft mt-1.5 flex flex-wrap items-center gap-x-3 text-[13px]">

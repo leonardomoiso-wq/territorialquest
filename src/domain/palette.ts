@@ -23,7 +23,7 @@ export const BASE = {
   edge: "#ffffff",
   white: "#ffffff",
   line: "#d3d3cf",
-  mute: "#7b7e83",
+  mute: "#6a6d72",
   graphite: "#4c5058",
   brown: "#1f2226",
 } as const;
@@ -34,7 +34,7 @@ export const HUE = {
   leaf: "#4a6b43",
   sage: "#b4c49c",
   "sage-2": "#9fb98a",
-  glow: "#d6993e",
+  glow: "#c47a1c",
   river: "#3d6f99",
   brick: "#a8473a",
   terracotta: "#b8573f",
@@ -151,4 +151,27 @@ export function cssTokens(): Record<string, string> {
 export function rgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+const channel = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+/** Luminanza relativa (WCAG). */
+export function luminance(hex: string): number {
+  const [r, g, b] = rgb(hex);
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+/** Rapporto di contrasto WCAG tra due colori (1–21). */
+export function contrast(a: string, b: string): number {
+  const x = luminance(a), y = luminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+/**
+ * Versione leggibile di un colore d'accento usato come testo: lo scurisce solo quanto basta
+ * per raggiungere il contrasto richiesto sullo sfondo (AA: 4,5 per il testo normale).
+ */
+export function readable(hex: string, bg: string = BASE.card, min = 4.5): string {
+  for (let k = 1; k > 0.3; k -= 0.05) {
+    const c = "#" + rgb(hex).map((v) => Math.round(v * k).toString(16).padStart(2, "0")).join("");
+    if (contrast(c, bg) >= min) return c;
+  }
+  return BASE.ink;
 }

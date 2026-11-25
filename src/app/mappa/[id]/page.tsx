@@ -17,6 +17,7 @@ import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@
 import MapView, { type MapMode } from "@/ui/MapView";
 import { Button, cx, Empty, Label, LinkButton, Logo, Notice, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
 import { PUBLIC_LAYER } from "@/domain/palette";
+import { readable } from "@/domain/palette";
 
 type Layer = "territorio" | "siti" | "luoghi" | "contributi" | "dati";
 type Item = { kind: "obs"; o: Observation } | { kind: "contrib"; c: Contribution } | { kind: "place"; p: Place } | { kind: "area"; name: string };
@@ -231,7 +232,7 @@ export default function Mappa() {
               <Tag color="var(--color-leaf)">validato</Tag>
             </div>
             {item.o.form === "percezione" && item.o.feeling ? <p className="serif text-2xl italic">«{item.o.feeling}»</p>
-              : item.o.form !== "indagine" && summary(item.o) && <p className="display text-xl" style={{ color: formOf(item.o.form).color }}>{summary(item.o)}</p>}
+              : item.o.form !== "indagine" && summary(item.o) && <p className="display text-xl" style={{ color: readable(formOf(item.o.form).color) }}>{summary(item.o)}</p>}
             {item.o.form === "indagine" && <SurveyAnswers data={item.o.data} mediaUrl={mediaUrl} />}
             {item.o.note && <p className="text-[15px] leading-snug">{item.o.note}</p>}
             {item.o.source_url && <a className="text-sm underline underline-offset-2" href={item.o.source_url} target="_blank" rel="noreferrer">Apri la fonte</a>}

@@ -30,7 +30,7 @@ import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Icon, type IconName } from "@/ui/icons";
 import { Button, cx, Dot, Empty, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
-import { BASE as TONE, FORM_COLOR, HUE, INDICATOR } from "@/domain/palette";
+import { BASE as TONE, FORM_COLOR, HUE, INDICATOR, readable } from "@/domain/palette";
 
 type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers" | "view" | "diario" | "menu";
 type LngLat = [number, number];
@@ -859,7 +859,7 @@ export default function Campo() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap gap-1.5"><FormTag form={o.form} /><KindTag o={o} />{th && <Tag color={th.color}>{th.name}</Tag>}</div>
                       <h4 className="mt-1.5 text-[17px] tracking-[-0.02em]">{o.title}</h4>
-                      {summary(o) && <p className="text-sm" style={{ color: formOf(o.form).color }}>{summary(o)}</p>}
+                      {summary(o) && <p className="text-sm" style={{ color: readable(formOf(o.form).color) }}>{summary(o)}</p>}
                       {o.note && <p className="soft text-sm">{o.note}</p>}
                       {o.form === "indagine" && <div className="mt-2"><SurveyAnswers data={o.data} mediaUrl={mediaUrl} /></div>}
                       <p className="label soft mt-1.5 inline-flex flex-wrap items-center gap-1.5">
@@ -966,7 +966,7 @@ export default function Campo() {
             </div>
             {detail.form === "percezione" && detail.feeling
               ? <p className="serif text-2xl italic">«{detail.feeling}»</p>
-              : summary(detail) && <p className="display text-2xl" style={{ color: formOf(detail.form).color }}>{summary(detail)}</p>}
+              : summary(detail) && <p className="display text-2xl" style={{ color: readable(formOf(detail.form).color) }}>{summary(detail)}</p>}
             {detail.form === "percezione" && summary(detail) && <p className="soft text-sm">{summary(detail)}</p>}
             {detail.form === "indagine" && <SurveyAnswers data={detail.data} mediaUrl={mediaUrl} />}
             {detail.note && <p className="text-[15px]">{detail.note}</p>}

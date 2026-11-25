@@ -4,6 +4,7 @@ import { Icon } from "@/ui/icons";
 import { FEELINGS, FLOW_MODES, FORMS, formOf, INTENSITY, LENSES, perHour, SENSES, type Form, type FormData, type Lens } from "@/domain/forms";
 import type { Theme } from "@/domain/types";
 import { Area, Button, cx, Field, Label, Notice, PlusIcon, Sheet } from "@/ui/kit";
+import { readable } from "@/domain/palette";
 
 /** Un rilievo in compilazione. */
 export interface Entry {
@@ -33,7 +34,7 @@ export function FormTag({ form }: { form: string | null | undefined }) {
   const f = formOf(form);
   return (
     <span className="label inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5"
-      style={{ color: f.color, borderColor: `color-mix(in srgb, ${f.color} 35%, transparent)`, background: `color-mix(in srgb, ${f.color} 9%, transparent)` }}>
+      style={{ color: readable(f.color), borderColor: `color-mix(in srgb, ${f.color} 35%, transparent)`, background: `color-mix(in srgb, ${f.color} 9%, transparent)` }}>
       <FormIcon form={form} className="!size-3.5" />{f.label}
     </span>
   );
