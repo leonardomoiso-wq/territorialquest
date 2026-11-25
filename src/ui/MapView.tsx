@@ -77,6 +77,8 @@ interface Props {
   fog?: boolean;
   /** Centra la mappa su questo punto quando cambia. */
   focus?: [number, number] | null;
+  /** Cambia per ricentrare sullo stesso punto (pulsante «Dove sono»). */
+  focusNonce?: number;
   /** L'utente ha spostato la mappa con un gesto. */
   onDrag?: () => void;
   mode?: MapMode;
@@ -465,7 +467,7 @@ export default function MapView(props: Props) {
     }
 
     const heading = ex?.heading;
-    const focus = p.focus ? `${p.focus.map((v) => v.toFixed(5)).join(",")}|${ex ? heading ?? "" : ""}` : "";
+    const focus = p.focus ? `${p.focus.map((v) => v.toFixed(5)).join(",")}|${ex ? heading ?? "" : ""}|${p.focusNonce ?? ""}` : "";
     if (focus !== applied.current.focus) {
       applied.current.focus = focus;
       if (p.focus) {

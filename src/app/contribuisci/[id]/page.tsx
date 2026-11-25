@@ -8,6 +8,7 @@ import { FEELINGS, FORMS } from "@/domain/forms";
 import type { Contribution } from "@/domain/types";
 import { addContribution, explain, loadPublicMap, myContributions, useSession, type PublicMap } from "@/lib/data";
 import { useAction } from "@/lib/hooks";
+import { locateOnce } from "@/lib/locate";
 import { backdrop } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Area, Button, cx, Empty, Field, Label, LinkButton, Logo, Notice, PlusIcon, Sheet, Spinner, Tag } from "@/ui/kit";
@@ -21,6 +22,8 @@ export default function Contribuisci() {
   const [map, setMap] = useState<PublicMap | null | undefined>(undefined);
   const [mine, setMine] = useState<Contribution[]>([]);
   const [pin, setPin] = useState<[number, number] | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [seek, setSeek] = useState<{ at: [number, number]; n: number } | null>(null);
   const [step, setStep] = useState<"punto" | "modulo" | "fatto" | "miei">("punto");
   const [form, setForm] = useState<Contribution["form"]>("immagine");
   const [title, setTitle] = useState("");
@@ -49,7 +52,7 @@ export default function Contribuisci() {
 
   const c = map.campaign;
   const spec = KINDS.find((k) => k.id === form)!;
-  const locate = () => navigator.geolocation?.getCurrentPosition((g) => setPin([g.coords.longitude, g.coords.latitude]), () => undefined, { enableHighAccuracy: true });
+  const locate = () => locateOnce().then(({ at }) => { setGeoError(null); setPin(at); setSeek({ at, n: Date.now() }); }, (e) => setGeoError(e instanceof Error ? e.message : "Posizione non disponibile."));
   const reset = () => { setTitle(""); setNote(""); setFeeling(""); setValue(""); setUnit(""); setFile(null); setConsent(false); setPin(null); };
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +73,7 @@ export default function Contribuisci() {
   return (
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={map.areas} places={map.places} fit {...backdrop(c)}
-        contributions={mine.filter((x) => x.status !== "rejected")} pin={pin} onClick={step === "punto" ? setPin : undefined} />
+        contributions={mine.filter((x) => x.status !== "rejected")} pin={pin} focus={seek?.at ?? null} focusNonce={seek?.n} onClick={step === "punto" ? setPin : undefined} />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-5">
         <div className="glass pointer-events-auto max-w-md rounded-[26px] p-4">
@@ -86,6 +89,7 @@ export default function Contribuisci() {
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {geoError && <button type="button" onClick={() => setGeoError(null)} className="glass-ink pointer-events-auto absolute bottom-[calc(5rem+env(safe-area-inset-bottom))] mx-3 max-w-md rounded-3xl px-4 py-2.5 text-left text-sm">{geoError}</button>}
         <div className="glass pointer-events-auto flex items-center gap-1.5 rounded-full p-1.5">
           <Button variant="ghost" onClick={locate}>Dove sono</Button>
           <Button variant="glow" disabled={!pin} onClick={() => setStep("modulo")}>Continua</Button>

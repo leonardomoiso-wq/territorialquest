@@ -21,6 +21,7 @@ import { Spark } from "@/ui/charts";
 import { Community, ContributeSheet, contributionsFor, type Target } from "@/ui/Contribute";
 import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import { addObservation, checkIn, uploadMedia, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
+import { locateOnce } from "@/lib/locate";
 import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
 import { useAction, useNow } from "@/lib/hooks";
 import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
@@ -46,6 +47,11 @@ const ICON = {
   view: "M3 17 12 21l9-4M3 12l9 4 9-4M12 3 3 7.500l9 4 9-4z",
   help: "M9.500 9a2.500 2.500 0 1 1 3.500 2.300c-.700.300-1 .900-1 1.700M12 17v.010",
 };
+
+/** Mirino con un punto rosso: la posizione non è arrivata, tocca per sapere perché. */
+const GeoAlert = () => (
+  <span className="relative"><Icon d={ICON.target} /><span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-[#b8573f] ring-2 ring-paper" /></span>
+);
 
 /** Pulsante tondo con etichetta sotto, per le colonne ai lati della vista esplora. */
 function SideButton({ label, d, count, onClick, children }: { label: string; d?: string; count?: number; onClick: () => void; children?: React.ReactNode }) {
@@ -84,6 +90,10 @@ export default function Campo() {
   const [pin, setPin] = useState<LngLat | null>(null);
   const [position, setPosition] = useState<LngLat | null>(null);
   const [follow, setFollow] = useState(true);
+  /** Ricentra la mappa su di me anche senza un'uscita in corso. */
+  const [centerOn, setCenterOn] = useState<{ at: LngLat; n: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
   const [detail, setDetail] = useState<Observation | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [cheer, setCheer] = useState<Cheer | null>(null);
@@ -143,6 +153,7 @@ export default function Campo() {
       (g) => {
         const p: LngLat = [g.coords.longitude, g.coords.latitude];
         setPosition(p);
+        setGeoError(null);
         trackRef.current(p, g.coords.accuracy ?? 0);
         // oltre i 10 km/h si guarda la strada, non il telefono
         if (walkingRef.current && (g.coords.speed ?? 0) > 2.8 && Date.now() - lastSpeedWarn.current > 300000) {
@@ -151,7 +162,7 @@ export default function Campo() {
         }
         if (Date.now() - lastBeat.current > 45000) beat(p);
       },
-      () => undefined,
+      (e) => { if (e.code === 1) setGeoError("negata"); },
       { enableHighAccuracy: true, maximumAge: 5000 },
     );
     const t = setInterval(() => beat(), 60000);
@@ -163,7 +174,7 @@ export default function Campo() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4500);
+    const t = setTimeout(() => setToast(null), toast.length > 80 ? 9000 : 4500);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -287,6 +298,21 @@ export default function Campo() {
   const motion = !reducedMotion && view.quality !== "essenziale";
   const litPct = ind.territory.size ? Math.round(([...ind.territory].filter((x) => litNow.has(x)).length / ind.territory.size) * 100) : 0;
   const nearestPlaces = position ? data.places.filter((p) => p.placed !== false && !reached.has(p.id)).map((p) => ({ p, m: metersBetween(position, [p.lng, p.lat]) })).sort((a, b) => a.m - b.m).slice(0, 3) : [];
+  /** «Dove sono»: chiede la posizione e ci porta la mappa; spiega che cosa fare se non arriva. */
+  const locate = async () => {
+    setLocating(true);
+    try {
+      const { at, accuracy } = await locateOnce();
+      setPosition(at);
+      setGeoError(null);
+      if (walking) setFollow(true);
+      setCenterOn({ at, n: Date.now() });
+      if (accuracy > 500) setToast(`Posizione approssimativa (circa ${formatMeters(accuracy)}): sul computer è stimata dalla rete.`);
+    } catch (e) {
+      setGeoError("errore");
+      setToast(e instanceof Error ? e.message : "Posizione non disponibile.");
+    } finally { setLocating(false); }
+  };
   const toggleCompass = async () => {
     if (compassOn) { setCompassOn(false); return; }
     if (await compass.enable()) { setCompassOn(true); setFollow(true); }
@@ -374,7 +400,7 @@ export default function Campo() {
         grid fog fit controls={false} walked={walked} {...backdrop(c)}
         places={data.places} routes={data.routes} reached={reached} activeRouteId={routeId} selectedPlaceId={placeId}
         onPlaceClick={(pid) => { setPlaceId(pid); setPanel("place"); }}
-        focus={walking && follow && !picking ? position : null} onDrag={() => setFollow(false)}
+        focus={walking && follow && !picking ? position : centerOn?.at ?? null} focusNonce={centerOn?.n} onDrag={() => setFollow(false)}
         pin={(picking || panel === "new") && !tracing ? pin : null}
         draft={(picking || panel === "new") && tracing ? path : undefined} draftLine
         players={[
@@ -461,6 +487,12 @@ export default function Campo() {
         {toast && <div className="glass-ink pointer-events-auto animate-rise rounded-full px-4 py-2 text-sm" role="status">{toast}</div>}
       </div>
 
+      {!picking && !walking && (
+        <button type="button" onClick={locate} aria-label="Dove sono"
+          className="glass absolute right-3 bottom-24 z-20 flex h-11 items-center gap-2 rounded-full pr-4 pl-3 text-sm transition active:scale-95">
+          {geoError ? <GeoAlert /> : <Icon d={ICON.target} />}{locating ? "Cerco…" : "Dove sono"}
+        </button>
+      )}
       {layerState.all.length > 0 && !picking && !walking && (
         <IconButton label="Strati di dati" onClick={() => setPanel("layers")} className="absolute top-1/2 right-3 z-20 !size-11 -translate-y-1/2"><LayersIcon /></IconButton>
       )}
@@ -483,7 +515,7 @@ export default function Campo() {
             )}
             <SideButton label="Vista" d={ICON.view} onClick={() => setPanel("view")} />
             {layerState.all.length > 0 && <SideButton label="Strati" onClick={() => setPanel("layers")}><LayersIcon /></SideButton>}
-            {!follow && position && <SideButton label="Su di me" d={ICON.target} onClick={() => setFollow(true)} />}
+            <SideButton label={locating ? "Cerco" : "Dove sono"} d={ICON.target} onClick={locate}>{geoError ? <GeoAlert /> : undefined}</SideButton>
           </div>
         </>
       )}
