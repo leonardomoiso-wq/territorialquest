@@ -105,7 +105,7 @@ export default function Mappa() {
           <h1 className="display mt-3 text-[clamp(1.6rem,6vw,2.2rem)]">{c.name}</h1>
           {intro && (c.public_intro || c.description) && <p className="soft mt-1.5 text-sm leading-snug">{c.public_intro || c.description}</p>}
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-            <span><b className="num font-medium">{map.observations.length - sites}</b> rilievi validati</span>
+            <span><b className="num font-medium">{map.observations.length - sites}</b> rilievi confermati</span>
             <span><b className="num font-medium">{sites}</b> indagini sui siti</span>
             <span><b className="num font-medium">{map.places.length}</b> luoghi</span>
             <span><b className="num font-medium">{map.contributions.length}</b> contributi</span>
@@ -144,7 +144,7 @@ export default function Mappa() {
 
       {/* ------------------------------------------------------------- elenco */}
       <Sheet open={list} onClose={() => setList(false)} kicker={c.name} title="Che cosa è emerso" wide>
-        {entries.length === 0 ? <Empty title="Ancora niente di pubblicato.">I rilievi compaiono qui dopo la conferma di un altro team, i contributi dopo l&apos;approvazione della regia.</Empty> : (
+        {entries.length === 0 ? <Empty title="Ancora niente di pubblicato.">I rilievi compaiono qui dopo la conferma di un&apos;altra squadra, i contributi dopo l&apos;approvazione della regia.</Empty> : (
           <ul className="grid gap-3 sm:grid-cols-2">
             {entries.slice(0, 300).map(({ key, item: it }) => {
               const form = it.kind === "obs" ? it.o.form : it.kind === "contrib" ? it.c.form : null;
@@ -229,7 +229,7 @@ export default function Mappa() {
               <FormTag form={item.o.form} />
               {theme(item.o.theme_id) && <Tag color={theme(item.o.theme_id)!.color}>{theme(item.o.theme_id)!.name}</Tag>}
               {place(item.o.place_id) && <button onClick={() => setItem({ kind: "place", p: place(item.o.place_id)! })}><Tag color={categoryOf(place(item.o.place_id)!.category).color}>{place(item.o.place_id)!.name}</Tag></button>}
-              <Tag color="var(--color-leaf)">validato</Tag>
+              <Tag color="var(--color-leaf)">confermato</Tag>
             </div>
             {item.o.form === "percezione" && item.o.feeling ? <p className="serif text-2xl italic">«{item.o.feeling}»</p>
               : item.o.form !== "indagine" && summary(item.o) && <p className="display text-xl" style={{ color: readable(formOf(item.o.form).color) }}>{summary(item.o)}</p>}

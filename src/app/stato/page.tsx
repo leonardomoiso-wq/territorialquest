@@ -10,7 +10,7 @@ type Result = { label: string; file: string; ok: boolean | null; detail?: string
 
 /** Ogni controllo legge una tabella o una colonna introdotta da una migrazione. */
 const CHECKS: { label: string; file: string; table: string; select: string }[] = [
-  { label: "Campagne, team, aree, rilievi", file: "20261114000000_init.sql", table: "campaigns", select: "id" },
+  { label: "Campagne, squadre, aree, rilievi", file: "20261114000000_init.sql", table: "campaigns", select: "id" },
   { label: "Iscrizioni e ruoli", file: "20261114000000_init.sql", table: "memberships", select: "id, role" },
   { label: "Missioni e messaggi", file: "20261114000000_init.sql", table: "announcements", select: "id" },
   { label: "Sfondi della mappa", file: "20261115000000_model_and_forms.sql", table: "campaigns", select: "basemap, overlay" },

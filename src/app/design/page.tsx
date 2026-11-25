@@ -99,7 +99,7 @@ export default function Design() {
         <div className="mt-10 flex flex-wrap items-center gap-6">
           <div className="glass flex items-center gap-2 rounded-full p-1.5">
             <Button className="min-w-40"><PlusIcon /> Nuovo rilievo</Button>
-            <Button variant="ghost">Valida</Button>
+            <Button variant="ghost">Conferma</Button>
             <Button variant="ghost">Missioni</Button>
             <IconButton label="Team" className="!shadow-none">TQ</IconButton>
           </div>
@@ -131,7 +131,7 @@ export default function Design() {
           <Ring value={0.41} color="#e8c07a" size={84} />
           <div className="min-w-64 flex-1 space-y-4">
             <div><div className="mb-2 flex justify-between text-sm"><span>Apriamo la zona nord</span><span className="num soft">31/40</span></div><Meter value={0.78} color="var(--color-glow)" /></div>
-            <div><div className="mb-2 flex justify-between text-sm"><span>Dieci conferme tra team</span><span className="num soft">4/10</span></div><Meter value={0.4} color="#e08a6e" /></div>
+            <div><div className="mb-2 flex justify-between text-sm"><span>Dieci conferme tra squadre</span><span className="num soft">4/10</span></div><Meter value={0.4} color="#e08a6e" /></div>
           </div>
         </div>
       </Block>

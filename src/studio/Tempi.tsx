@@ -92,7 +92,7 @@ export default function Tempi({ data, now, refresh }: Ctx) {
       <section>
         <SectionTitle kicker="Obiettivi comuni a tempo" title="Missioni" action={<Button onClick={() => setDraft(newMission())}><PlusIcon /> Nuova missione</Button>} />
         {data.missions.length === 0 ? (
-          <Empty title="Nessuna missione.">Le missioni sono traguardi condivisi da tutti i team, con un inizio e una fine. Alla scadenza si chiudono.</Empty>
+          <Empty title="Nessuna missione.">Le missioni sono traguardi condivisi da tutte le squadre, con un inizio e una fine. Alla scadenza si chiudono.</Empty>
         ) : (
           <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 md:grid-cols-2">
             {data.missions.map((m) => {

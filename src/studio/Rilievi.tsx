@@ -34,7 +34,7 @@ export function Rilievi({ data, now, refresh }: Ctx) {
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Segmented className="max-w-full overflow-x-auto" value={status} onChange={(v) => { setStatus(v); setShown(20); }} options={[
           { id: "pending", label: `In attesa ${count("pending")}` },
-          { id: "validated", label: `Validati ${count("validated")}` },
+          { id: "validated", label: `Confermati ${count("validated")}` },
           { id: "flagged", label: `Segnalati ${count("flagged")}` },
           { id: "all", label: "Tutti" },
         ]} />

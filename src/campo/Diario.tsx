@@ -43,7 +43,7 @@ export function Diario({ data, me, drafts, onDrafts, onOpen }: {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
         <span><b className="num font-medium">{total}</b> rilievi</span>
-        <span><b className="num font-medium">{confirmed}</b> confermati da altri team</span>
+        <span><b className="num font-medium">{confirmed}</b> confermati da altre squadre</span>
         <span><b className="num font-medium">{entries.length - total}</b> luoghi raggiunti</span>
       </div>
       {drafts > 0 && (
@@ -81,7 +81,7 @@ export function Diario({ data, me, drafts, onDrafts, onOpen }: {
           </ul>
         </section>
       ))}
-      {total > 0 && <p className="soft text-xs">I punti dei rilievi arrivano al totale di tutti quando un altro team li conferma sul posto.</p>}
+      {total > 0 && <p className="soft text-xs">I punti dei rilievi arrivano al totale di tutti quando un&apos;altra squadra li conferma sul posto.</p>}
     </div>
   );
 }

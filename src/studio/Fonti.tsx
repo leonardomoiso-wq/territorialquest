@@ -323,7 +323,7 @@ function Viewer({ d, ctx, onClose }: { d: Dataset | null; ctx: Ctx; onClose: () 
               <Select label="Tipo di luogo" value={category} onChange={(e) => setCategory(e.target.value as PlaceCategory)}>
                 {PLACE_CATEGORIES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
               </Select>
-              <Field label="Punti per team" type="number" min={0} max={1000} value={points} onChange={(e) => setPoints(Number(e.target.value))} />
+              <Field label="Punti per squadra" type="number" min={0} max={1000} value={points} onChange={(e) => setPoints(Number(e.target.value))} />
               {d.kind === "punti" && distCol && <Field label="Entro km dal tracciato" type="number" step="0.1" min={0} value={maxKm} onChange={(e) => setMaxKm(e.target.value)} placeholder="tutti" />}
             </div>
             {error && <div className="mt-3"><Notice tone="error">{error}</Notice></div>}

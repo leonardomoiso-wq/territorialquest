@@ -38,7 +38,7 @@ export default function Team({ data, me, now, refresh }: Ctx) {
           </div>
         </div>
         <select aria-label="Team" className={selectClass} value={m.team_id ?? ""} disabled={busy} onChange={(e) => act(() => updateMember(m.id, { team_id: e.target.value || null }))}>
-          <option value="">Senza team</option>
+          <option value="">Senza squadra</option>
           {data.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <select aria-label="Ruolo" className={selectClass} value={m.role} disabled={busy || m.user_id === c.owner_id} onChange={(e) => act(() => updateMember(m.id, { role: e.target.value as Role }))}>
@@ -72,9 +72,9 @@ export default function Team({ data, me, now, refresh }: Ctx) {
       {error && <Notice tone="error">{error}</Notice>}
 
       <section>
-        <SectionTitle kicker={`${players.length} giocatori`} title="Team" action={<Button onClick={() => setDraft({ name: "", color: PALETTE[data.teams.length % PALETTE.length] })}><PlusIcon /> Nuovo team</Button>} />
+        <SectionTitle kicker={`${players.length} giocatori`} title="Team" action={<Button onClick={() => setDraft({ name: "", color: PALETTE[data.teams.length % PALETTE.length] })}><PlusIcon /> Nuova squadra</Button>} />
         {data.teams.length === 0 ? (
-          <Empty title="Ancora nessun team.">Crea i team: i giocatori sceglieranno il proprio entrando, oppure li assegni tu da qui.</Empty>
+          <Empty title="Ancora nessuna squadra.">Crea le squadre: i giocatori sceglieranno il proprio entrando, oppure li assegni tu da qui.</Empty>
         ) : (
           <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-2">
             {data.teams.map((t) => {
@@ -93,7 +93,7 @@ export default function Team({ data, me, now, refresh }: Ctx) {
                     <div><div className="num text-xl">{Math.round(ind.byTeam[t.id] ?? 0)}</div><div className="label soft mt-0.5">pt portati</div></div>
                     <div><div className="num text-xl">{validatedForOthers}</div><div className="label soft mt-0.5">aiuti dati</div></div>
                   </div>
-                  {members.length ? <ul className="divide-y divide-line">{members.map((m) => <Row key={m.id} m={m} />)}</ul> : <p className="soft pt-4 text-sm">Nessun giocatore in questo team.</p>}
+                  {members.length ? <ul className="divide-y divide-line">{members.map((m) => <Row key={m.id} m={m} />)}</ul> : <p className="soft pt-4 text-sm">Nessun giocatore in questa squadra.</p>}
                 </Card>
               );
             })}
@@ -103,7 +103,7 @@ export default function Team({ data, me, now, refresh }: Ctx) {
 
       {unassigned.length > 0 && (
         <section>
-          <SectionTitle kicker="Da assegnare" title="Senza team" />
+          <SectionTitle kicker="Da assegnare" title="Senza squadra" />
           <Card><ul className="divide-y divide-line">{unassigned.map((m) => <Row key={m.id} m={m} />)}</ul></Card>
         </section>
       )}
@@ -123,14 +123,14 @@ export default function Team({ data, me, now, refresh }: Ctx) {
         </Card>
       </section>
 
-      <Sheet open={!!draft} onClose={() => setDraft(null)} kicker={draft?.id ? "Modifica team" : "Nuovo team"} title="Chi esplora insieme">
+      <Sheet open={!!draft} onClose={() => setDraft(null)} kicker={draft?.id ? "Modifica squadra" : "Nuova squadra"} title="Chi esplora insieme">
         {draft && (
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); run(async () => { await saveTeam({ ...draft, campaign_id: c.id, name: draft.name.trim() }); await refresh(); setDraft(null); }); }}>
             <Field label="Nome" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} required maxLength={40} autoFocus />
             <div><Label className="mb-2 block">Colore</Label><Swatches value={draft.color} onChange={(color) => setDraft({ ...draft, color })} /></div>
             {error && <Notice tone="error">{error}</Notice>}
             <div className="flex gap-2 pt-2">
-              <Button type="submit" size="lg" className="flex-1" disabled={busy}>Salva il team</Button>
+              <Button type="submit" size="lg" className="flex-1" disabled={busy}>Salva la squadra</Button>
               {draft.id && <Button size="lg" variant="danger" disabled={busy} onClick={() => confirm("Eliminare il team? I giocatori restano senza team.") && run(async () => { await deleteTeam(draft.id!); await refresh(); setDraft(null); })}>Elimina</Button>}
             </div>
           </form>

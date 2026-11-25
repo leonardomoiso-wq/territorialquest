@@ -236,7 +236,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
                 <span>{hectares(a.geometry).toFixed(1)} ha</span>
                 <span>{cellsOf(a.geometry, res).length} celle{res < 10 ? " grandi" : ""}</span>
                 <span>{count} rilievi</span>
-                <span>{team ? team.name : "tutti i team"}</span>
+                <span>{team ? team.name : "tutte le squadre"}</span>
               </div>
               {selected === a.id && !tool && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -268,7 +268,7 @@ export default function Aree({ data, now, refresh }: Ctx) {
             <div><Label className="mb-2 block">Ambiente prevalente</Label><EnvChips value={draft.environment} onChange={(environment) => setDraft({ ...draft, environment })} /></div>
             <div><Label className="mb-2 block">Colore del perimetro</Label><Swatches value={draft.color} onChange={(color) => setDraft({ ...draft, color })} /></div>
             <Select label="Assegnata a" value={draft.team_id ?? ""} onChange={(e) => setDraft({ ...draft, team_id: e.target.value || null })}>
-              <option value="">Tutti i team</option>
+              <option value="">Tutte le squadre</option>
               {data.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </Select>
             <div className="grid grid-cols-2 gap-3">

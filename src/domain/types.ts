@@ -264,9 +264,9 @@ export interface CampaignData {
 }
 
 export const KIND_LABEL: Record<ObservationKind, string> = {
-  field: "Field",
-  desk: "Desk",
-  feel: "Feel",
+  field: "Sul posto",
+  desk: "Da fonti",
+  feel: "Sensazione",
 };
 export const KIND_HINT: Record<ObservationKind, string> = {
   field: "Rilevato sul posto",

@@ -130,7 +130,7 @@ export function Recap({ summary, onClose, onDrafts }: { summary: WalkSummary | n
             <p className="leading-7">Per il gruppo: <b className="num font-medium text-leaf">+{s.potential}</b> punti in arrivo{s.confirms > 0 ? `, ${s.confirms} rilievi di altri confermati` : ""}.</p>
           </div>
           <p className="soft mt-3 text-sm">
-            {s.potential > 0 ? "I punti entrano nel totale comune quando un altro team conferma i tuoi rilievi." : "Ogni zona accesa aiuta gli altri team a sapere dove non serve tornare."}
+            {s.potential > 0 ? "I punti entrano nel totale comune quando un'altra squadra conferma i tuoi rilievi." : "Ogni zona accesa aiuta le altre squadre a sapere dove non serve tornare."}
           </p>
           <div className="mt-6 flex gap-2">
             {s.drafts > 0 && <Button size="lg" variant="outline" onClick={onDrafts}>Completa {s.drafts} foto</Button>}

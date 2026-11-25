@@ -109,7 +109,7 @@ interface Props {
   places?: Place[];
   /** Percorsi di esplorazione: linee che uniscono i luoghi in ordine. */
   routes?: Route[];
-  /** Luoghi già raggiunti (dal team o da chi guarda). */
+  /** Luoghi già raggiunti (dalla squadra o da chi guarda). */
   reached?: Iterable<string>;
   /** Percorso in evidenza: gli altri si attenuano. */
   activeRouteId?: string | null;

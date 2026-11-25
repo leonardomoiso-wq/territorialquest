@@ -73,7 +73,7 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
         <Card className="space-y-3 !p-6">
           <Label>Visibilità</Label>
           <Toggle on={!!c.public_map} disabled={busy} onChange={(v) => set({ public_map: v })} title="Mappa pubblica"
-            hint={`Chiunque abbia il link vede i ${validated} rilievi validati, i luoghi, i percorsi e i contributi approvati. Mai i nomi di chi ha raccolto.`} />
+            hint={`Chiunque abbia il link vede i ${validated} rilievi confermati, i luoghi, i percorsi e i contributi approvati. Mai i nomi di chi ha raccolto.`} />
           <Toggle on={!!c.contributions_open} disabled={busy} onChange={(v) => set({ contributions_open: v })} title="Contributi individuali"
             hint="Chiunque abbia un profilo può proporre foto, informazioni, percezioni, dati e idee. Nulla viene pubblicato senza la tua approvazione." />
           <div className="pt-2">
@@ -95,7 +95,7 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
               </div>
             </div>
           ))}
-          <p className="soft text-xs">I membri della campagna vedono la mappa anche quando è spenta, come archivio di ciò che è stato validato.</p>
+          <p className="soft text-xs">I membri della campagna vedono la mappa anche quando è spenta, come archivio di ciò che è stato confermato.</p>
         </Card>
       </section>
 

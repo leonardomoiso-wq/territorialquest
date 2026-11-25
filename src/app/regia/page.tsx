@@ -78,7 +78,7 @@ export default function Regia() {
           <>
             <h1 className="serif animate-rise text-[64px] leading-none">{mode === "in" ? "Regia." : "Nuova regia."}</h1>
             <p className="soft mt-4">
-              {mode === "in" ? "Accesso riservato a chi crea e coordina le campagne. I tutor entrano come giocatori: li promuove il master dentro la campagna." : "Crea il profilo di regia con la tua password. Ti serve il codice di regia del progetto."}
+              {mode === "in" ? "Accesso riservato a chi crea e coordina le campagne. I tutor entrano come giocatori: li nomina la regia dentro la campagna." : "Crea il profilo di regia con la tua password. Ti serve il codice di regia del progetto."}
             </p>
             {sent ? (
               <div className="mt-8"><Notice tone="ok">Ti abbiamo inviato un link di conferma a {email}. Aprilo, poi accedi da questa pagina e inserisci il codice di regia.</Notice></div>

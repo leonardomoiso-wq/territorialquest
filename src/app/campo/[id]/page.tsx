@@ -253,7 +253,7 @@ export default function Campo() {
     const r = await checkIn(p.id, position[0], position[1]);
     await refresh();
     vibrate([30, 50, 30, 50, 60]);
-    celebrate(r.first_for_team ? `+${Math.round(p.points / 2)}` : "Arrivato", r.first_for_team ? `Hai raggiunto ${p.name}. L'altra metà arriva con un rilievo confermato.` : `${p.name}: il tuo team era già passato.`, categoryOf(p.category).color, true);
+    celebrate(r.first_for_team ? `+${Math.round(p.points / 2)}` : "Arrivato", r.first_for_team ? `Hai raggiunto ${p.name}. L'altra metà arriva con un rilievo confermato.` : `${p.name}: la tua squadra era già passato.`, categoryOf(p.category).color, true);
   });
   const sendSurvey = (p: Place, r: SurveyResult) => run(async () => {
     const answers = { ...r.answers };
@@ -267,7 +267,7 @@ export default function Campo() {
     await refresh();
     vibrate([20, 40, 20, 40, 60]);
     toss(categoryOf(p.category).color, Object.values(r.photos)[0]);
-    celebrate("Indagine", `Inviata. Quando un altro team la conferma, ${p.name} vale altri ${Math.round(p.points / 2)} pt per tutti.`, categoryOf(p.category).color);
+    celebrate("Indagine", `Inviata. Quando un'altra squadra la conferma, ${p.name} vale altri ${Math.round(p.points / 2)} pt per tutti.`, categoryOf(p.category).color);
     setPanel(null);
   });
   const collectHere = (p: Place) => { setAtPlace(p.id); setPin([p.lng, p.lat]); setPanel("form"); setError(null); };
@@ -354,7 +354,7 @@ export default function Campo() {
       await refresh();
       vibrate([20, 40, 20]);
       toss(formOf(form).color, file);
-      celebrate(`+${worth}`, previous === 0 ? "Zona nuova per questo tema. I punti arrivano a tutti alla prima conferma." : "Salvato. I punti arrivano a tutti quando un altro team conferma.", formOf(form).color);
+      celebrate(`+${worth}`, previous === 0 ? "Zona nuova per questo tema. I punti arrivano a tutti alla prima conferma." : "Salvato. I punti arrivano a tutti quando un'altra squadra conferma.", formOf(form).color);
       cancel();
     });
   };
@@ -689,7 +689,7 @@ export default function Campo() {
             </section>
             <section>
               <Label className="mb-2 block">Da confermare – {toValidateAround.length}</Label>
-              {toValidateAround.length === 0 ? <p className="soft text-sm">Nessun rilievo di altri team qui intorno.</p> : (
+              {toValidateAround.length === 0 ? <p className="soft text-sm">Nessun rilievo di altre squadre qui intorno.</p> : (
                 <Button variant="outline" onClick={() => setPanel("validate")}>Conferma i {toValidateAround.length} rilievi vicini</Button>
               )}
             </section>
@@ -714,7 +714,7 @@ export default function Campo() {
 
       {/* ---------------------------------------------------------- luogo */}
       <Sheet open={openPanel === "place" && !!currentPlace} onClose={() => setPanel(null)}
-        kicker={currentPlace ? `${categoryOf(currentPlace.category).label} – ${currentPlace.points} pt per team` : ""} title={currentPlace?.name ?? ""} wide>
+        kicker={currentPlace ? `${categoryOf(currentPlace.category).label} – ${currentPlace.points} pt per squadra` : ""} title={currentPlace?.name ?? ""} wide>
         {currentPlace && (() => {
           const p = currentPlace, d = placeDistance(p), prog = ind.places.get(p.id);
           const arrived = reached.has(p.id);
@@ -756,7 +756,7 @@ export default function Campo() {
               </div>
               <Community items={contributionsFor(data.contributions, { place_id: p.id })}
                 onAdd={() => { setPanel(null); setContribTarget({ campaignId: c.id, name: p.name, at: [p.lng, p.lat], place_id: p.id }); }} />
-              <p className="soft text-xs">Arrivo entro {p.radius_m} m. {prog ? `${prog.reached.size} ${prog.reached.size === 1 ? "team è passato" : "team sono passati"} di qui.` : ""}</p>
+              <p className="soft text-xs">Arrivo entro {p.radius_m} m. {prog ? `${prog.reached.size} ${prog.reached.size === 1 ? "squadra è passata" : "squadre sono passate"} di qui.` : ""}</p>
               {actionError && <Notice tone="error">{actionError}</Notice>}
               <div className="flex flex-wrap gap-2">
                 {!arrived && <Button size="lg" variant={close ? "glow" : "outline"} className="flex-1" disabled={busy || !canCollect || d == null} onClick={() => arrive(p)}>{close ? "Sono arrivato" : "Registra l'arrivo"}</Button>}
@@ -777,7 +777,7 @@ export default function Campo() {
         <div className="on-ink rounded-card p-5">
           <div className="flex items-baseline gap-2">
             <span className="display num text-[44px] leading-none text-glow">{reached.size}/{data.places.length}</span>
-            <span className="label soft">luoghi raggiunti dal tuo team</span>
+            <span className="label soft">luoghi raggiunti dalla tua squadra</span>
           </div>
           <Meter value={data.places.length ? reached.size / data.places.length : 0} className="mt-4" color="var(--color-glow)" />
         </div>
@@ -847,7 +847,7 @@ export default function Campo() {
       <Sheet open={openPanel === "validate"} onClose={() => setPanel(null)} kicker="Validazione tra team" title="Conferma i rilievi degli altri" wide>
         {actionError && <div className="mb-3"><Notice tone="error">{actionError}</Notice></div>}
         {toValidate.length === 0 ? (
-          <Empty title="Tutto confermato.">Quando un altro team inserisce un rilievo, lo trovi qui. Confermarlo fa crescere il punteggio di tutti.</Empty>
+          <Empty title="Tutto confermato.">Quando un&apos;altra squadra inserisce un rilievo, lo trovi qui. Confermarlo fa crescere il punteggio di tutti.</Empty>
         ) : (
           <ul className="space-y-3">
             {toValidate.slice(0, 30).map((o) => {
@@ -924,7 +924,7 @@ export default function Campo() {
 
       {/* --------------------------------------------------------- team */}
       <Sheet open={openPanel === "team"} onClose={() => setPanel(needsTeam ? "team" : null)} kicker={needsTeam ? "Prima di partire" : "Il tuo posto nella campagna"} title="Con chi esplori?">
-        {data.teams.length === 0 ? <p className="soft text-sm">La regia non ha ancora creato i team.</p> : (
+        {data.teams.length === 0 ? <p className="soft text-sm">La regia non ha ancora creato le squadre.</p> : (
           <div className="space-y-2">
             {data.teams.map((t) => (
               <button key={t.id} disabled={busy} onClick={() => run(async () => { await chooseTeam(id, t.id, role ?? me.field_role); await refresh(); setPanel(null); })}
@@ -962,7 +962,7 @@ export default function Campo() {
               <KindTag o={detail} />
               {lensLabel(detail.lens) && <Tag>{lensLabel(detail.lens)}</Tag>}
               {themeOf(data, detail.theme_id) && <Tag color={themeOf(data, detail.theme_id)!.color}>{themeOf(data, detail.theme_id)!.name}</Tag>}
-              <Tag>{detail.status === "validated" ? `validato – qualità ${["", "bassa", "media", "alta"][detail.quality ?? 2]}` : detail.status === "pending" ? "in attesa di conferma" : "segnalato"}</Tag>
+              <Tag>{detail.status === "validated" ? `confermato – qualità ${["", "bassa", "media", "alta"][detail.quality ?? 2]}` : detail.status === "pending" ? "in attesa di conferma" : "segnalato"}</Tag>
             </div>
             {detail.form === "percezione" && detail.feeling
               ? <p className="serif text-2xl italic">«{detail.feeling}»</p>

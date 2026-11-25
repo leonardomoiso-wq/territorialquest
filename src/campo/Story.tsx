@@ -6,10 +6,10 @@ import Topo from "@/ui/Topo";
 import { Button, cx, Label } from "@/ui/kit";
 
 const STEPS = [
-  { kicker: "La premessa", line: ["La mappa è", "spenta."], body: "Questo territorio lo attraversano in tanti, ma nessuno lo conosce davvero. Per ora è una distesa grigia." },
-  { kicker: "Cammina", line: ["Camminando", "la accendi."], body: "Inizia un'uscita e muoviti: ogni zona che attraversi si accende, per te e per tutti gli altri team." },
-  { kicker: "Osserva", line: ["Osservando le", "dai colore."], body: "Una foto, un flusso, una percezione, un dato, un'informazione, un'idea. Uno scatto rapido ora, i dettagli quando ti fermi." },
-  { kicker: "Conferma", line: ["Conta solo", "insieme."], body: "Un rilievo vale quando un altro team passa di lì e lo conferma. Non c'è classifica: c'è un solo punteggio, ed è di tutti." },
+  { kicker: "All'inizio", line: ["La mappa è", "spenta."], body: "Questo territorio lo attraversano in tanti, ma nessuno lo conosce davvero. Per ora è una distesa grigia." },
+  { kicker: "Cammina", line: ["Ogni passo", "la accende."], body: "Premi Parti e muoviti. Ogni zona che attraversi si accende, per te e per le altre squadre." },
+  { kicker: "Raccogli", line: ["Quello che vedi", "le dà colore."], body: "Una foto, un passaggio di persone, una sensazione, un numero, una storia, un'idea. Scatti adesso, scrivi due righe quando ti fermi." },
+  { kicker: "Conferma", line: ["Vale solo", "insieme."], body: "Un rilievo vale punti quando un'altra squadra passa di lì e lo conferma. Non c'è classifica: c'è un solo punteggio, ed è di tutti." },
 ];
 
 /** Racconto d'apertura: una schermata per volta, come si gioca e perché. */

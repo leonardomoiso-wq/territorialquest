@@ -17,7 +17,7 @@ export default function SurveyEditor({ value, onChange, category }: { value: Que
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Label>Indagine sul sito – scala micro</Label>
-          <p className="soft mt-1 max-w-md text-sm">Le domande che i team compilano una volta arrivati, una per schermata. Completata e confermata da un altro team, vale la seconda metà dei punti del luogo.</p>
+          <p className="soft mt-1 max-w-md text-sm">Le domande che le squadre compilano una volta arrivati, una per schermata. Completata e confermata da un&apos;altra squadra, vale la seconda metà dei punti del luogo.</p>
         </div>
         <Button size="sm" variant="outline" onClick={() => (!value.length || confirm("Sostituire le domande con la scheda modello?")) && onChange(withIds(SURVEY_TEMPLATES[category]))}>
           Usa la scheda modello

@@ -91,7 +91,7 @@ export default function Studio() {
         ) : items.length === 0 ? (
           organizer ? (
             <Empty title="Nessuna campagna, per ora." action={<Button onClick={() => setOpen(true)}><PlusIcon /> Crea la prima</Button>}>
-              Una campagna è un&apos;attività di esplorazione: ha un territorio, dei tempi e dei team.
+              Una campagna è un&apos;attività di esplorazione: ha un territorio, dei tempi e delle squadre.
             </Empty>
           ) : (
             <Empty title="Non partecipi ancora a nessuna campagna." action={<LinkButton href="/entra">Entra con un codice</LinkButton>}>

@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import { BASE, HUE } from "@/domain/palette";
 
-const COLORS = [HUE.leaf, HUE["sage-2"], HUE.glow, HUE.river, HUE.terracotta, HUE.rust];
+// colori pieni della palette: gli esagoni accesi devono farsi notare sul fondo neutro
+const COLORS = [HUE.leaf, HUE.river, HUE.terracotta, HUE.glow, HUE.plum, HUE.teal, HUE.brick];
 
 /**
  * Territorio astratto: una griglia esagonale in scala di grigi che prende
@@ -77,9 +78,9 @@ export default function HexField({ className, density = 26, dark = false }: { cl
         c.life += (goal - c.life) * Math.min(1, dt * (near ? 0.012 : 0.0025));
         const lift = c.h * (0.35 + c.life * 0.65);
         const top = c.y - lift;
-        // carta (chiaro) o marrone su lino (scuro)
-        const base = dark ? 52 + c.seed * 14 : 228 - c.seed * 16;
-        const grey = dark ? `rgb(${base},${base - 12},${base - 24})` : `rgb(${base},${base - 6},${base - 22})`;
+        // grigi neutri: chiari su carta, scuri sui pannelli d'inchiostro
+        const base = dark ? 40 + c.seed * 14 : 232 - c.seed * 14;
+        const grey = dark ? `rgb(${base},${base + 2},${base + 6})` : `rgb(${base},${base},${base - 3})`;
 
         // lato in ombra: dà spessore al volume
         ctx.globalAlpha = dark ? 0.9 : 1;
@@ -91,7 +92,7 @@ export default function HexField({ className, density = 26, dark = false }: { cl
         ctx.fillStyle = grey;
         ctx.fill();
         if (c.life > 0.02) {
-          ctx.globalAlpha = Math.min(1, c.life) * (0.55 + c.seed * 0.45);
+          ctx.globalAlpha = Math.min(1, c.life) * (0.8 + c.seed * 0.2);
           ctx.fillStyle = c.color;
           ctx.fill();
         }

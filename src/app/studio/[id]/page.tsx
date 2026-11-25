@@ -53,7 +53,7 @@ function Panel() {
   if (me.role === "player") {
     return (
       <main className="on-paper grid min-h-dvh place-items-center p-6">
-        <Empty title="Quest'area è della regia." action={<LinkButton href={`/campo/${id}`}>Vai sul campo</LinkButton>}>Solo master e tutor gestiscono la campagna.</Empty>
+        <Empty title="Quest'area è della regia." action={<LinkButton href={`/campo/${id}`}>Vai sul campo</LinkButton>}>Solo regia e tutor gestiscono la campagna.</Empty>
       </main>
     );
   }

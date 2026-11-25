@@ -56,7 +56,7 @@ export function Atlante({ data }: { data: Pick<CampaignData, "observations" | "v
     <div className="space-y-7">
       <p className="text-[15px] leading-snug">
         Il gruppo ha riempito <b className="num font-medium">{filled(all)}</b> caselle su <b className="num font-medium">{all.length}</b>.
-        <span className="soft"> L&apos;atlante è di tutti: ogni team aggiunge le sue scoperte.</span>
+        <span className="soft"> L&apos;atlante è di tutti: ogni squadra aggiunge le sue scoperte.</span>
       </p>
       <Section title="Forme di raccolta" list={a.forms} asset={(id) => `atlante/forma-${id}`} icon={(id) => `forma-${id}`} />
       <Section title="Tipi di luogo" list={a.places} asset={(id) => `atlante/luogo-${id}`} icon={(id) => `luogo-${id}` as IconName} />

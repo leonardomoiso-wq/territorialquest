@@ -344,7 +344,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
                 <input type="range" min={10} max={200} step={5} value={place.radius_m} onChange={(e) => setPlace({ ...place, radius_m: Number(e.target.value) })} className="w-full accent-ink" />
                 <span className="soft text-xs">Entro questa distanza il luogo risulta raggiunto.</span>
               </label>
-              <Field label="Punti per team" type="number" min={0} max={1000} step={5} value={place.points} onChange={(e) => setPlace({ ...place, points: Number(e.target.value) })}
+              <Field label="Punti per squadra" type="number" min={0} max={1000} step={5} value={place.points} onChange={(e) => setPlace({ ...place, points: Number(e.target.value) })}
                 hint="Metà all'arrivo, metà all'indagine (o al primo rilievo) confermata sul posto." />
             </div>
 

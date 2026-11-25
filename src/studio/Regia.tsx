@@ -161,7 +161,7 @@ export default function Regia({ data, me, now }: Ctx) {
         </Card>
 
         <Card>
-          <Label>Messaggio ai team</Label>
+          <Label>Messaggio alle squadre</Label>
           <form onSubmit={send} className="mt-3 space-y-2.5">
             <Area value={body} onChange={(e) => setBody(e.target.value)} placeholder="Es. La zona nord è ancora scoperta: chi può passarci?" maxLength={280} aria-label="Messaggio" />
             <div className="flex gap-2">
