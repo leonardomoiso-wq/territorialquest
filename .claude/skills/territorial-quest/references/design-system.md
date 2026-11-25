@@ -1,6 +1,7 @@
 > **Colori**: unica fonte `src/domain/palette.ts` (BASE, HUE, ON_INK, ROLE, PLACE_COLOR, FORM_COLOR, ENV_COLOR, SERIES, TEAM_COLORS,
 > INDICATOR, PUBLIC_LAYER, SKY, MAP). `npm run palette` rigenera i token CSS; il test vieta esadecimali scritti a mano altrove.
 > Illustrazioni in scala di grigi (inchiostro, accento grigio medio, carta), ricolorate dall'app.
+> Neutri senza seppia: carta #f3f2ee, schede #fbfaf7, inchiostro #1c1e22, grigi freddi; ombre rgb(20 22 26). Il calore viene solo dagli accenti.
 
 # Design system
 

@@ -84,7 +84,7 @@ export default function HexField({ className, density = 26, dark = false }: { cl
         // lato in ombra: dà spessore al volume
         ctx.globalAlpha = dark ? 0.9 : 1;
         hex(c.x, c.y, r - 1.5);
-        ctx.fillStyle = dark ? BASE.night : "rgba(43,33,24,0.12)";
+        ctx.fillStyle = dark ? BASE.night : "rgba(20,22,26,0.12)";
         ctx.fill();
         // faccia superiore
         hex(c.x, top, r - 1.5);

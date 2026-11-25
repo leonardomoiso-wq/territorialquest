@@ -29,7 +29,7 @@ export default function Home() {
       {/* ------------------------------------------------------------ scena */}
       <section className="relative flex min-h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_90%_at_50%_0%,var(--color-card)_0%,var(--color-paper)_50%,var(--color-paper-2)_100%)]">
         <HexField className="absolute inset-0 size-full [mask-image:linear-gradient(to_bottom,transparent_0%,transparent_30%,black_78%)]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[70%] bg-[radial-gradient(60%_70%_at_50%_45%,rgb(245_241_230/0.95),transparent)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[70%] bg-[radial-gradient(60%_70%_at_50%_45%,rgb(251_250_247/0.95),transparent)]" />
         {/* curve di livello disegnate a mano, sopra la sfumatura e sotto i testi */}
         <div className="curve-carta pointer-events-none absolute inset-0 [mask-image:linear-gradient(to_bottom,black_0%,black_55%,transparent_85%)]" aria-hidden />
 

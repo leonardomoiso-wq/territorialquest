@@ -1,5 +1,6 @@
 /**
- * Palette unica di Territorial Quest («carta e mappa»).
+ * Palette unica di Territorial Quest («carta e mappa»): fondi neutri quasi bianchi, inchiostro quasi nero,
+ * accenti saturi. Niente seppia nei neutri: il calore viene dagli accenti.
  *
  * È l'unico posto dove si scrivono colori. Da qui leggono:
  * - l'interfaccia: `npm run palette` riscrive i token `--color-*` in src/app/globals.css;
@@ -12,19 +13,19 @@
 
 /** Toni di base: carta, inchiostro e neutri. */
 export const BASE = {
-  ink: "#2b2118",
-  "ink-2": "#3a2a1c",
-  "ink-3": "#4a3826",
-  night: "#21170f",
-  paper: "#ebe6d8",
-  "paper-2": "#e2dbc9",
-  card: "#f5f1e6",
-  edge: "#fbf8f0",
+  ink: "#1c1e22",
+  "ink-2": "#2a2d32",
+  "ink-3": "#3a3d44",
+  night: "#111316",
+  paper: "#f3f2ee",
+  "paper-2": "#e6e5e0",
+  card: "#fbfaf7",
+  edge: "#ffffff",
   white: "#ffffff",
-  line: "#cfc5ae",
-  mute: "#8a7d68",
-  graphite: "#5c4a36",
-  brown: "#3a2a1c",
+  line: "#d3d3cf",
+  mute: "#7b7e83",
+  graphite: "#4c5058",
+  brown: "#1f2226",
 } as const;
 
 /** Tinte d'accento con un nome: tutte le altre tabelle le riusano. */
@@ -48,7 +49,7 @@ export const HUE = {
 
 /** Toni chiari per testi e accenti su fondo scuro (pannelli inchiostro). */
 export const ON_INK = {
-  cream: "#f1ead9",
+  cream: "#f2f1ec",
   "sky-light": "#7fb0ff",
   "pink-light": "#ff9cc2",
   "balance": "#8fb3d1",
@@ -134,9 +135,9 @@ export const SKY = {
 /** Colori propri della mappa. */
 export const MAP = {
   /** Nebbia di carta della vista esplora. */
-  fogPaper: "#f3eee2",
+  fogPaper: "#f2f2ef",
   /** Edifici in rilievo. */
-  building: "#e6dfcf",
+  building: "#e4e4e1",
   /** Persona senza squadra sulla mappa della regia. */
   noTeam: "#3d4046",
 } as const;

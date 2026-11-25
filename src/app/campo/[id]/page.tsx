@@ -544,7 +544,7 @@ export default function Campo() {
               aria-label={`Zaino della squadra${todo ? `: ${todo} cose da fare` : ""}`}
               className={cx("relative flex w-20 flex-col items-center gap-1 transition active:scale-95", fly && "animate-thump")}>
               <span className="grid size-14 place-items-center rounded-full p-[3px] shadow-[var(--shadow-soft)]"
-                style={{ background: `conic-gradient(${myTeam?.color ?? TONE.ink} ${litPct * 3.6}deg, rgb(245 241 230 / .85) 0)` }}>
+                style={{ background: `conic-gradient(${myTeam?.color ?? TONE.ink} ${litPct * 3.6}deg, rgb(251 250 247 / .85) 0)` }}>
                 <span className="grid size-full place-items-center rounded-full bg-paper">
                   <span className="num text-[15px] font-medium leading-none">{litPct}<span className="text-[11px]">%</span></span>
                 </span>
@@ -557,7 +557,7 @@ export default function Campo() {
             {walking ? (
               <div className="relative mb-1">
                 <button type="button" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }} aria-label="Raccogli"
-                  className="grid size-[76px] place-items-center rounded-full bg-ink text-paper shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-glow),0_14px_28px_-10px_rgb(43_33_24/.5)] transition active:scale-95 disabled:opacity-40">
+                  className="grid size-[76px] place-items-center rounded-full bg-ink text-paper shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-glow),0_14px_28px_-10px_rgb(20_22_26/.5)] transition active:scale-95 disabled:opacity-40">
                   <span className="flex flex-col items-center gap-0.5"><PlusIcon /><span className="text-[11px] font-medium tracking-wide">Raccogli</span></span>
                 </button>
                 <label className={cx("absolute -top-2 -right-4 grid size-11 cursor-pointer place-items-center rounded-full bg-paper text-ink shadow-[var(--shadow-soft)] transition active:scale-95", !canCollect && "pointer-events-none opacity-40")} title="Scatto rapido">
@@ -569,7 +569,7 @@ export default function Campo() {
             ) : (
               <div className="relative mb-1">
                 <button type="button" disabled={!canCollect} onClick={begin} aria-label="Inizia un'uscita"
-                  className="grid size-[76px] place-items-center rounded-full bg-glow text-ink shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-ink),0_14px_28px_-10px_rgb(43_33_24/.5)] transition active:scale-95 disabled:opacity-40">
+                  className="grid size-[76px] place-items-center rounded-full bg-glow text-ink shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-ink),0_14px_28px_-10px_rgb(20_22_26/.5)] transition active:scale-95 disabled:opacity-40">
                   <span className="flex flex-col items-center gap-0.5"><Icon name="walk" className="!size-6" /><span className="text-[11px] font-medium tracking-wide">Parti</span></span>
                 </button>
                 <button type="button" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }} aria-label="Nuovo rilievo senza uscita" title="Nuovo rilievo"
@@ -639,8 +639,8 @@ export default function Campo() {
         <div key={fly.id} className="pointer-events-none fixed z-[54] animate-fly" aria-hidden
           style={{ ["--fly-x" as string]: fly.x != null ? `${fly.x}px` : undefined, ["--fly-y" as string]: fly.y != null ? `${fly.y}px` : undefined }}>
           {fly.img
-            ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={fly.img} alt="" className="h-28 w-24 rounded-[2px] border-[5px] border-b-[14px] border-edge object-cover shadow-[0_12px_24px_-8px_rgb(43_33_24/.45)]" />
-            : <div className="h-24 w-20 rounded-[3px] border-4 border-paper shadow-[0_12px_24px_-8px_rgb(43_33_24/.45)]" style={{ background: fly.color }} />}
+            ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={fly.img} alt="" className="h-28 w-24 rounded-[2px] border-[5px] border-b-[14px] border-edge object-cover shadow-[0_12px_24px_-8px_rgb(20_22_26/.45)]" />
+            : <div className="h-24 w-20 rounded-[3px] border-4 border-paper shadow-[0_12px_24px_-8px_rgb(20_22_26/.45)]" style={{ background: fly.color }} />}
         </div>
       )}
 

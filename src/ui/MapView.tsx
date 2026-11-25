@@ -194,7 +194,7 @@ function signImage(color: string, state: string) {
   const W = 40, H = 62;
   const { c, g } = canvas(W, H);
   // ombra a terra
-  g.fillStyle = "rgba(43,33,24,0.22)";
+  g.fillStyle = "rgba(20,22,26,0.22)";
   g.beginPath(); g.ellipse(W / 2, H - 4, 9, 3.2, 0, 0, Math.PI * 2); g.fill();
   // palina
   g.strokeStyle = INK; g.lineWidth = 3; g.lineCap = "round";
@@ -232,7 +232,7 @@ function figureImage(color: string) {
   body.roundRect(W / 2 - 7, 36, 5.6, 17, 2.6);
   body.roundRect(W / 2 + 1.4, 36, 5.6, 17, 2.6);
   // bordo di carta bianca, poi il colore: effetto ritaglio
-  g.save(); g.translate(1.5, 1.5); g.fillStyle = "rgba(43,33,24,0.25)"; g.fill(body); g.restore();
+  g.save(); g.translate(1.5, 1.5); g.fillStyle = "rgba(20,22,26,0.25)"; g.fill(body); g.restore();
   g.strokeStyle = BASE.edge; g.lineWidth = 5; g.lineJoin = "round"; g.stroke(body);
   g.fillStyle = color; g.fill(body);
   g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke(body);

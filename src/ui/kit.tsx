@@ -101,7 +101,7 @@ export function Dot({ color, live, className }: { color: string; live?: boolean;
 /* --------------------------------------------------------------- pannelli */
 /** Scheda come ritaglio di carta: bordo bianco e ombra morbida. */
 export function Card({ className, ...p }: ComponentProps<"div">) {
-  return <div className={cx("surface rounded-[2px] p-5 shadow-[0_0_0_5px_var(--color-edge),0_12px_26px_-12px_rgb(43_33_24/0.22)] [.on-ink_&]:shadow-none [.on-ink_&]:border [.on-ink_&]:hairline", className)} {...p} />;
+  return <div className={cx("surface rounded-[2px] p-5 shadow-[0_0_0_5px_var(--color-edge),0_12px_26px_-12px_rgb(20_22_26/0.22)] [.on-ink_&]:shadow-none [.on-ink_&]:border [.on-ink_&]:hairline", className)} {...p} />;
 }
 
 /** Cartello di sezione: riquadro con bordo e testo mono maiuscolo, numero in un quadratino ocra. */
