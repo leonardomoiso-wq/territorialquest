@@ -10,7 +10,7 @@ import { useEffect, useRef } from "react";
 import { cellHeight, environmentOf, modelCells, type Environment } from "@/domain/environment";
 import { boundsOf, cellOf, cellRing, cellsOf, gridResolution, toRes } from "@/domain/geo";
 import { categoryColors, layersBounds, pointsOf, type Dataset } from "@/domain/datasets";
-import { categoryOf, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
+import { categoryOf, PLACE_CATEGORIES, type Area, type Basemap, type Observation, type Overlay, type Place, type Route } from "@/domain/types";
 
 setWorkerUrl("/maplibre-gl-worker.mjs");
 
@@ -19,11 +19,23 @@ const SATELLITE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Worl
 const SATELLITE_CREDIT = "Immagini © Esri, Maxar, Earthstar Geographics";
 const PAPER = "#ebe6d8";
 
-/** Stile di riserva se le tessere non sono raggiungibili: restano visibili i dati. */
+/**
+ * Stile di riserva se la mappa vettoriale non risponde: una mappa a immagini chiara,
+ * così sotto i dati resta sempre un riferimento (strade, edifici, nomi).
+ */
 const BLANK: StyleSpecification = {
   version: 8,
-  sources: {},
-  layers: [{ id: "bg", type: "background", paint: { "background-color": PAPER } }],
+  sources: {
+    riserva: {
+      type: "raster", tileSize: 256, maxzoom: 19,
+      tiles: ["a", "b", "c"].map((s) => `https://${s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png`),
+      attribution: "© OpenStreetMap © CARTO",
+    },
+  },
+  layers: [
+    { id: "bg", type: "background", paint: { "background-color": PAPER } },
+    { id: "riserva", type: "raster", source: "riserva" },
+  ],
 };
 
 const KIND_COLOR = { field: "#4a6b43", desk: "#3d6f99", feel: "#b8573f" };
@@ -117,6 +129,12 @@ interface Props {
   interactive?: boolean;
   /** Pulsanti di zoom (su telefono basta il gesto). */
   controls?: boolean;
+  /**
+   * Vista esplora: camera inclinata che segue chi cammina (e la bussola), cartelli in piedi,
+   * sagome di carta, nebbia di carta sulle zone mai attraversate. rich aggiunge edifici e cielo;
+   * motion abilita le brevi animazioni (celle che si accendono).
+   */
+  explore?: { heading: number | null; rich: boolean; motion: boolean; sky?: { sky: string; horizon: string; fog: string } } | null;
   className?: string;
 }
 
@@ -146,13 +164,85 @@ function environmentFrom(features: { sourceLayer?: string; properties: Record<st
   return null;
 }
 
+/* ------------------------------------------------ immagini della vista esplora */
+/** Aggiunge alla mappa un cartello («sign|colore|stato») o una sagoma («fig|colore») se manca. */
+function ensureImage(m: MLMap, id: string) {
+  const [kind, color, state] = id.split("|");
+  if (m.hasImage(id) || !/^#[0-9a-f]{6}$/i.test(color ?? "")) return;
+  if (kind === "sign") m.addImage(id, signImage(color, state ?? "da"), { pixelRatio: PX });
+  if (kind === "fig") m.addImage(id, figureImage(color), { pixelRatio: PX });
+}
+const PX = 2;
+const INK = "#2b2118";
+const canvas = (w: number, h: number) => {
+  const c = document.createElement("canvas");
+  c.width = w * PX; c.height = h * PX;
+  const g = c.getContext("2d")!;
+  g.scale(PX, PX);
+  return { c, g };
+};
+const asImage = (c: HTMLCanvasElement) => c.getContext("2d")!.getImageData(0, 0, c.width, c.height);
+
+/** Cartello da sentiero in piedi: palina, tabella del colore del tipo, segno dello stato. */
+function signImage(color: string, state: string) {
+  const W = 40, H = 62;
+  const { c, g } = canvas(W, H);
+  // ombra a terra
+  g.fillStyle = "rgba(43,33,24,0.22)";
+  g.beginPath(); g.ellipse(W / 2, H - 4, 9, 3.2, 0, 0, Math.PI * 2); g.fill();
+  // palina
+  g.strokeStyle = INK; g.lineWidth = 3; g.lineCap = "round";
+  g.beginPath(); g.moveTo(W / 2, H - 5); g.lineTo(W / 2, 26); g.stroke();
+  // tabella: bordo carta, poi colore
+  const board = (inset: number, fill: string) => {
+    g.fillStyle = fill;
+    g.beginPath(); g.roundRect(4 + inset, 3 + inset, W - 8 - inset * 2, 26 - inset * 2, 4 - inset / 2); g.fill();
+  };
+  board(0, INK); board(1.6, "#fbf8f0"); board(3.6, color);
+  g.strokeStyle = "#fbf8f0"; g.lineWidth = 2.4; g.lineJoin = "round"; g.lineCap = "round";
+  if (state === "da") {
+    // freccia di sentiero: meta da raggiungere
+    g.beginPath(); g.moveTo(13, 16); g.lineTo(26, 16); g.moveTo(22, 11.5); g.lineTo(26.5, 16); g.lineTo(22, 20.5); g.stroke();
+  } else {
+    g.beginPath(); g.moveTo(13.5, 16); g.lineTo(18, 20.5); g.lineTo(26.5, 11.5); g.stroke();
+  }
+  if (state === "done") {
+    // timbro del team: luogo completato
+    g.fillStyle = "#d6993e"; g.strokeStyle = INK; g.lineWidth = 1.6;
+    g.beginPath(); g.arc(W - 7, 7, 6.5, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = INK; g.beginPath(); g.arc(W - 7, 7, 2, 0, Math.PI * 2); g.fill();
+  }
+  return asImage(c);
+}
+
+/** Sagoma di carta ritagliata: chi cammina, con il colore della squadra. */
+function figureImage(color: string) {
+  const W = 34, H = 58;
+  const { c, g } = canvas(W, H);
+  const body = new Path2D();
+  body.arc(W / 2, 10, 6.5, 0, Math.PI * 2);
+  body.moveTo(W / 2 - 8, 21);
+  body.roundRect(W / 2 - 8.5, 19, 17, 21, 6);
+  body.roundRect(W / 2 - 7, 36, 5.6, 17, 2.6);
+  body.roundRect(W / 2 + 1.4, 36, 5.6, 17, 2.6);
+  // bordo di carta bianca, poi il colore: effetto ritaglio
+  g.save(); g.translate(1.5, 1.5); g.fillStyle = "rgba(43,33,24,0.25)"; g.fill(body); g.restore();
+  g.strokeStyle = "#fbf8f0"; g.lineWidth = 5; g.lineJoin = "round"; g.stroke(body);
+  g.fillStyle = color; g.fill(body);
+  g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke(body);
+  return asImage(c);
+}
+
 export default function MapView(props: Props) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const ready = useRef(false);
   const latest = useRef(props);
   const fitted = useRef(false);
-  const applied = useRef({ mode: "" as string, raster: "", overlay: "", focus: "", place: "" });
+  const applied = useRef({ mode: "" as string, raster: "", overlay: "", focus: "", place: "", explore: "" });
+  /** Celle percorse all'ultimo disegno: le nuove si accendono con una breve dissolvenza. */
+  const walkedBefore = useRef<{ key: string; cells: Set<string> } | null>(null);
+  const flashAnim = useRef(0);
 
   /** Ultimi ingressi di ogni sorgente: si ridisegna solo ciò che è cambiato. */
   const lastDeps = useRef(new Map<string, unknown[]>());
@@ -211,12 +301,33 @@ export default function MapView(props: Props) {
     });
     if (mode === "model") put("cells", ["vuoto"], () => fc([])); else put("model", ["vuoto"], () => fc([]));
 
+    // celle appena accese: dissolvenza dorata di poco più di un secondo
+    if (walkedBefore.current?.key !== walkedKey) {
+      const now = new Set([...(p.walked ?? [])].map((c) => toRes(c, res)));
+      const before = walkedBefore.current?.cells;
+      walkedBefore.current = { key: walkedKey, cells: now };
+      const fresh = before && p.explore?.motion ? [...now].filter((c) => !before.has(c)) : [];
+      if (fresh.length && fresh.length < 40 && m.getLayer("flash")) {
+        write("flash", fc(fresh.map((c) => ({ type: "Feature", geometry: { type: "Polygon", coordinates: [cellRing(c)] }, properties: {} }))));
+        cancelAnimationFrame(flashAnim.current);
+        const t0 = performance.now();
+        const step = (t: number) => {
+          const k = Math.min(1, (t - t0) / 1200);
+          if (!map.current?.getLayer("flash")) return;
+          map.current.setPaintProperty("flash", "fill-opacity", 0.85 * (1 - k) * (1 - k));
+          if (k < 1) flashAnim.current = requestAnimationFrame(step);
+        };
+        flashAnim.current = requestAnimationFrame(step);
+      }
+    }
+
     put("observations", [p.observations], () => fc((p.observations ?? []).map((o) => point([o.lng, o.lat], { id: o.id, color: KIND_COLOR[o.kind], status: o.status }))));
     put("flows", [p.observations], () => fc((p.observations ?? []).filter((o) => o.path && o.path.length > 1 && o.status !== "flagged").map((o) => ({
       type: "Feature", geometry: { type: "LineString", coordinates: o.path! },
       properties: { id: o.id, intensity: Number((o.data as { intensity?: number } | undefined)?.intensity ?? 2), status: o.status },
     }))));
-    set("players", fc((p.players ?? []).map((u) => point([u.lng, u.lat], { name: u.name, color: u.color, online: u.online }))));
+    for (const u of p.players ?? []) ensureImage(m, `fig|${u.color}`);
+    set("players", fc((p.players ?? []).map((u) => point([u.lng, u.lat], { name: u.name, color: u.color, online: u.online, me: u.id === "me" }))));
 
     const d = p.draft ?? [];
     set("draft", fc([
@@ -266,6 +377,7 @@ export default function MapView(props: Props) {
       const r0 = pl.radius_m / (156543.03 * Math.cos((pl.lat * Math.PI) / 180));
       return point([pl.lng, pl.lat], {
         id: pl.id, name: pl.name, color: categoryOf(pl.category).color, reached: reached.has(pl.id), done: completed.has(pl.id),
+        state: completed.has(pl.id) ? "done" : reached.has(pl.id) ? "ok" : "da",
         selected: pl.id === p.selectedPlaceId, r0, r22: r0 * 4194304,
       });
     })));
@@ -326,12 +438,40 @@ export default function MapView(props: Props) {
       if (sel) m.easeTo({ center: [sel.lng, sel.lat], zoom: Math.max(m.getZoom(), 15), duration: 700 });
     }
 
-    const focus = p.focus ? p.focus.map((v) => v.toFixed(5)).join(",") : "";
+    /* ------------------------------------------------------- vista esplora */
+    const ex = p.explore ?? null;
+    const exKey = ex ? `on|${ex.rich}|${ex.sky?.sky ?? ""}` : "off";
+    if (exKey !== applied.current.explore) {
+      const was = applied.current.explore;
+      applied.current.explore = exKey;
+      const on = !!ex;
+      for (const id of ["places-sign", "players-fig", "players-shadow"]) show(id, on);
+      for (const id of ["places-halo", "places", "players-halo", "players", "cells-line"]) show(id, !on);
+      show("tq-buildings", on && !!ex?.rich);
+      // nebbia di carta: le zone mai attraversate restano coperte da una velatura chiara
+      // sempre leggera: strade ed edifici della mappa di riferimento devono restare leggibili
+      m.setPaintProperty("cells-fog", "fill-color", on ? "#f3eee2" : "#3a2a1c");
+      m.setPaintProperty("cells-fog", "fill-opacity", ["case", ["get", "dark"], on ? 0.38 : 0.16, 0]);
+      m.setPaintProperty("cells-fill", "fill-opacity", on
+        ? ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.22, 6, 0.4]
+        : ["interpolate", ["linear"], ["get", "n"], 0, 0, 1, 0.5, 6, 0.78]);
+      if (on && ex?.rich && ex.sky) {
+        try {
+          m.setSky({ "sky-color": ex.sky.sky, "horizon-color": ex.sky.horizon, "fog-color": ex.sky.fog, "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.7, "fog-ground-blend": 0.35, "atmosphere-blend": 0 });
+        } catch { /* cielo non disponibile */ }
+      }
+      if (on && !was.startsWith("on")) m.easeTo({ pitch: 58, zoom: Math.max(m.getZoom(), 16.8), duration: was === "" || !ex?.motion ? 0 : 900 });
+      else if (!on && was.startsWith("on")) m.easeTo({ pitch: 0, bearing: 0, duration: 700 });
+    }
+
+    const heading = ex?.heading;
+    const focus = p.focus ? `${p.focus.map((v) => v.toFixed(5)).join(",")}|${ex ? heading ?? "" : ""}` : "";
     if (focus !== applied.current.focus) {
       applied.current.focus = focus;
       if (p.focus) {
         fitted.current = true;
-        m.easeTo({ center: p.focus, zoom: Math.max(m.getZoom(), 16.4), duration: 900 });
+        if (ex) m.easeTo({ center: p.focus, zoom: Math.min(19, Math.max(m.getZoom(), 16.8)), pitch: Math.max(m.getPitch(), 45), ...(heading != null ? { bearing: heading } : {}), duration: ex.motion ? 650 : 0 });
+        else m.easeTo({ center: p.focus, zoom: Math.max(m.getZoom(), 16.4), duration: 900 });
       }
     }
 
@@ -358,7 +498,8 @@ export default function MapView(props: Props) {
     if (!el.current) return;
     let cancelled = false;
     const p = latest.current;
-    applied.current = { mode: "", raster: "", overlay: "", focus: "", place: "" };
+    applied.current = { mode: "", raster: "", overlay: "", focus: "", place: "", explore: "" };
+    walkedBefore.current = null;
     lastDeps.current = new Map();
     fitted.current = false;
 
@@ -376,16 +517,20 @@ export default function MapView(props: Props) {
       map.current = m;
       if ((p.interactive ?? true) && (p.controls ?? true)) m.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
 
+      m.on("styleimagemissing", (e: { id: string }) => ensureImage(m, e.id));
+
       m.on("load", () => {
         const empty = fc([]);
         // rilievi, contributi e strati di punti si raggruppano: sotto lo zoom 16 i punti vicini diventano un grappolo
         const CLUSTERED = new Set(["observations", "contribs", "layer-points"]);
-        for (const id of ["areas", "cells", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) {
+        for (const id of ["areas", "cells", "flash", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) {
           // i luoghi sono mete: si raggruppano solo da lontano (scala di vallata), da vicino restano singoli
           m.addSource(id, CLUSTERED.has(id) ? { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 15 }
             : id === "places" ? { type: "geojson", data: empty, cluster: true, clusterRadius: 36, clusterMaxZoom: 12 }
             : { type: "geojson", data: empty });
         }
+        // cartelli pronti per ogni tipo di luogo e stato: le immagini create al volo possono andare perse
+        for (const cat of PLACE_CATEGORIES) for (const st of ["da", "ok", "done"]) ensureImage(m, `sign|${cat.color}|${st}`);
         const single = ["!", ["has", "point_count"]] as const;
         const grouped = ["has", "point_count"] as const;
         /** Cerchio di un grappolo: più grande quanti più punti contiene. */
@@ -416,6 +561,19 @@ export default function MapView(props: Props) {
         m.addLayer({ id: "areas-line", type: "line", source: "areas", paint: {
           "line-color": ["get", "color"], "line-width": ["case", ["get", "selected"], 3, 1.6], "line-dasharray": [2, 1.5],
         } });
+
+        // edifici in rilievo dalla mappa di base (solo nella vista esplora ricca)
+        if (m.getStyle().sources?.openmaptiles) {
+          try {
+            m.addLayer({ id: "tq-buildings", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 14, layout: { visibility: "none" }, paint: {
+              "fill-extrusion-color": "#e6dfcf",
+              "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
+              "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+              "fill-extrusion-opacity": 0.85,
+            } });
+          } catch { /* mappa di base senza edifici */ }
+        }
+        m.addLayer({ id: "flash", type: "fill", source: "flash", paint: { "fill-color": "#e3b04b", "fill-opacity": 0 } });
 
         m.addLayer({ id: "model", type: "fill-extrusion", source: "model", layout: { visibility: "none" }, paint: {
           "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": ["get", "h"], "fill-extrusion-opacity": 0.94,
@@ -469,6 +627,16 @@ export default function MapView(props: Props) {
           "circle-radius": 6, "circle-color": ["get", "color"], "circle-opacity": ["case", ["get", "online"], 1, 0.4],
           "circle-stroke-color": "#2b2118", "circle-stroke-width": 2,
         } });
+        // vista esplora: ombra a terra e sagoma di carta in piedi per chi cammina
+        m.addLayer({ id: "players-shadow", type: "circle", source: "players", layout: { visibility: "none" }, paint: {
+          "circle-radius": ["case", ["get", "me"], 10, 7], "circle-color": "#2b2118", "circle-opacity": 0.16, "circle-blur": 0.4,
+          "circle-pitch-alignment": "map",
+        } });
+        m.addLayer({ id: "players-fig", type: "symbol", source: "players", layout: {
+          visibility: "none", "icon-image": ["concat", "fig|", ["get", "color"]], "icon-anchor": "bottom",
+          "icon-size": ["case", ["get", "me"], 1, 0.72], "icon-allow-overlap": true, "icon-ignore-placement": true,
+          "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport", "symbol-sort-key": ["case", ["get", "me"], 1, 0],
+        } });
         // contributi individuali: anello bianco, nucleo colorato; in revisione tratteggiati dalla trasparenza
         m.addLayer({ id: "contribs-cluster", type: "circle", source: "contribs", filter: grouped as never, paint: clusterPaint("#7a5c9a") });
         clusterCount("contribs-cluster-count", "contribs", "#f5f1e6");
@@ -494,6 +662,12 @@ export default function MapView(props: Props) {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, ["case", ["get", "selected"], 7, 4], 13, ["case", ["get", "selected"], 10, 7], 16, ["case", ["get", "selected"], 12, 9]],
           "circle-color": ["get", "color"],
           "circle-stroke-color": "#ffffff", "circle-stroke-width": ["case", ["get", "reached"], 2, 0],
+        } });
+        // vista esplora: cartelli in piedi, più grandi da vicino; i più vicini coprono i lontani
+        m.addLayer({ id: "places-sign", type: "symbol", source: "places", filter: single as never, layout: {
+          visibility: "none", "icon-image": ["concat", "sign|", ["get", "color"], "|", ["get", "state"]], "icon-anchor": "bottom",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.55, 16, 0.85, 18, 1.1], "icon-allow-overlap": true,
+          "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport", "symbol-z-order": "viewport-y",
         } });
         if (m.getStyle().glyphs) {
           try {
@@ -614,7 +788,7 @@ export default function MapView(props: Props) {
         if (lp && cur.onLayerPointClick) return cur.onLayerPointClick({ datasetId: String(lp.properties.datasetId), index: Number(lp.properties.index), dataset: String(lp.properties.dataset), label: String(lp.properties.label), category: String(lp.properties.category) });
         const ct = hit(e, "contribs");
         if (ct && cur.onContributionClick) return cur.onContributionClick(String(ct.properties.id));
-        const pl = hit(e, "places-halo") ?? hit(e, "places");
+        const pl = hit(e, "places-sign") ?? hit(e, "places-halo") ?? hit(e, "places");
         if (pl && cur.onPlaceClick) return cur.onPlaceClick(String(pl.properties.id));
         const o = hit(e, "obs") ?? hit(e, "flows");
         if (o && cur.onObservationClick) return cur.onObservationClick(String(o.properties.id));
@@ -636,6 +810,7 @@ export default function MapView(props: Props) {
     observer.observe(el.current);
     return () => {
       cancelled = true;
+      cancelAnimationFrame(flashAnim.current);
       observer.disconnect();
       ready.current = false;
       map.current?.remove();

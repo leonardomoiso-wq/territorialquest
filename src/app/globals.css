@@ -49,6 +49,9 @@
   --animate-pulse-ring: pulse-ring 2.2s ease-out infinite;
   --animate-pop: pop 1.9s var(--ease-out-expo) both;
   --animate-burst: burst 1.4s var(--ease-out-expo) both;
+  --animate-stamp: stamp 1.6s var(--ease-out-expo) both;
+  --animate-fly: fly 0.9s cubic-bezier(0.5, 0, 0.75, 0.4) both;
+  --animate-thump: thump 0.5s var(--ease-out-expo) 0.85s both;
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(14px); }
@@ -67,6 +70,22 @@
   @keyframes burst {
     0% { opacity: 0.9; transform: scale(0.2); }
     100% { opacity: 0; transform: scale(2.4); }
+  }
+  /* timbro: arriva dall'alto, si calca, resta un attimo, sbiadisce */
+  @keyframes stamp {
+    0% { opacity: 0; transform: scale(1.9) rotate(-18deg); }
+    22% { opacity: 1; transform: scale(0.94) rotate(-8deg); }
+    30%, 80% { opacity: 1; transform: scale(1) rotate(-8deg); }
+    100% { opacity: 0; transform: scale(1) rotate(-8deg); }
+  }
+  /* ritaglio raccolto che vola nello stemma della squadra, in basso a sinistra */
+  @keyframes fly {
+    0% { left: 50%; top: 42%; transform: translate(-50%, -50%) scale(1) rotate(-5deg); opacity: 1; }
+    100% { left: 3.25rem; top: calc(100% - 4.75rem); transform: translate(-50%, -50%) scale(0.18) rotate(10deg); opacity: 0.4; }
+  }
+  @keyframes thump {
+    0%, 100% { transform: scale(1); }
+    40% { transform: scale(1.16); }
   }
   @keyframes pulse-ring {
     0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }

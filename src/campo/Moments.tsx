@@ -9,6 +9,8 @@ export interface Cheer {
   big: string;
   small: string;
   color?: string;
+  /** Arrivo a un luogo: il timbro si calca sulla carta. */
+  stamp?: boolean;
 }
 
 /** Momento di ricompensa: breve, a tutto schermo, non blocca il cammino. */
@@ -22,16 +24,27 @@ export function Celebration({ cheer, onEnd }: { cheer: Cheer | null; onEnd: () =
   const color = cheer.color ?? "var(--color-glow)";
   return (
     <div key={cheer.id} className="pointer-events-none fixed inset-0 z-[55] grid place-items-center" role="status" aria-live="polite">
-      <svg viewBox="0 0 100 100" className="absolute size-[26rem] max-w-none animate-burst" aria-hidden>
-        <path d="M50 4 90 27v46L50 96 10 73V27z" fill="none" stroke={color} strokeWidth="2.5" />
-      </svg>
-      <svg viewBox="0 0 100 100" className="absolute size-[26rem] max-w-none animate-burst [animation-delay:160ms]" aria-hidden>
-        <path d="M50 4 90 27v46L50 96 10 73V27z" fill={color} fillOpacity="0.18" />
-      </svg>
-      <div className="glass-ink mx-6 w-72 max-w-full animate-pop rounded-panel px-7 py-7 text-center">
+      {cheer.stamp ? (
+        <svg viewBox="0 0 100 100" className="absolute size-[17rem] max-w-none animate-stamp" aria-hidden>
+          <circle cx="50" cy="50" r="44" fill="none" stroke={color} strokeWidth="5" />
+          <circle cx="50" cy="50" r="36" fill={color} fillOpacity="0.14" stroke={color} strokeWidth="1.5" strokeDasharray="3 3" />
+          <path d="M33 51 45 63 68 38" fill="none" stroke={color} strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <>
+          <svg viewBox="0 0 100 100" className="absolute size-[26rem] max-w-none animate-burst" aria-hidden>
+            <path d="M50 4 90 27v46L50 96 10 73V27z" fill="none" stroke={color} strokeWidth="2.5" />
+          </svg>
+          <svg viewBox="0 0 100 100" className="absolute size-[26rem] max-w-none animate-burst [animation-delay:160ms]" aria-hidden>
+            <path d="M50 4 90 27v46L50 96 10 73V27z" fill={color} fillOpacity="0.18" />
+          </svg>
+        </>
+      )}
+      {/* un tocco chiude subito il momento */}
+      <button type="button" onClick={onEnd} className={"glass-ink pointer-events-auto mx-6 w-72 max-w-full animate-pop rounded-panel px-7 py-7 text-center" + (cheer.stamp ? " mt-[19rem]" : "")}>
         <div className="display text-[52px] leading-none" style={{ color }}>{cheer.big}</div>
         <div className="mx-auto mt-3 text-sm leading-snug text-paper/85">{cheer.small}</div>
-      </div>
+      </button>
     </div>
   );
 }

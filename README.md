@@ -33,6 +33,25 @@ La mappa parte spenta. Un'uscita a piedi, con telefono o tablet, ha quattro gest
 Al rientro un riepilogo mostra che cosa l'uscita ha portato al punteggio comune.
 Delle uscite si salvano le celle attraversate e la distanza, non il tracciato GPS.
 
+### Vista esplora
+
+Durante l'uscita la mappa si inclina e segue chi cammina:
+
+- **Sagoma di carta** al centro, con l'anello d'azione di 80 m; i compagni di squadra sono sagome più piccole.
+- **Cartelli in piedi** per i luoghi: freccia se sono da raggiungere, spunta se raggiunti,
+  timbro ocra se completati dal team.
+- **Nebbia di carta** leggera sulle zone mai attraversate. Le celle che si accendono hanno una breve dissolvenza dorata.
+- **Barra in basso**: stemma della squadra con la mappa accesa (%), pulsante grande *Raccogli*
+  con lo scatto rapido, *Vicino a te* con i prossimi luoghi.
+- **Colonne laterali**: a sinistra Conferma, Foto, Percorsi, Come; a destra Bussola o Nord, Vista, Strati, Su di me.
+- **Ricompense**: all'arrivo il timbro si calca sulla carta; dopo una raccolta un ritaglio vola nello stemma.
+  Ogni momento si chiude con un tocco.
+- **Vista**: Esplora o Piatta; grafica Automatica, Ricca (edifici in rilievo, cielo dell'ora del giorno) o Essenziale.
+  In automatica, sotto i 30 fotogrammi al secondo edifici e cielo si spengono da soli.
+  Se il telefono chiede meno movimento, le animazioni si fermano.
+- **Sicurezza e batteria**: schermo acceso solo durante l'uscita; oltre i 10 km/h compare l'invito a guardare la strada.
+- **Mappa di riserva**: se la mappa vettoriale non risponde, sotto resta una mappa chiara a immagini (© OpenStreetMap © CARTO).
+
 ## Luoghi, percorsi e indagini sul sito
 
 - **Luoghi** (sezione Luoghi della regia): punti di interesse storici, naturalistici, culturali,

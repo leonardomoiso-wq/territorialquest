@@ -8,6 +8,7 @@ import { Celebration, Recap, type Cheer, type WalkSummary } from "@/campo/Moment
 import Story from "@/campo/Story";
 import Survey, { SurveyAnswers, type SurveyResult } from "@/campo/Survey";
 import { useWalk, vibrate } from "@/campo/useWalk";
+import { QUALITY_LABEL, skyAt, useAutoQuality, useHeading, useReducedMotion, useViewPrefs, useWakeLock, type Quality } from "@/campo/explore";
 import { formOf, kindOf, lensLabel, pathLength, summary, type Form } from "@/domain/forms";
 import { categoryColors, figuresFor, formatValue, pointsOf } from "@/domain/datasets";
 import { areaAt, cellOf, toRes } from "@/domain/geo";
@@ -24,9 +25,9 @@ import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
 import { useAction, useNow } from "@/lib/hooks";
 import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
-import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Sheet, Spinner, Tag } from "@/ui/kit";
+import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
 
-type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers" | "view";
 type LngLat = [number, number];
 
 const NEAR = 80; // metri: «sei sul posto»
@@ -42,7 +43,23 @@ const ICON = {
   walk: "M13 4.500a1.500 1.500 0 1 0 0-.010M9 21l2-6-2.500-2.500L10 8l3 1 2 3h3M11 15l3 2 1 4",
   target: "M12 3v3M12 18v3M3 12h3M18 12h3M12 15.500a3.500 3.500 0 1 0 0-7 3.500 3.500 0 0 0 0 7z",
   route: "M6 19a2 2 0 1 0 0-.010M18 7a2 2 0 1 0 0-.010M6 17V11a4 4 0 0 1 4-4h6",
+  view: "M3 17 12 21l9-4M3 12l9 4 9-4M12 3 3 7.500l9 4 9-4z",
+  help: "M9.500 9a2.500 2.500 0 1 1 3.500 2.300c-.700.300-1 .900-1 1.700M12 17v.010",
 };
+
+/** Pulsante tondo con etichetta sotto, per le colonne ai lati della vista esplora. */
+function SideButton({ label, d, count, onClick, children }: { label: string; d?: string; count?: number; onClick: () => void; children?: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={`${label}${count ? `: ${count}` : ""}`}
+      className="pointer-events-auto flex w-14 flex-col items-center gap-1 transition active:scale-95">
+      <span className="glass relative grid size-12 place-items-center rounded-full">
+        {children ?? (d && <Icon d={d} />)}
+        {!!count && <span className="num absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-ink px-1 text-center text-[11px] leading-5 text-paper">{count}</span>}
+      </span>
+      <span className="label rounded-full bg-paper/80 px-1.5 !text-[9px] leading-4 backdrop-blur">{label}</span>
+    </button>
+  );
+}
 
 /** Pulsante a icona con contatore, per il dock in cammino. */
 function Counter({ label, d, count, onClick }: { label: string; d: string; count: number; onClick: () => void }) {
@@ -97,9 +114,23 @@ export default function Campo() {
     return s;
   }, [ind]);
 
-  const celebrate = useCallback((big: string, small: string, color?: string) => setCheer({ id: Date.now(), big, small, color }), []);
+  const celebrate = useCallback((big: string, small: string, color?: string, stamp?: boolean) => setCheer({ id: Date.now(), big, small, color, stamp }), []);
+  /** Ritaglio che vola nello stemma della squadra dopo una raccolta. */
+  const [fly, setFly] = useState<{ id: number; color: string } | null>(null);
+  const toss = useCallback((color: string) => setFly({ id: Date.now(), color }), []);
+  useEffect(() => { if (!fly) return; const t = setTimeout(() => setFly(null), 1500); return () => clearTimeout(t); }, [fly]);
+  const view = useViewPrefs();
+  const reducedMotion = useReducedMotion();
+  const [compassOn, setCompassOn] = useState(false);
+  const lastSpeedWarn = useRef(0);
   const onLit = useCallback(() => celebrate("Accesa", "Zona nuova: nessuno era ancora passato di qui."), [celebrate]);
   const { walk, start, stop, track } = useWalk(id, user?.id, me?.team_id ?? null, lit, onLit);
+  const exploring = !!walk && view.explore;
+  const slow = useAutoQuality(exploring && view.quality === "auto");
+  const compass = useHeading(exploring && compassOn);
+  useWakeLock(!!walk);
+  const walkingRef = useRef(false);
+  useEffect(() => { walkingRef.current = !!walk; }, [walk]);
   const trackRef = useRef(track);
   useEffect(() => { trackRef.current = track; }, [track]);
 
@@ -113,6 +144,11 @@ export default function Campo() {
         const p: LngLat = [g.coords.longitude, g.coords.latitude];
         setPosition(p);
         trackRef.current(p, g.coords.accuracy ?? 0);
+        // oltre i 10 km/h si guarda la strada, non il telefono
+        if (walkingRef.current && (g.coords.speed ?? 0) > 2.8 && Date.now() - lastSpeedWarn.current > 300000) {
+          lastSpeedWarn.current = Date.now();
+          setToast("Vai veloce: guarda la strada, la mappa ti aspetta.");
+        }
         if (Date.now() - lastBeat.current > 45000) beat(p);
       },
       () => undefined,
@@ -144,7 +180,7 @@ export default function Campo() {
       async (r) => {
         await refresh();
         vibrate([30, 50, 30, 50, 60]);
-        celebrate(r.first_for_team ? `+${Math.round(pl.points / 2)}` : "Arrivato", `${pl.name}${pl.prompt ? `: ${pl.prompt}` : ". Raccogli qui un rilievo per completarlo."}`, categoryOf(pl.category).color);
+        celebrate(r.first_for_team ? `+${Math.round(pl.points / 2)}` : "Arrivato", `${pl.name}${pl.prompt ? `: ${pl.prompt}` : ". Raccogli qui un rilievo per completarlo."}`, categoryOf(pl.category).color, true);
         setPlaceId(pl.id);
       },
       () => checking.current.delete(pl.id),
@@ -215,7 +251,7 @@ export default function Campo() {
     const r = await checkIn(p.id, position[0], position[1]);
     await refresh();
     vibrate([30, 50, 30, 50, 60]);
-    celebrate(r.first_for_team ? `+${Math.round(p.points / 2)}` : "Arrivato", r.first_for_team ? `Hai raggiunto ${p.name}. L'altra metà arriva con un rilievo confermato.` : `${p.name}: il tuo team era già passato.`, categoryOf(p.category).color);
+    celebrate(r.first_for_team ? `+${Math.round(p.points / 2)}` : "Arrivato", r.first_for_team ? `Hai raggiunto ${p.name}. L'altra metà arriva con un rilievo confermato.` : `${p.name}: il tuo team era già passato.`, categoryOf(p.category).color, true);
   });
   const sendSurvey = (p: Place, r: SurveyResult) => run(async () => {
     const answers = { ...r.answers };
@@ -228,6 +264,7 @@ export default function Campo() {
     });
     await refresh();
     vibrate([20, 40, 20, 40, 60]);
+    toss(categoryOf(p.category).color);
     celebrate("Indagine", `Inviata. Quando un altro team la conferma, ${p.name} vale altri ${Math.round(p.points / 2)} pt per tutti.`, categoryOf(p.category).color);
     setPanel(null);
   });
@@ -244,6 +281,17 @@ export default function Campo() {
   const hereArea = here ? areaAt(here[0], here[1], data.areas) : null;
   const areaClosed = hereArea ? !areaOpen(hereArea, now) : false;
   const placeNote = `${tracing && path.length > 1 ? `Tracciato di ${pathLength(path)} m. ` : ""}${hereArea ? `Area: ${hereArea.name}.` : "Fuori dalle aree definite."}`;
+
+  /* -------------------------------------------------------- vista esplora */
+  const rich = view.quality === "ricca" || (view.quality === "auto" && !slow);
+  const motion = !reducedMotion && view.quality !== "essenziale";
+  const litPct = ind.territory.size ? Math.round(([...ind.territory].filter((x) => litNow.has(x)).length / ind.territory.size) * 100) : 0;
+  const nearestPlaces = position ? data.places.filter((p) => p.placed !== false && !reached.has(p.id)).map((p) => ({ p, m: metersBetween(position, [p.lng, p.lat]) })).sort((a, b) => a.m - b.m).slice(0, 3) : [];
+  const toggleCompass = async () => {
+    if (compassOn) { setCompassOn(false); return; }
+    if (await compass.enable()) { setCompassOn(true); setFollow(true); }
+    else setToast("Bussola non disponibile: ruota la mappa con due dita.");
+  };
 
   const closeStory = () => { try { localStorage.setItem(`tq-story-${id}`, "1"); } catch { /* memoria non disponibile */ } setStory(false); };
   const pick = (f: Form) => {
@@ -272,6 +320,7 @@ export default function Campo() {
       if (draftId) { await removeDraft(draftId); setDrafts((d) => d.filter((x) => x.id !== draftId)); }
       await refresh();
       vibrate([20, 40, 20]);
+      toss(formOf(form).color);
       celebrate(`+${worth}`, previous === 0 ? "Zona nuova per questo tema. I punti arrivano a tutti alla prima conferma." : "Salvato. I punti arrivano a tutti quando un altro team conferma.", formOf(form).color);
       cancel();
     });
@@ -290,6 +339,7 @@ export default function Campo() {
     const d = await addDraft(id, file, position ?? [c.center_lng, c.center_lat]);
     setDrafts((list) => [...list, d]);
     vibrate(30);
+    toss("#4a6b43");
     setToast("Foto salvata. La completi quando ti fermi.");
   };
   const complete = (d: Draft) => {
@@ -332,6 +382,7 @@ export default function Campo() {
           ...(position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? "#2b2118", lng: position[0], lat: position[1], online: true }] : []),
         ]}
         reach={position && canCollect ? NEAR : null} completed={completed}
+        explore={exploring ? { heading: compassOn ? compass.heading : 0, rich, motion, sky: rich ? skyAt(now) : undefined } : null}
         layers={layerState.layers}
         onLayerPointClick={(x) => setPoint({ datasetId: x.datasetId, index: x.index })}
         onClick={picking ? (p) => (tracing ? setPath((ps) => [...ps, p]) : setPin(p)) : undefined}
@@ -360,11 +411,12 @@ export default function Campo() {
 
       <div className="pointer-events-none absolute inset-x-0 top-[4.5rem] z-20 flex flex-col items-center gap-2 px-3 sm:top-24">
         {walking && (
-          <div className="glass-ink pointer-events-auto flex items-center gap-3 rounded-full py-2 pr-4 pl-3 text-sm">
+          <div className="glass-ink pointer-events-auto flex items-center gap-3 rounded-full py-1.5 pr-1.5 pl-3 text-sm">
             <Dot color="var(--color-glow)" live />
             <span className="num">{formatDuration(now.getTime() - new Date(walk.startedAt).getTime())}</span>
             <span className="num">{formatMeters(walk.meters)}</span>
             <span><b className="num font-medium text-glow">{walk.fresh.length}</b> accese</span>
+            <button type="button" onClick={end} className="rounded-full bg-paper px-3 py-1 text-[13px] font-medium text-ink transition active:scale-95">Rientra</button>
           </div>
         )}
         {walking && !picking && nearby.length > 0 && (
@@ -409,16 +461,36 @@ export default function Campo() {
         {toast && <div className="glass-ink pointer-events-auto animate-rise rounded-full px-4 py-2 text-sm" role="status">{toast}</div>}
       </div>
 
-      {layerState.all.length > 0 && !picking && (
+      {layerState.all.length > 0 && !picking && !walking && (
         <IconButton label="Strati di dati" onClick={() => setPanel("layers")} className="absolute top-1/2 right-3 z-20 !size-11 -translate-y-1/2"><LayersIcon /></IconButton>
       )}
-      {walking && !follow && !picking && position && (
-        <IconButton label="Torna alla mia posizione" onClick={() => setFollow(true)} className="absolute right-3 bottom-24 z-20 !size-12"><Icon d={ICON.target} /></IconButton>
+      {/* ------------------------------------------- colonne della vista in cammino */}
+      {walking && !picking && (
+        <>
+          <div className="pointer-events-none absolute bottom-36 left-2 z-20 flex flex-col gap-2.5 sm:left-4">
+            <SideButton label="Conferma" d={ICON.check} count={toValidate.length} onClick={() => setPanel("validate")} />
+            {drafts.length > 0 && <SideButton label="Foto" d={ICON.tray} count={drafts.length} onClick={() => setPanel("drafts")} />}
+            {data.places.length > 0 && <SideButton label="Percorsi" d={ICON.route} onClick={() => setPanel("routes")} />}
+            <SideButton label="Come" d={ICON.help} onClick={() => setStory(true)} />
+          </div>
+          <div className="pointer-events-none absolute right-2 bottom-36 z-20 flex flex-col gap-2.5 sm:right-4">
+            {exploring && (
+              <SideButton label={compassOn ? "Bussola" : "Nord"} onClick={toggleCompass}>
+                <svg viewBox="0 0 24 24" className="size-6" style={{ transform: `rotate(${compassOn ? -(compass.heading ?? 0) : 0}deg)`, transition: motion ? "transform .3s" : undefined }} aria-hidden>
+                  <path d="M12 3 15 12h-6z" fill="#b8573f" /><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35" />
+                </svg>
+              </SideButton>
+            )}
+            <SideButton label="Vista" d={ICON.view} onClick={() => setPanel("view")} />
+            {layerState.all.length > 0 && <SideButton label="Strati" onClick={() => setPanel("layers")}><LayersIcon /></SideButton>}
+            {!follow && position && <SideButton label="Su di me" d={ICON.target} onClick={() => setFollow(true)} />}
+          </div>
+        </>
       )}
 
       {/* ----------------------------------------------------------- dock */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="glass pointer-events-auto flex max-w-full items-center gap-1.5 rounded-full p-1.5">
+        <div className={cx("pointer-events-auto flex max-w-full items-center gap-1.5", (picking || !walking) && "glass rounded-full p-1.5")}>
           {picking ? (
             tracing ? (
               <>
@@ -436,31 +508,84 @@ export default function Campo() {
               </>
             )
           ) : (
+            walking ? (
+              <div className="flex w-[min(30rem,calc(100vw-1rem))] items-end justify-between gap-2">
+                {/* stemma della squadra: la mappa accesa di tutti, non un livello personale */}
+                <button key={fly?.id ?? "stemma"} type="button" onClick={() => setPanel("missions")} aria-label={`Squadra: mappa accesa al ${litPct}%`}
+                  className={cx("flex w-20 flex-col items-center gap-1 transition active:scale-95", fly && "animate-thump")}>
+                  <span className="grid size-14 place-items-center rounded-full p-[3px] shadow-[var(--shadow-soft)]"
+                    style={{ background: `conic-gradient(${myTeam?.color ?? "#2b2118"} ${litPct * 3.6}deg, rgb(245 241 230 / .85) 0)` }}>
+                    <span className="grid size-full place-items-center rounded-full bg-paper">
+                      <span className="num text-[15px] font-medium leading-none">{litPct}<span className="text-[10px]">%</span></span>
+                    </span>
+                  </span>
+                  <span className="label max-w-full truncate rounded-full bg-paper/85 px-1.5 !text-[9px] leading-4 backdrop-blur">{myTeam?.name ?? "Accesa"}</span>
+                </button>
+
+                {/* raccogli: il gesto principale, al centro e grande */}
+                <div className="relative mb-1">
+                  <button type="button" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }} aria-label="Raccogli"
+                    className="grid size-[76px] place-items-center rounded-full bg-ink text-paper shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-glow),0_14px_28px_-10px_rgb(43_33_24/.5)] transition active:scale-95 disabled:opacity-40">
+                    <span className="flex flex-col items-center gap-0.5"><PlusIcon /><span className="text-[11px] font-medium tracking-wide">Raccogli</span></span>
+                  </button>
+                  <label className={cx("absolute -top-2 -right-4 grid size-11 cursor-pointer place-items-center rounded-full bg-paper text-ink shadow-[var(--shadow-soft)] transition active:scale-95", !canCollect && "pointer-events-none opacity-40")} title="Scatto rapido">
+                    <Icon d={ICON.camera} />
+                    <span className="sr-only">Scatto rapido</span>
+                    <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={!canCollect} onChange={(e) => { snap(e.target.files?.[0]); e.target.value = ""; }} />
+                  </label>
+                </div>
+
+                {/* vicino a te: i prossimi luoghi da raggiungere */}
+                <button type="button" onClick={() => setPanel("near")} className="glass mb-3 flex h-12 w-24 items-center justify-center gap-1.5 rounded-full px-3 transition active:scale-95" aria-label={`Vicino a te: ${aroundCount}`}>
+                  {nearestPlaces.length ? nearestPlaces.map(({ p }) => <span key={p.id} className="size-3 rounded-full ring-2 ring-paper" style={{ background: categoryOf(p.category).color }} />) : <Icon d={ICON.near} />}
+                  <span className="min-w-0 truncate text-[12px] leading-tight">{nearestPlaces[0] ? formatMeters(nearestPlaces[0].m) : "Vicino"}</span>
+                </button>
+              </div>
+            ) : (
             <>
-              {walking ? (
-                <label className={cx("grid size-14 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition active:scale-95", !canCollect && "pointer-events-none opacity-40")} title="Scatto rapido">
-                  <Icon d={ICON.camera} className="!size-6" />
-                  <span className="sr-only">Scatto rapido</span>
-                  <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={!canCollect} onChange={(e) => { snap(e.target.files?.[0]); e.target.value = ""; }} />
-                </label>
-              ) : (
-                <Button variant="glow" className="h-12 !px-5" disabled={!canCollect} onClick={begin}><Icon d={ICON.walk} /> Inizia un&apos;uscita</Button>
-              )}
+              <Button variant="glow" className="h-12 !px-5" disabled={!canCollect} onClick={begin}><Icon d={ICON.walk} /> Inizia un&apos;uscita</Button>
               <button type="button" aria-label="Nuovo rilievo" title="Nuovo rilievo" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }}
-                className={cx("grid shrink-0 place-items-center rounded-full transition active:scale-95 disabled:opacity-40", walking ? "h-10 gap-2 px-4 text-sm font-medium hover:bg-ink/6 sm:flex" : "size-10 hover:bg-ink/6")}>
-                <PlusIcon />{walking && <span className="hidden sm:inline">Rilievo</span>}
+                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95 disabled:opacity-40">
+                <PlusIcon />
               </button>
               <Counter label="Conferma i rilievi degli altri" d={ICON.check} count={toValidate.length} onClick={() => setPanel("validate")} />
               {drafts.length > 0 && <Counter label="Foto da completare" d={ICON.tray} count={drafts.length} onClick={() => setPanel("drafts")} />}
               <Counter label="Vicino a te" d={ICON.near} count={aroundCount} onClick={() => setPanel("near")} />
               {data.places.length > 0 && <Counter label="Luoghi e percorsi" d={ICON.route} count={0} onClick={() => setPanel("routes")} />}
-              {walking
-                ? <Button variant="outline" className="h-10" onClick={end}>Rientra</Button>
-                : <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="hidden size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6 sm:grid">?</button>}
+              <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="hidden size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6 sm:grid">?</button>
             </>
+            )
           )}
         </div>
       </div>
+
+      <Sheet open={openPanel === "view"} onClose={() => setPanel(null)} kicker="In cammino" title="Vista">
+        <div className="space-y-5">
+          <div>
+            <Label className="mb-2 block">Mappa</Label>
+            <Segmented value={view.explore ? "esplora" : "piatta"} onChange={(v) => view.setExplore(v === "esplora")}
+              options={[{ id: "esplora", label: "Esplora" }, { id: "piatta", label: "Piatta" }]} />
+            <p className="soft mt-2 text-sm">Esplora inclina la mappa e la fa seguire i tuoi passi. Piatta è la carta vista dall&apos;alto.</p>
+          </div>
+          <div>
+            <Label className="mb-2 block">Grafica</Label>
+            <Segmented<Quality> value={view.quality} onChange={view.setQuality}
+              options={(["auto", "ricca", "essenziale"] as Quality[]).map((q) => ({ id: q, label: QUALITY_LABEL[q] }))} />
+            <p className="soft mt-2 text-sm">
+              {view.quality === "auto" ? (slow ? "Il telefono fatica: edifici e cielo sono spenti." : "Edifici e cielo restano accesi finché il telefono va fluido.")
+                : view.quality === "ricca" ? "Edifici in rilievo, cielo dell'ora del giorno, celle che si accendono."
+                : "Niente rilievo, cielo e animazioni: consuma meno batteria."}
+            </p>
+          </div>
+          <p className="soft text-xs">Durante l&apos;uscita lo schermo resta acceso. La posizione viene usata per accendere le zone, il tracciato non viene salvato.</p>
+        </div>
+      </Sheet>
+
+      {fly && motion && (
+        <div key={fly.id} className="pointer-events-none fixed z-[54] animate-fly" aria-hidden>
+          <div className="h-24 w-20 rounded-[3px] border-4 border-paper shadow-[0_12px_24px_-8px_rgb(43_33_24/.45)]" style={{ background: fly.color }} />
+        </div>
+      )}
 
       <Sheet open={openPanel === "layers"} onClose={() => setPanel(null)} kicker="Sulla mappa" title="Strati di dati"><LayersPanel state={layerState} /></Sheet>
       <PointSheet point={point} datasets={data.datasets} position={position} onClose={() => setPoint(null)}

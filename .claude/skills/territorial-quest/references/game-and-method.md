@@ -20,6 +20,18 @@ qualità: 0 finché non è validato · bassa 0.5 · media 1 · alta 1.5
 
 Parti → cammina (le celle attraversate si accendono per tutti; bussola verso la zona spenta più vicina o verso la tappa del percorso) → osserva (scatto rapido salvato sul dispositivo, didascalia dopo) → conferma i rilievi degli altri quando sei entro 80 m → rientra (riepilogo). Arrivo automatico ai luoghi entrando nel raggio. Ricompense brevi a tutto schermo con vibrazione; schermo tenuto acceso. I passi GPS contano solo se plausibili (4–120 m, precisione ≤ 50 m).
 
+## Vista esplora (`src/campo/explore.ts`, prop `explore` di `MapView`)
+
+Durante l'uscita la mappa si inclina (pitch 58) e segue la posizione; con la bussola attiva ruota secondo il telefono
+(`useHeading`, permesso su iPhone con un tocco), altrimenti resta a nord.
+Luoghi come cartelli in piedi (`places-sign`, immagini `sign|colore|stato` con stato `da`, `ok` o `done`), persone come sagome di carta
+(`players-fig`, immagini `fig|colore`). Le immagini si preparano in anticipo con `ensureImage`: quelle create al volo vanno perse.
+Nebbia di carta leggera (0.38) e celle più trasparenti, perché la mappa di riferimento resti leggibile; celle nuove con dissolvenza
+`flash` di 1,2 s. Grafica: `useViewPrefs` (Esplora o Piatta; Automatica, Ricca o Essenziale), `useAutoQuality` spegne edifici e cielo
+sotto i 30 fps, `useReducedMotion` ferma le animazioni. `useWakeLock` tiene lo schermo acceso solo in uscita.
+Regole: un effetto alla volta, breve, chiudibile con un tocco; comandi nel terzo basso; nessun livello personale
+(lo stemma mostra la mappa accesa della squadra). Se lo stile vettoriale non risponde, `BLANK` usa una mappa raster CARTO.
+
 ## Impianto di raccolta (`src/domain/forms.ts`, `src/domain/survey.ts`)
 
 Tre coordinate indipendenti:
