@@ -51,6 +51,9 @@ for (const file of readdirSync(SRC).sort()) {
   // fondo verde da ritagliare oppure fondo bianco (che nell'app diventa il colore carta)
   const greenBg = rule.cutout && data[1] - Math.max(data[0], data[2]) > 90;
   const whiteBg = rule.cutout && !greenBg;
+  // luminosità del fondo chiaro, misurata sui quattro angoli (Gemini lo fa bianco o grigio chiarissimo)
+  const L = (i) => 0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2];
+  const bgL = Math.min(...[0, info.width - 1, (info.height - 1) * info.width, px - 1].map(L));
 
   for (let i = 0; i < px; i++) {
     let r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2], a = data[i * 4 + 3];
@@ -63,7 +66,7 @@ for (const file of readdirSync(SRC).sort()) {
     }
     lum[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
     // fondo bianco: il quasi bianco diventa trasparente, così sotto si vede la carta vera dell'interfaccia
-    if (whiteBg) a = lum[i] > 246 ? 0 : lum[i] > 226 ? Math.round(a * (246 - lum[i]) / 20) : a;
+    if (whiteBg) a = lum[i] > bgL - 5 ? 0 : lum[i] > bgL - 25 ? Math.round(a * (bgL - 5 - lum[i]) / 20) : a;
     alpha[i] = a;
   }
 
