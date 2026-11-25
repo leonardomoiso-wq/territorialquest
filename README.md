@@ -41,9 +41,13 @@ Durante l'uscita la mappa si inclina e segue chi cammina:
 - **Cartelli in piedi** per i luoghi: freccia se sono da raggiungere, spunta se raggiunti,
   timbro ocra se completati dal team.
 - **Nebbia di carta** leggera sulle zone mai attraversate. Le celle che si accendono hanno una breve dissolvenza nel colore della squadra.
-- **Barra in basso**: stemma della squadra con la mappa accesa (%), pulsante grande *Raccogli*
+- **Barra in basso**, uguale dentro e fuori dall'uscita: a sinistra lo stemma della squadra (mappa accesa %) che apre lo
+  **Zaino**, al centro il gesto principale (*Raccogli* con lo scatto rapido in uscita, *Parti* con il rilievo veloce fuori),
+  a destra *Vicino a te* con i prossimi luoghi.
   con lo scatto rapido, *Vicino a te* con i prossimi luoghi.
-- **Colonne laterali**: a sinistra Conferma, Foto, Percorsi, Come; a destra Bussola o Nord, Vista, Strati, Su di me.
+- **Zaino**: tutte le funzioni in riquadri grandi (Conferma, Foto da completare, Diario, Atlante, Luoghi e percorsi,
+  Vicino a te, Squadra e missioni, Vista, Strati, Come si gioca, Rientra); un pallino sullo stemma conta ciò che aspetta.
+  Sulla mappa restano solo bussola e «Dove sono».
 - **Ricompense**: all'arrivo il cartello esce dal terreno e si alza (0,6 s) e il timbro si calca sulla carta (0,9 s);
   dopo una raccolta la foto vera, come una polaroid, vola nel **Diario**. Ogni momento si chiude con un tocco.
 - **Diario**: le proprie raccolte e i luoghi raggiunti, giorno per giorno, con lo stato di conferma e i punti.

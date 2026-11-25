@@ -21,7 +21,7 @@ import { bearing, formatDuration, formatMeters, metersBetween, nearestDark, wind
 import { routeLength, routeMinutes } from "@/studio/Luoghi";
 import { Spark } from "@/ui/charts";
 import { Community, ContributeSheet, contributionsFor, type Target } from "@/ui/Contribute";
-import { LayersIcon, LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
+import { LayersPanel, PointSheet, useLayers, type PointRef } from "@/ui/Layers";
 import { addObservation, checkIn, uploadMedia, chooseTeam, heartbeat, mediaUrl, useCampaign, useSession, validateObservation } from "@/lib/data";
 import { locateOnce } from "@/lib/locate";
 import { addDraft, listDrafts, removeDraft, type Draft } from "@/lib/drafts";
@@ -29,10 +29,10 @@ import { useAction, useNow } from "@/lib/hooks";
 import { backdrop, KindTag, nameOf, teamOf, themeOf } from "@/studio/shared";
 import MapView from "@/ui/MapView";
 import { Icon, type IconName } from "@/ui/icons";
-import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
+import { Button, cx, Dot, Empty, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
 import { BASE as TONE, FORM_COLOR, HUE, INDICATOR } from "@/domain/palette";
 
-type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers" | "view" | "diario";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers" | "view" | "diario" | "menu";
 type LngLat = [number, number];
 
 const NEAR = 80; // metri: «sei sul posto»
@@ -57,16 +57,6 @@ function SideButton({ label, icon, count, onClick, children, flyTarget, pulse }:
   );
 }
 
-/** Pulsante a icona con contatore, per il dock in cammino. */
-function Counter({ label, icon, count, onClick, flyTarget, pulse }: { label: string; icon: IconName; count: number; onClick: () => void; flyTarget?: boolean; pulse?: boolean }) {
-  return (
-    <button type="button" aria-label={`${label}${count ? `: ${count}` : ""}`} title={label} onClick={onClick} data-fly-target={flyTarget || undefined}
-      className={cx("relative grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95", pulse && "animate-thump")}>
-      <Icon name={icon} />
-      {count > 0 && <span className="num absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-ink px-1 text-center text-[11px] leading-4 text-paper">{count}</span>}
-    </button>
-  );
-}
 
 export default function Campo() {
   const { id } = useParams<{ id: string }>();
@@ -314,6 +304,22 @@ export default function Campo() {
       setToast(e instanceof Error ? e.message : "Posizione non disponibile.");
     } finally { setLocating(false); }
   };
+  /** Cose che aspettano qualcuno: rilievi degli altri da confermare e foto da completare. */
+  const todo = toValidate.length + drafts.length;
+  const book_ = (b: "diario" | "atlante") => () => { setBook(b); setPanel("diario"); };
+  const menuItems: { id: string; label: string; icon: IconName; color: string; count?: number; go: () => void }[] = [
+    { id: "conferma", label: "Conferma", icon: "check", color: HUE.leaf, count: toValidate.length, go: () => setPanel("validate") },
+    ...(drafts.length ? [{ id: "foto", label: "Foto da completare", icon: "tray" as IconName, color: HUE.terracotta, count: drafts.length, go: () => setPanel("drafts") }] : []),
+    { id: "diario", label: "Diario", icon: "diario", color: TONE.graphite, go: book_("diario") },
+    { id: "atlante", label: "Atlante", icon: "atlante", color: HUE.plum, go: book_("atlante") },
+    ...(data.places.length ? [{ id: "percorsi", label: "Luoghi e percorsi", icon: "route" as IconName, color: HUE.brick, go: () => setPanel("routes") }] : []),
+    { id: "vicino", label: "Vicino a te", icon: "pin", color: HUE.river, count: aroundCount, go: () => setPanel("near") },
+    { id: "squadra", label: "Squadra e missioni", icon: "team", color: myTeam?.color ?? HUE.glow, go: () => setPanel("missions") },
+    ...(walking ? [{ id: "vista", label: "Vista", icon: "view" as IconName, color: HUE.teal, go: () => setPanel("view") }] : []),
+    ...(layerState.all.length ? [{ id: "strati", label: "Strati di dati", icon: "layers" as IconName, color: HUE.rust, go: () => setPanel("layers") }] : []),
+    { id: "come", label: "Come si gioca", icon: "help", color: TONE.mute, go: () => { setPanel(null); setStory(true); } },
+    ...(walking ? [{ id: "rientra", label: "Rientra", icon: "flag" as IconName, color: TONE.ink, go: () => { setPanel(null); end(); } }] : []),
+  ];
   const toggleCompass = async () => {
     if (compassOn) { setCompassOn(false); return; }
     if (await compass.enable()) { setCompassOn(true); setFollow(true); }
@@ -497,45 +503,25 @@ export default function Campo() {
         {toast && <div className="glass-ink pointer-events-auto animate-rise rounded-full px-4 py-2 text-sm" role="status">{toast}</div>}
       </div>
 
-      {!picking && !walking && (
-        <button type="button" onClick={locate} aria-label="Dove sono"
-          className="glass absolute right-3 bottom-24 z-20 flex h-11 items-center gap-2 rounded-full pr-4 pl-3 text-sm transition active:scale-95">
-          {geoError ? <GeoAlert /> : <Icon name="target" />}{locating ? "Cerco…" : "Dove sono"}
-        </button>
-      )}
-      {layerState.all.length > 0 && !picking && !walking && (
-        <IconButton label="Strati di dati" onClick={() => setPanel("layers")} className="absolute top-1/2 right-3 z-20 !size-11 -translate-y-1/2"><LayersIcon /></IconButton>
-      )}
-      {/* ------------------------------------------- colonne della vista in cammino */}
-      {walking && !picking && (
-        <>
-          <div className="pointer-events-none absolute bottom-36 left-2 z-20 flex flex-col gap-2.5 sm:left-4">
-            <SideButton label="Conferma" icon="check" count={toValidate.length} onClick={() => setPanel("validate")} />
-            {drafts.length > 0 && <SideButton label="Foto" icon="tray" count={drafts.length} onClick={() => setPanel("drafts")} />}
-            {data.places.length > 0 && <SideButton label="Percorsi" icon="route" onClick={() => setPanel("routes")} />}
-            <SideButton label="Diario" icon="diario" onClick={() => setPanel("diario")} flyTarget pulse={!!fly} key={fly?.id ?? "diario"} />
-            <SideButton label="Come" icon="help" onClick={() => setStory(true)} />
-          </div>
-          <div className="pointer-events-none absolute right-2 bottom-36 z-20 flex flex-col gap-2.5 sm:right-4">
-            {exploring && (
-              <SideButton label={compassOn ? "Bussola" : "Nord"} onClick={toggleCompass}>
-                <svg viewBox="0 0 24 24" className="size-6" style={{ transform: `rotate(${compassOn ? -(compass.heading ?? 0) : 0}deg)`, transition: motion ? "transform .3s" : undefined }} aria-hidden>
-                  <path d="M12 3 15 12h-6z" fill="var(--color-feel)" /><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35" />
-                </svg>
-              </SideButton>
-            )}
-            <SideButton label="Vista" icon="view" onClick={() => setPanel("view")} />
-            {layerState.all.length > 0 && <SideButton label="Strati" onClick={() => setPanel("layers")}><LayersIcon /></SideButton>}
-            <SideButton label={locating ? "Cerco" : "Dove sono"} icon="target" onClick={locate}>{geoError ? <GeoAlert /> : undefined}</SideButton>
-          </div>
-        </>
+      {/* ---------------------------------- comandi della mappa (a destra, solo questi) */}
+      {!picking && (
+        <div className="pointer-events-none absolute right-2 bottom-36 z-20 flex flex-col gap-2.5 sm:right-4">
+          {exploring && (
+            <SideButton label={compassOn ? "Bussola" : "Nord"} onClick={toggleCompass}>
+              <svg viewBox="0 0 24 24" className="size-6" style={{ transform: `rotate(${compassOn ? -(compass.heading ?? 0) : 0}deg)`, transition: motion ? "transform .3s" : undefined }} aria-hidden>
+                <path d="M12 3 15 12h-6z" fill="var(--color-feel)" /><path d="M12 21 9 12h6z" fill="currentColor" opacity=".35" />
+              </svg>
+            </SideButton>
+          )}
+          <SideButton label={locating ? "Cerco" : "Dove sono"} icon="target" onClick={locate}>{geoError ? <GeoAlert /> : undefined}</SideButton>
+        </div>
       )}
 
       {/* ----------------------------------------------------------- dock */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className={cx("pointer-events-auto flex max-w-full items-center gap-1.5", (picking || !walking) && "glass rounded-full p-1.5")}>
-          {picking ? (
-            tracing ? (
+        {picking ? (
+          <div className="glass pointer-events-auto flex max-w-full items-center gap-1.5 rounded-full p-1.5">
+            {tracing ? (
               <>
                 <span className="px-3 text-sm">{path.length < 2 ? "Tocca la mappa lungo il percorso" : `${pathLength(path)} m`}</span>
                 <Button size="sm" variant="ghost" onClick={() => setPath(path.slice(0, -1))} disabled={!path.length}>Indietro</Button>
@@ -549,59 +535,83 @@ export default function Campo() {
                 <Button size="sm" variant="ghost" onClick={cancel}>Annulla</Button>
                 <Button variant="glow" disabled={!pin} onClick={() => { setPicking(false); setPanel("new"); }}>Conferma<span className="hidden sm:inline"> il punto</span></Button>
               </>
-            )
-          ) : (
-            walking ? (
-              <div className="flex w-[min(30rem,calc(100vw-1rem))] items-end justify-between gap-2">
-                {/* stemma della squadra: la mappa accesa di tutti, non un livello personale */}
-                <button key={fly?.id ?? "stemma"} type="button" onClick={() => setPanel("missions")} aria-label={`Squadra: mappa accesa al ${litPct}%`}
-                  className={cx("flex w-20 flex-col items-center gap-1 transition active:scale-95", fly && "animate-thump")}>
-                  <span className="grid size-14 place-items-center rounded-full p-[3px] shadow-[var(--shadow-soft)]"
-                    style={{ background: `conic-gradient(${myTeam?.color ?? TONE.ink} ${litPct * 3.6}deg, rgb(245 241 230 / .85) 0)` }}>
-                    <span className="grid size-full place-items-center rounded-full bg-paper">
-                      <span className="num text-[15px] font-medium leading-none">{litPct}<span className="text-[11px]">%</span></span>
-                    </span>
-                  </span>
-                  <span className="max-w-full truncate rounded-full bg-paper/85 px-1.5 text-[11px] leading-4 font-medium backdrop-blur">{myTeam?.name ?? "Accesa"}</span>
-                </button>
+            )}
+          </div>
+        ) : (
+          <div className="pointer-events-auto flex w-[min(30rem,calc(100vw-1rem))] items-end justify-between gap-2">
+            {/* in basso a sinistra: lo stemma della squadra apre lo zaino con tutte le funzioni */}
+            <button key={fly?.id ?? "stemma"} type="button" onClick={() => setPanel("menu")} data-fly-target
+              aria-label={`Zaino della squadra${todo ? `: ${todo} cose da fare` : ""}`}
+              className={cx("relative flex w-20 flex-col items-center gap-1 transition active:scale-95", fly && "animate-thump")}>
+              <span className="grid size-14 place-items-center rounded-full p-[3px] shadow-[var(--shadow-soft)]"
+                style={{ background: `conic-gradient(${myTeam?.color ?? TONE.ink} ${litPct * 3.6}deg, rgb(245 241 230 / .85) 0)` }}>
+                <span className="grid size-full place-items-center rounded-full bg-paper">
+                  <span className="num text-[15px] font-medium leading-none">{litPct}<span className="text-[11px]">%</span></span>
+                </span>
+              </span>
+              {todo > 0 && <span className="num absolute top-0 right-2 min-w-5 rounded-full bg-feel px-1 text-center text-[11px] leading-5 text-white ring-2 ring-paper">{todo}</span>}
+              <span className="max-w-full truncate rounded-full bg-paper/85 px-1.5 text-[11px] leading-4 font-medium backdrop-blur">{myTeam?.name ?? "Zaino"}</span>
+            </button>
 
-                {/* raccogli: il gesto principale, al centro e grande */}
-                <div className="relative mb-1">
-                  <button type="button" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }} aria-label="Raccogli"
-                    className="grid size-[76px] place-items-center rounded-full bg-ink text-paper shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-glow),0_14px_28px_-10px_rgb(43_33_24/.5)] transition active:scale-95 disabled:opacity-40">
-                    <span className="flex flex-col items-center gap-0.5"><PlusIcon /><span className="text-[11px] font-medium tracking-wide">Raccogli</span></span>
-                  </button>
-                  <label className={cx("absolute -top-2 -right-4 grid size-11 cursor-pointer place-items-center rounded-full bg-paper text-ink shadow-[var(--shadow-soft)] transition active:scale-95", !canCollect && "pointer-events-none opacity-40")} title="Scatto rapido">
-                    <Icon name="camera" />
-                    <span className="sr-only">Scatto rapido</span>
-                    <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={!canCollect} onChange={(e) => { snap(e.target.files?.[0]); e.target.value = ""; }} />
-                  </label>
-                </div>
-
-                {/* vicino a te: i prossimi luoghi da raggiungere */}
-                <button type="button" onClick={() => setPanel("near")} className="glass mb-3 flex h-12 w-24 items-center justify-center gap-1.5 rounded-full px-3 transition active:scale-95" aria-label={`Vicino a te: ${aroundCount}`}>
-                  {nearestPlaces.length ? nearestPlaces.map(({ p }) => <span key={p.id} className="size-3 rounded-full ring-2 ring-paper" style={{ background: categoryOf(p.category).color }} />) : <Icon name="pin" />}
-                  <span className="min-w-0 truncate text-[12px] leading-tight">{nearestPlaces[0] ? formatMeters(nearestPlaces[0].m) : "Vicino"}</span>
+            {/* al centro: il gesto principale, grande */}
+            {walking ? (
+              <div className="relative mb-1">
+                <button type="button" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }} aria-label="Raccogli"
+                  className="grid size-[76px] place-items-center rounded-full bg-ink text-paper shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-glow),0_14px_28px_-10px_rgb(43_33_24/.5)] transition active:scale-95 disabled:opacity-40">
+                  <span className="flex flex-col items-center gap-0.5"><PlusIcon /><span className="text-[11px] font-medium tracking-wide">Raccogli</span></span>
                 </button>
+                <label className={cx("absolute -top-2 -right-4 grid size-11 cursor-pointer place-items-center rounded-full bg-paper text-ink shadow-[var(--shadow-soft)] transition active:scale-95", !canCollect && "pointer-events-none opacity-40")} title="Scatto rapido">
+                  <Icon name="camera" />
+                  <span className="sr-only">Scatto rapido</span>
+                  <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={!canCollect} onChange={(e) => { snap(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
               </div>
             ) : (
-            <>
-              <Button variant="glow" className="h-12 !px-5" disabled={!canCollect} onClick={begin}><Icon name="walk" /> Inizia un&apos;uscita</Button>
-              <button type="button" aria-label="Nuovo rilievo" title="Nuovo rilievo" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }}
-                className="grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95 disabled:opacity-40">
-                <PlusIcon />
-              </button>
-              <Counter label="Conferma i rilievi degli altri" icon="check" count={toValidate.length} onClick={() => setPanel("validate")} />
-              {drafts.length > 0 && <Counter label="Foto da completare" icon="tray" count={drafts.length} onClick={() => setPanel("drafts")} />}
-              <Counter label="Vicino a te" icon="pin" count={aroundCount} onClick={() => setPanel("near")} />
-              {data.places.length > 0 && <Counter label="Luoghi e percorsi" icon="route" count={0} onClick={() => setPanel("routes")} />}
-              <Counter label="Diario" icon="diario" count={0} onClick={() => setPanel("diario")} flyTarget pulse={!!fly} key={fly?.id ?? "diario"} />
-              <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="hidden size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6 sm:grid">?</button>
-            </>
-            )
-          )}
-        </div>
+              <div className="relative mb-1">
+                <button type="button" disabled={!canCollect} onClick={begin} aria-label="Inizia un'uscita"
+                  className="grid size-[76px] place-items-center rounded-full bg-glow text-ink shadow-[0_0_0_4px_var(--color-paper),0_0_0_7px_var(--color-ink),0_14px_28px_-10px_rgb(43_33_24/.5)] transition active:scale-95 disabled:opacity-40">
+                  <span className="flex flex-col items-center gap-0.5"><Icon name="walk" className="!size-6" /><span className="text-[11px] font-medium tracking-wide">Parti</span></span>
+                </button>
+                <button type="button" disabled={!canCollect} onClick={() => { setError(null); setPanel("form"); }} aria-label="Nuovo rilievo senza uscita" title="Nuovo rilievo"
+                  className="absolute -top-2 -right-4 grid size-11 place-items-center rounded-full bg-paper text-ink shadow-[var(--shadow-soft)] transition active:scale-95 disabled:opacity-40">
+                  <PlusIcon />
+                </button>
+              </div>
+            )}
+
+            {/* in basso a destra: vicino a te, i prossimi luoghi da raggiungere */}
+            <button type="button" onClick={() => setPanel("near")} className="glass mb-3 flex h-12 w-24 items-center justify-center gap-1.5 rounded-full px-3 transition active:scale-95" aria-label={`Vicino a te: ${aroundCount}`}>
+              {nearestPlaces.length ? nearestPlaces.map(({ p }) => <span key={p.id} className="size-3 rounded-full ring-2 ring-paper" style={{ background: categoryOf(p.category).color }} />) : <Icon name="pin" />}
+              <span className="min-w-0 truncate text-[12px] leading-tight">{nearestPlaces[0] ? formatMeters(nearestPlaces[0].m) : "Vicino"}</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* ------------------------------------------------ zaino: tutte le funzioni */}
+      <Sheet open={openPanel === "menu"} onClose={() => setPanel(null)} kicker={myTeam ? `Squadra ${myTeam.name}` : c.name} title="Zaino" wide>
+        <button type="button" onClick={() => setPanel("missions")} className="on-ink mb-5 flex w-full items-center gap-4 rounded-card p-4 text-left">
+          <span className="grid size-14 shrink-0 place-items-center rounded-full p-[3px]" style={{ background: `conic-gradient(${myTeam?.color ?? "var(--color-glow)"} ${litPct * 3.6}deg, rgb(255 255 255 / .15) 0)` }}>
+            <span className="num grid size-full place-items-center rounded-full bg-ink text-[15px]">{litPct}%</span>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px]">Mappa accesa al {litPct}%</span>
+            <span className="soft block text-sm"><b className="num font-medium text-glow">{ind.score.toLocaleString("it-IT")}</b> punti insieme – squadra e missioni</span>
+          </span>
+          <Icon name="team" />
+        </button>
+        <ul className="grid grid-cols-3 gap-2.5">
+          {menuItems.map((m) => (
+            <li key={m.id}>
+              <button type="button" onClick={m.go} className="ritaglio relative flex h-24 w-full flex-col items-center justify-center gap-2 px-1 text-center transition active:scale-95">
+                <span className="grid size-10 place-items-center rounded-full text-white" style={{ background: m.color }}><Icon name={m.icon} /></span>
+                <span className="text-[13px] leading-tight">{m.label}</span>
+                {!!m.count && <span className="num absolute top-1.5 right-1.5 min-w-5 rounded-full bg-feel px-1 text-[11px] leading-5 text-white">{m.count}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
 
       <Sheet open={openPanel === "view"} onClose={() => setPanel(null)} kicker="In cammino" title="Vista">
         <div className="space-y-5">
