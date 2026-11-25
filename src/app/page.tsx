@@ -1,8 +1,7 @@
 import HexField from "@/ui/HexField";
 import Parallax from "@/ui/Parallax";
-import { Tinted } from "@/ui/Tinted";
 import { ArrowIcon, Dock, Kick, Label, LinkButton, Logo, Ring, Tag } from "@/ui/kit";
-import { BASE, ENV_COLOR, FORM_COLOR, HUE, INDICATOR, ON_INK, PLACE_COLOR } from "@/domain/palette";
+import { BASE, HUE, INDICATOR, ON_INK } from "@/domain/palette";
 
 /* Testi: lessico in docs/LESSICO.md (campagna, uscita, rilievo, conferma, squadra, zona, regia). */
 
@@ -26,20 +25,6 @@ const INDICATORS = [
   { label: "Scambio", v: 0.41, color: INDICATOR.exchange, body: "Quante conferme passano da una squadra all'altra." },
 ];
 
-/** Illustrazione dell'atlante che fluttua: profondità e rotazione dicono quanto si muove scorrendo. */
-function Floater({ name, accent, className, depth, rx0 = 0, ry0 = 0, rz0 = 0, rx = 0, ry = 0, rz = 0 }: {
-  name: string; accent: string; className: string; depth: number; rx0?: number; ry0?: number; rz0?: number; rx?: number; ry?: number; rz?: number;
-}) {
-  return (
-    <div className={`pointer-events-none absolute [perspective:900px] ${className}`} aria-hidden>
-      <div data-depth={depth} data-rx0={rx0} data-ry0={ry0} data-rz0={rz0} data-rx={rx} data-ry={ry} data-rz={rz}
-        className="drop-shadow-[0_24px_28px_rgb(20_22_26/.22)] will-change-transform [transform-style:preserve-3d]">
-        <Tinted name={name} accent={accent} paper={BASE.edge} className="w-full" />
-      </div>
-    </div>
-  );
-}
-
 export default function Home() {
   return (
     <Parallax>
@@ -52,12 +37,6 @@ export default function Home() {
             <HexField className="size-full" />
           </div>
         </div>
-        <Floater name="atlante/ambiente-urbano" accent={ENV_COLOR.urbano.color} depth={140} rx0={8} ry0={-18} ry={14} rz={-4}
-          className="top-[58%] -left-10 w-36 sm:top-[46%] sm:left-[4%] sm:w-56" />
-        <Floater name="atlante/ambiente-verde" accent={ENV_COLOR.verde.color} depth={220} rx0={6} ry0={20} ry={-16} rz={5}
-          className="top-[64%] -right-8 w-32 sm:top-[22%] sm:right-[5%] sm:w-52" />
-        <Floater name="atlante/ambiente-acqua" accent={ENV_COLOR.acqua.color} depth={90} ry0={-8} ry={10} rz={3}
-          className="hidden sm:block sm:top-[68%] sm:right-[22%] sm:w-40" />
 
         <header className="relative z-10 flex items-start justify-between p-5 sm:p-7">
           <Logo />
@@ -102,11 +81,6 @@ export default function Home() {
             {STORY.map((s, i) => (
               <li key={s.title} className="flex min-h-64 flex-col bg-ink p-7">
                 <span className="label soft">{String(i + 1).padStart(2, "0")}</span>
-                <span className="mt-6 flex gap-1" aria-hidden>
-                  {[0, 1, 2, 3].map((n) => (
-                    <svg key={n} viewBox="0 0 24 24" className="size-7"><path d="M12 2 21 7v10l-9 5-9-5V7z" fill={n <= i ? s.color : "transparent"} fillOpacity={n === i ? 1 : 0.35} stroke={n <= i ? s.color : "rgb(255 255 255 / 0.25)"} strokeWidth="1.5" /></svg>
-                  ))}
-                </span>
                 <h3 className="serif mt-auto pt-8 text-[34px]">{s.title}</h3>
                 <p className="soft mt-2 text-sm leading-snug">{s.body}</p>
               </li>
@@ -121,10 +95,6 @@ export default function Home() {
 
       {/* ------------------------------------------------------- superfici */}
       <section className="on-paper relative overflow-hidden px-6 py-28">
-        <Floater name="atlante/luogo-storico" accent={PLACE_COLOR.storico} depth={160} ry0={-14} ry={18} rz={-3}
-          className="top-10 -right-14 w-40 opacity-90 sm:top-16 sm:right-[3%] sm:w-56" />
-        <Floater name="atlante/luogo-naturalistico" accent={PLACE_COLOR.naturalistico} depth={90} ry0={12} ry={-14} rz={4}
-          className="hidden lg:block lg:bottom-6 lg:left-[2%] lg:w-48" />
         <div className="relative mx-auto max-w-6xl">
           <Label>Tre spazi, gli stessi dati</Label>
           <h2 className="display mt-3 max-w-3xl text-[clamp(2rem,5vw,3.75rem)]">
@@ -182,10 +152,6 @@ export default function Home() {
 
       {/* ------------------------------------------------------------ dati */}
       <section className="on-paper relative overflow-hidden px-6 py-28">
-        <Floater name="atlante/forma-indagine" accent={FORM_COLOR.indagine} depth={120} ry0={-10} ry={16} rz={-4}
-          className="-bottom-8 -left-10 w-36 sm:left-[3%] sm:w-48" />
-        <Floater name="atlante/forma-dato" accent={FORM_COLOR.dato} depth={180} ry0={14} ry={-12} rz={3}
-          className="hidden md:block md:top-6 md:right-[4%] md:w-56" />
         <div className="relative mx-auto grid max-w-6xl gap-12 md:grid-cols-2 md:items-end">
           <div>
             <Label>Dati aperti</Label>
