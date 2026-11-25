@@ -139,7 +139,7 @@ interface Props {
    * sagome di carta, nebbia di carta sulle zone mai attraversate. rich aggiunge edifici e cielo;
    * motion abilita le brevi animazioni (celle che si accendono).
    */
-  explore?: { heading: number | null; rich: boolean; motion: boolean; sky?: { sky: string; horizon: string; fog: string } } | null;
+  explore?: { heading: number | null; rich: boolean; motion: boolean; sky?: { sky: string; horizon: string; fog: string }; accent?: string } | null;
   className?: string;
 }
 
@@ -248,6 +248,9 @@ export default function MapView(props: Props) {
   /** Celle percorse all'ultimo disegno: le nuove si accendono con una breve dissolvenza. */
   const walkedBefore = useRef<{ key: string; cells: Set<string> } | null>(null);
   const flashAnim = useRef(0);
+  /** Luoghi raggiunti all'ultimo disegno: un nuovo arrivo fa alzare il suo cartello. */
+  const reachedBefore = useRef<Set<string> | null>(null);
+  const riseAnim = useRef(0);
 
   /** Ultimi ingressi di ogni sorgente: si ridisegna solo ciò che è cambiato. */
   const lastDeps = useRef(new Map<string, unknown[]>());
@@ -386,6 +389,32 @@ export default function MapView(props: Props) {
         selected: pl.id === p.selectedPlaceId, r0, r22: r0 * 4194304,
       });
     })));
+    // arrivo: il cartello del luogo appena raggiunto esce dal terreno e si alza (0,6 s)
+    const prevReached = reachedBefore.current;
+    reachedBefore.current = reached;
+    const risen = prevReached && p.explore?.motion ? (p.places ?? []).find((pl) => reached.has(pl.id) && !prevReached.has(pl.id) && pl.placed !== false) : undefined;
+    if (risen && m.getLayer("rise-sign")) {
+      write("rise", fc([point([risen.lng, risen.lat], { id: risen.id, color: categoryOf(risen.category).color, state: completed.has(risen.id) ? "done" : "ok" })]));
+      m.setFilter("places-sign", ["all", ["!", ["has", "point_count"]], ["!=", ["get", "id"], risen.id]]);
+      cancelAnimationFrame(riseAnim.current);
+      const t0 = performance.now();
+      const step = (t: number) => {
+        const mm = map.current;
+        if (!mm?.getLayer("rise-sign")) return;
+        const k = Math.min(1, (t - t0) / 600);
+        // uscita con un piccolo rimbalzo finale
+        const e = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
+        mm.setPaintProperty("rise-sign", "icon-translate", [0, 34 * (1 - e)]);
+        mm.setPaintProperty("rise-sign", "icon-opacity", Math.min(1, k * 2.5));
+        if (k < 1) riseAnim.current = requestAnimationFrame(step);
+        else {
+          mm.setFilter("places-sign", ["!", ["has", "point_count"]]);
+          (mm.getSource("rise") as GeoJSONSource | undefined)?.setData(fc([]));
+        }
+      };
+      riseAnim.current = requestAnimationFrame(step);
+    }
+
     const byId = new Map((p.places ?? []).map((pl) => [pl.id, pl]));
     put("routes", [p.routes, p.places, p.activeRouteId], () => fc((p.routes ?? []).flatMap((r) => {
       const coords = r.stops.map((id) => byId.get(id)).filter((x): x is Place => !!x).map((x) => [x.lng, x.lat]);
@@ -445,7 +474,7 @@ export default function MapView(props: Props) {
 
     /* ------------------------------------------------------- vista esplora */
     const ex = p.explore ?? null;
-    const exKey = ex ? `on|${ex.rich}|${ex.sky?.sky ?? ""}` : "off";
+    const exKey = ex ? `on|${ex.rich}|${ex.sky?.sky ?? ""}|${ex.accent ?? ""}` : "off";
     if (exKey !== applied.current.explore) {
       const was = applied.current.explore;
       applied.current.explore = exKey;
@@ -453,6 +482,8 @@ export default function MapView(props: Props) {
       for (const id of ["places-sign", "players-fig", "players-shadow"]) show(id, on);
       for (const id of ["places-halo", "places", "players-halo", "players", "cells-line"]) show(id, !on);
       show("tq-buildings", on && !!ex?.rich);
+      // le celle appena accese prendono il colore della squadra
+      m.setPaintProperty("flash", "fill-color", ex?.accent ?? HUE.honey);
       // nebbia di carta: le zone mai attraversate restano coperte da una velatura chiara
       // sempre leggera: strade ed edifici della mappa di riferimento devono restare leggibili
       m.setPaintProperty("cells-fog", "fill-color", on ? MAP.fogPaper : BASE["ink-2"]);
@@ -505,6 +536,7 @@ export default function MapView(props: Props) {
     const p = latest.current;
     applied.current = { mode: "", raster: "", overlay: "", focus: "", place: "", explore: "" };
     walkedBefore.current = null;
+    reachedBefore.current = null;
     lastDeps.current = new Map();
     fitted.current = false;
 
@@ -530,7 +562,7 @@ export default function MapView(props: Props) {
         const empty = fc([]);
         // rilievi, contributi e strati di punti si raggruppano: sotto lo zoom 16 i punti vicini diventano un grappolo
         const CLUSTERED = new Set(["observations", "contribs", "layer-points"]);
-        for (const id of ["areas", "cells", "flash", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) {
+        for (const id of ["areas", "cells", "flash", "rise", "model", "observations", "flows", "routes", "places", "contribs", "layer-points", "layer-lines", "reach", "players", "draft", "edit", "pin"]) {
           // i luoghi sono mete: si raggruppano solo da lontano (scala di vallata), da vicino restano singoli
           m.addSource(id, CLUSTERED.has(id) ? { type: "geojson", data: empty, cluster: true, clusterRadius: 44, clusterMaxZoom: 15 }
             : id === "places" ? { type: "geojson", data: empty, cluster: true, clusterRadius: 36, clusterMaxZoom: 12 }
@@ -676,6 +708,11 @@ export default function MapView(props: Props) {
           "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.55, 16, 0.85, 18, 1.1], "icon-allow-overlap": true,
           "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport", "symbol-z-order": "viewport-y",
         } });
+        m.addLayer({ id: "rise-sign", type: "symbol", source: "rise", layout: {
+          "icon-image": ["concat", "sign|", ["get", "color"], "|", ["get", "state"]], "icon-anchor": "bottom",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.55, 16, 0.85, 18, 1.1], "icon-allow-overlap": true, "icon-ignore-placement": true,
+          "icon-pitch-alignment": "viewport", "icon-rotation-alignment": "viewport",
+        }, paint: { "icon-translate-anchor": "viewport", "icon-opacity": 0 } });
         if (m.getStyle().glyphs) {
           try {
             m.addLayer({ id: "places-label", type: "symbol", source: "places", minzoom: 14, filter: single as never, layout: {
@@ -819,6 +856,7 @@ export default function MapView(props: Props) {
     return () => {
       cancelled = true;
       cancelAnimationFrame(flashAnim.current);
+      cancelAnimationFrame(riseAnim.current);
       observer.disconnect();
       ready.current = false;
       map.current?.remove();

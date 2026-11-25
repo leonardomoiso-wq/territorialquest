@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { formOf } from "@/domain/forms";
+import { cellRing } from "@/domain/geo";
 import { formatDuration, formatMeters } from "@/domain/walk";
-import { Button, Label, Sheet } from "@/ui/kit";
+import { Icon } from "@/ui/icons";
+import { Button, Sheet } from "@/ui/kit";
 
 export interface Cheer {
   id: number;
@@ -59,30 +62,68 @@ export interface WalkSummary {
   potential: number;
   drafts: number;
   places: number;
+  /** Celle attraversate (per la mini mappa del taccuino) e colore della squadra. */
+  cellIds?: string[];
+  color?: string;
+  /** Luoghi raggiunti e rilievi raccolti in questa uscita. */
+  placeList?: { name: string; color: string; lng: number; lat: number }[];
+  items?: { title: string; form: string | null }[];
 }
 
-/** Riepilogo al rientro: che cosa ha portato questa uscita al territorio di tutti. */
+/** Mini mappa del taccuino: le celle attraversate disegnate a mano, con i luoghi raggiunti. Non c'è tracciato GPS. */
+function Sketch({ cells, color, places }: { cells: string[]; color: string; places: { lng: number; lat: number; color: string }[] }) {
+  const rings = cells.map(cellRing);
+  const pts = [...rings.flat(), ...places.map((p) => [p.lng, p.lat] as [number, number])];
+  if (!pts.length) return null;
+  const lat0 = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  const k = Math.cos((lat0 * Math.PI) / 180);
+  const xs = pts.map((p) => p[0] * k), ys = pts.map((p) => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const span = Math.max(maxX - minX, maxY - minY) || 1e-4;
+  const W = 300, H = 170, pad = 14, scale = Math.min((W - pad * 2) / (maxX - minX || span), (H - pad * 2) / (maxY - minY || span));
+  const ox = (W - (maxX - minX) * scale) / 2, oy = (H - (maxY - minY) * scale) / 2;
+  const at = (p: [number, number]) => [ox + (p[0] * k - minX) * scale, H - (oy + (p[1] - minY) * scale)];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" aria-label="Le zone attraversate in questa uscita">
+      {rings.map((r, i) => (
+        <path key={i} d={`M${r.map((p) => at(p).map((v) => v.toFixed(1)).join(" ")).join("L")}z`}
+          fill={color} fillOpacity={0.28} stroke={color} strokeOpacity={0.75} strokeWidth={1.2} strokeLinejoin="round" />
+      ))}
+      {places.map((p, i) => { const [x, y] = at([p.lng, p.lat]); return (
+        <g key={i} transform={`translate(${x} ${y})`}>
+          <line y1={0} y2={-14} stroke="var(--color-ink)" strokeWidth={1.6} strokeLinecap="round" />
+          <rect x={-6} y={-22} width={12} height={9} rx={1.5} fill={p.color} stroke="var(--color-ink)" strokeWidth={1.2} />
+        </g>
+      ); })}
+    </svg>
+  );
+}
+
+/** Riepilogo al rientro, come la pagina di un taccuino di campo: che cosa ha portato l'uscita al territorio di tutti. */
 export function Recap({ summary, onClose, onDrafts }: { summary: WalkSummary | null; onClose: () => void; onDrafts: () => void }) {
   const s = summary;
   const title = !s ? "" : s.places > 0 ? "Meta raggiunta." : s.fresh > 0 ? "Hai acceso la mappa." : s.observations + s.confirms > 0 ? "Bel giro." : "Rientro.";
+  const today = new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
   return (
     <Sheet open={!!s} onClose={onClose} kicker="Fine dell'uscita" title={<span className="serif text-[40px] italic">{title}</span>}>
       {s && (
         <>
-          <div className="on-ink rounded-card p-5">
-            <div className="grid grid-cols-3 divide-x divide-white/10">
-              <div className="pr-3"><div className="display text-[26px] leading-none whitespace-nowrap">{formatMeters(s.meters)}</div><Label className="mt-2 block">a piedi</Label></div>
-              <div className="px-3"><div className="display text-[26px] leading-none whitespace-nowrap">{formatDuration(s.ms)}</div><Label className="mt-2 block">in giro</Label></div>
-              <div className="pl-3"><div className="display text-[26px] leading-none text-glow">{s.fresh}</div><Label className="mt-2 block">zone accese</Label></div>
-            </div>
+          {/* pagina di taccuino: righe, margine rosso, appunti */}
+          <div className="relative overflow-hidden rounded-[3px] bg-card py-4 pr-4 pl-10 shadow-[0_0_0_1px_var(--color-line),0_10px_22px_-14px_rgb(43_33_24/.4)]"
+            style={{ backgroundImage: "repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--color-river) 22%, transparent) 27px 28px)" }}>
+            <span className="absolute inset-y-0 left-7 w-px bg-alert/45" aria-hidden />
+            <p className="label soft leading-7">{today}</p>
+            {!!s.cellIds?.length && <div className="my-1"><Sketch cells={s.cellIds} color={s.color ?? "var(--color-leaf)"} places={s.placeList ?? []} /></div>}
+            <p className="leading-7"><b className="num font-medium">{formatMeters(s.meters)}</b> a piedi in <b className="num font-medium">{formatDuration(s.ms)}</b>, <b className="num font-medium text-glow">{s.fresh}</b> zone accese per la prima volta.</p>
+            {!!s.placeList?.length && <p className="leading-7">Raggiunti: {s.placeList.map((p) => p.name).join(", ")}.</p>}
+            {!!s.items?.length && (
+              <ul className="leading-7">
+                {s.items.slice(0, 6).map((x, i) => <li key={i} className="flex items-center gap-2"><Icon name={`forma-${formOf(x.form).id}`} className="!size-4" /><span className="truncate">{x.title}</span></li>)}
+                {s.items.length > 6 && <li className="soft">e altri {s.items.length - 6}</li>}
+              </ul>
+            )}
+            <p className="leading-7">Per il gruppo: <b className="num font-medium text-leaf">+{s.potential}</b> punti in arrivo{s.confirms > 0 ? `, ${s.confirms} rilievi di altri confermati` : ""}.</p>
           </div>
-          <ul className="mt-4 divide-y divide-line text-[15px]">
-            {s.places > 0 && <li className="flex justify-between py-3"><span>Luoghi raggiunti</span><span className="num">{s.places}</span></li>}
-            <li className="flex justify-between py-3"><span>Rilievi raccolti</span><span className="num">{s.observations}</span></li>
-            <li className="flex justify-between py-3"><span>Rilievi degli altri confermati</span><span className="num">{s.confirms}</span></li>
-            <li className="flex justify-between py-3"><span>Zone attraversate</span><span className="num">{s.cells}</span></li>
-            <li className="flex justify-between py-3"><span>Punti in arrivo per tutti</span><span className="num text-leaf">+{s.potential}</span></li>
-          </ul>
           <p className="soft mt-3 text-sm">
             {s.potential > 0 ? "I punti entrano nel totale comune quando un altro team conferma i tuoi rilievi." : "Ogni zona accesa aiuta gli altri team a sapere dove non serve tornare."}
           </p>

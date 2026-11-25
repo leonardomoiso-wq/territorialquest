@@ -66,7 +66,7 @@
   --animate-pulse-ring: pulse-ring 2.2s ease-out infinite;
   --animate-pop: pop 1.9s var(--ease-out-expo) both;
   --animate-burst: burst 1.4s var(--ease-out-expo) both;
-  --animate-stamp: stamp 1.6s var(--ease-out-expo) both;
+  --animate-stamp: stamp 0.9s var(--ease-out-expo) both;
   --animate-fly: fly 0.9s cubic-bezier(0.5, 0, 0.75, 0.4) both;
   --animate-thump: thump 0.5s var(--ease-out-expo) 0.85s both;
 
@@ -91,14 +91,15 @@
   /* timbro: arriva dall'alto, si calca, resta un attimo, sbiadisce */
   @keyframes stamp {
     0% { opacity: 0; transform: scale(1.9) rotate(-18deg); }
-    22% { opacity: 1; transform: scale(0.94) rotate(-8deg); }
-    30%, 80% { opacity: 1; transform: scale(1) rotate(-8deg); }
+    30% { opacity: 1; transform: scale(0.94) rotate(-8deg); }
+    42%, 75% { opacity: 1; transform: scale(1) rotate(-8deg); }
     100% { opacity: 0; transform: scale(1) rotate(-8deg); }
   }
   /* ritaglio raccolto che vola nello stemma della squadra, in basso a sinistra */
+  /* ritaglio raccolto: la foto vola nel Diario (posizione data da --fly-x e --fly-y) */
   @keyframes fly {
     0% { left: 50%; top: 42%; transform: translate(-50%, -50%) scale(1) rotate(-5deg); opacity: 1; }
-    100% { left: 3.25rem; top: calc(100% - 4.75rem); transform: translate(-50%, -50%) scale(0.18) rotate(10deg); opacity: 0.4; }
+    100% { left: var(--fly-x, 3.25rem); top: var(--fly-y, calc(100% - 4.75rem)); transform: translate(-50%, -50%) scale(0.16) rotate(10deg); opacity: 0.5; }
   }
   @keyframes thump {
     0%, 100% { transform: scale(1); }

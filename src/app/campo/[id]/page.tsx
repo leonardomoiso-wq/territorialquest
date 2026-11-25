@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Details, emptyEntry, FormPicker, FormTag, type Entry } from "@/campo/Collect";
+import { Diario } from "@/campo/Diario";
 import { Celebration, Recap, type Cheer, type WalkSummary } from "@/campo/Moments";
 import Story from "@/campo/Story";
 import Survey, { SurveyAnswers, type SurveyResult } from "@/campo/Survey";
@@ -30,7 +31,7 @@ import { Icon, type IconName } from "@/ui/icons";
 import { Button, cx, Dot, Empty, IconButton, Label, LinkButton, Meter, Notice, PlusIcon, Ring, Segmented, Sheet, Spinner, Tag } from "@/ui/kit";
 import { BASE as TONE, FORM_COLOR, HUE, INDICATOR } from "@/domain/palette";
 
-type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers" | "view";
+type Panel = null | "form" | "new" | "validate" | "missions" | "team" | "detail" | "drafts" | "place" | "routes" | "survey" | "near" | "layers" | "view" | "diario";
 type LngLat = [number, number];
 
 const NEAR = 80; // metri: «sei sul posto»
@@ -42,10 +43,10 @@ const GeoAlert = () => (
 );
 
 /** Pulsante tondo con etichetta sotto, per le colonne ai lati della vista esplora. */
-function SideButton({ label, icon, count, onClick, children }: { label: string; icon?: IconName; count?: number; onClick: () => void; children?: React.ReactNode }) {
+function SideButton({ label, icon, count, onClick, children, flyTarget, pulse }: { label: string; icon?: IconName; count?: number; onClick: () => void; children?: React.ReactNode; flyTarget?: boolean; pulse?: boolean }) {
   return (
-    <button type="button" onClick={onClick} aria-label={`${label}${count ? `: ${count}` : ""}`}
-      className="pointer-events-auto flex w-16 flex-col items-center gap-1 transition active:scale-95">
+    <button type="button" onClick={onClick} aria-label={`${label}${count ? `: ${count}` : ""}`} data-fly-target={flyTarget || undefined}
+      className={cx("pointer-events-auto flex w-16 flex-col items-center gap-1 transition active:scale-95", pulse && "animate-thump")}>
       <span className="glass relative grid size-12 place-items-center rounded-full">
         {children ?? (icon && <Icon name={icon} />)}
         {!!count && <span className="num absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-ink px-1 text-center text-[11px] leading-5 text-paper">{count}</span>}
@@ -56,10 +57,10 @@ function SideButton({ label, icon, count, onClick, children }: { label: string; 
 }
 
 /** Pulsante a icona con contatore, per il dock in cammino. */
-function Counter({ label, icon, count, onClick }: { label: string; icon: IconName; count: number; onClick: () => void }) {
+function Counter({ label, icon, count, onClick, flyTarget, pulse }: { label: string; icon: IconName; count: number; onClick: () => void; flyTarget?: boolean; pulse?: boolean }) {
   return (
-    <button type="button" aria-label={`${label}${count ? `: ${count}` : ""}`} title={label} onClick={onClick}
-      className="relative grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95">
+    <button type="button" aria-label={`${label}${count ? `: ${count}` : ""}`} title={label} onClick={onClick} data-fly-target={flyTarget || undefined}
+      className={cx("relative grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95", pulse && "animate-thump")}>
       <Icon name={icon} />
       {count > 0 && <span className="num absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-ink px-1 text-center text-[11px] leading-4 text-paper">{count}</span>}
     </button>
@@ -114,9 +115,18 @@ export default function Campo() {
 
   const celebrate = useCallback((big: string, small: string, color?: string, stamp?: boolean) => setCheer({ id: Date.now(), big, small, color, stamp }), []);
   /** Ritaglio che vola nello stemma della squadra dopo una raccolta. */
-  const [fly, setFly] = useState<{ id: number; color: string } | null>(null);
-  const toss = useCallback((color: string) => setFly({ id: Date.now(), color }), []);
-  useEffect(() => { if (!fly) return; const t = setTimeout(() => setFly(null), 1500); return () => clearTimeout(t); }, [fly]);
+  const [fly, setFly] = useState<{ id: number; color: string; img: string | null; x: number | null; y: number | null } | null>(null);
+  /** Il ritaglio raccolto (la foto, se c'è) vola fino al pulsante Diario visibile. */
+  const toss = useCallback((color: string, file?: File | null) => {
+    const target = [...document.querySelectorAll<HTMLElement>("[data-fly-target]")].find((el) => el.offsetParent);
+    const r = target?.getBoundingClientRect();
+    setFly({ id: Date.now(), color, img: file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null, x: r ? r.left + r.width / 2 : null, y: r ? r.top + r.height / 2 : null });
+  }, []);
+  useEffect(() => {
+    if (!fly) return;
+    const t = setTimeout(() => { if (fly.img) URL.revokeObjectURL(fly.img); setFly(null); }, 1600);
+    return () => clearTimeout(t);
+  }, [fly]);
   const view = useViewPrefs();
   const reducedMotion = useReducedMotion();
   const [compassOn, setCompassOn] = useState(false);
@@ -263,7 +273,7 @@ export default function Campo() {
     });
     await refresh();
     vibrate([20, 40, 20, 40, 60]);
-    toss(categoryOf(p.category).color);
+    toss(categoryOf(p.category).color, Object.values(r.photos)[0]);
     celebrate("Indagine", `Inviata. Quando un altro team la conferma, ${p.name} vale altri ${Math.round(p.points / 2)} pt per tutti.`, categoryOf(p.category).color);
     setPanel(null);
   });
@@ -334,7 +344,7 @@ export default function Campo() {
       if (draftId) { await removeDraft(draftId); setDrafts((d) => d.filter((x) => x.id !== draftId)); }
       await refresh();
       vibrate([20, 40, 20]);
-      toss(formOf(form).color);
+      toss(formOf(form).color, file);
       celebrate(`+${worth}`, previous === 0 ? "Zona nuova per questo tema. I punti arrivano a tutti alla prima conferma." : "Salvato. I punti arrivano a tutti quando un altro team conferma.", formOf(form).color);
       cancel();
     });
@@ -353,7 +363,7 @@ export default function Campo() {
     const d = await addDraft(id, file, position ?? [c.center_lng, c.center_lat]);
     setDrafts((list) => [...list, d]);
     vibrate(30);
-    toss(FORM_COLOR.immagine);
+    toss(FORM_COLOR.immagine, file);
     setToast("Foto salvata. La completi quando ti fermi.");
   };
   const complete = (d: Draft) => {
@@ -369,14 +379,23 @@ export default function Campo() {
   const end = async () => {
     const w = await stop();
     if (!w) return;
-    const mine = data.observations.filter((o) => o.author_id === me.user_id && o.created_at >= w.startedAt);
+    // confronto per istanti, non per testo: il database può scrivere le date in formati diversi
+    const t0 = new Date(w.startedAt).getTime();
+    const since = (iso: string | null | undefined) => !!iso && new Date(iso).getTime() >= t0;
+    const mine = data.observations.filter((o) => o.author_id === me.user_id && since(o.created_at));
     const ids = new Set(mine.map((o) => o.id));
     const potential = scoreObservations(data.observations).filter((s) => ids.has(s.observation.id)).reduce((sum, s) => sum + s.potential + s.value, 0);
     setRecap({
       ms: Date.now() - new Date(w.startedAt).getTime(), meters: w.meters, cells: w.cells.length, fresh: w.fresh.length,
       observations: mine.length, potential: Math.round(potential), drafts: drafts.length,
-      places: data.visits.filter((v) => v.user_id === me.user_id && v.created_at >= w.startedAt).length,
-      confirms: data.observations.filter((o) => o.validated_by === me.user_id && (o.validated_at ?? "") >= w.startedAt).length,
+      places: data.visits.filter((v) => v.user_id === me.user_id && since(v.created_at)).length,
+      confirms: data.observations.filter((o) => o.validated_by === me.user_id && since(o.validated_at)).length,
+      cellIds: w.cells, color: myTeam?.color,
+      placeList: data.visits.filter((v) => v.user_id === me.user_id && since(v.created_at)).flatMap((v) => {
+        const p = data.places.find((x) => x.id === v.place_id);
+        return p ? [{ name: p.name, color: categoryOf(p.category).color, lng: p.lng, lat: p.lat }] : [];
+      }),
+      items: mine.map((o) => ({ title: o.title, form: o.form ?? null })),
     });
     refresh();
   };
@@ -396,7 +415,7 @@ export default function Campo() {
           ...(position ? [{ id: "me", name: "Tu", color: myTeam?.color ?? TONE.ink, lng: position[0], lat: position[1], online: true }] : []),
         ]}
         reach={position && canCollect ? NEAR : null} completed={completed}
-        explore={exploring ? { heading: compassOn ? compass.heading : 0, rich, motion, sky: rich ? skyAt(now) : undefined } : null}
+        explore={exploring ? { heading: compassOn ? compass.heading : 0, rich, motion, sky: rich ? skyAt(now) : undefined, accent: myTeam?.color } : null}
         layers={layerState.layers}
         onLayerPointClick={(x) => setPoint({ datasetId: x.datasetId, index: x.index })}
         onClick={picking ? (p) => (tracing ? setPath((ps) => [...ps, p]) : setPin(p)) : undefined}
@@ -491,6 +510,7 @@ export default function Campo() {
             <SideButton label="Conferma" icon="check" count={toValidate.length} onClick={() => setPanel("validate")} />
             {drafts.length > 0 && <SideButton label="Foto" icon="tray" count={drafts.length} onClick={() => setPanel("drafts")} />}
             {data.places.length > 0 && <SideButton label="Percorsi" icon="route" onClick={() => setPanel("routes")} />}
+            <SideButton label="Diario" icon="diario" onClick={() => setPanel("diario")} flyTarget pulse={!!fly} key={fly?.id ?? "diario"} />
             <SideButton label="Come" icon="help" onClick={() => setStory(true)} />
           </div>
           <div className="pointer-events-none absolute right-2 bottom-36 z-20 flex flex-col gap-2.5 sm:right-4">
@@ -572,6 +592,7 @@ export default function Campo() {
               {drafts.length > 0 && <Counter label="Foto da completare" icon="tray" count={drafts.length} onClick={() => setPanel("drafts")} />}
               <Counter label="Vicino a te" icon="pin" count={aroundCount} onClick={() => setPanel("near")} />
               {data.places.length > 0 && <Counter label="Luoghi e percorsi" icon="route" count={0} onClick={() => setPanel("routes")} />}
+              <Counter label="Diario" icon="diario" count={0} onClick={() => setPanel("diario")} flyTarget pulse={!!fly} key={fly?.id ?? "diario"} />
               <button type="button" aria-label="Come si gioca" title="Come si gioca" onClick={() => setStory(true)} className="hidden size-10 shrink-0 place-items-center rounded-full text-[15px] font-medium transition hover:bg-ink/6 sm:grid">?</button>
             </>
             )
@@ -602,8 +623,11 @@ export default function Campo() {
       </Sheet>
 
       {fly && motion && (
-        <div key={fly.id} className="pointer-events-none fixed z-[54] animate-fly" aria-hidden>
-          <div className="h-24 w-20 rounded-[3px] border-4 border-paper shadow-[0_12px_24px_-8px_rgb(43_33_24/.45)]" style={{ background: fly.color }} />
+        <div key={fly.id} className="pointer-events-none fixed z-[54] animate-fly" aria-hidden
+          style={{ ["--fly-x" as string]: fly.x != null ? `${fly.x}px` : undefined, ["--fly-y" as string]: fly.y != null ? `${fly.y}px` : undefined }}>
+          {fly.img
+            ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={fly.img} alt="" className="h-28 w-24 rounded-[2px] border-[5px] border-b-[14px] border-edge object-cover shadow-[0_12px_24px_-8px_rgb(43_33_24/.45)]" />
+            : <div className="h-24 w-20 rounded-[3px] border-4 border-paper shadow-[0_12px_24px_-8px_rgb(43_33_24/.45)]" style={{ background: fly.color }} />}
         </div>
       )}
 
@@ -791,6 +815,11 @@ export default function Campo() {
       />
 
       {/* ----------------------------------------------- foto da completare */}
+      <Sheet open={openPanel === "diario"} onClose={() => setPanel(null)} kicker={data.campaign.name} title="Il tuo diario" wide>
+        <Diario data={data} me={me} drafts={drafts.length} onDrafts={() => setPanel("drafts")}
+          onOpen={(oid) => { const o = data.observations.find((x) => x.id === oid); if (o) { setDetail(o); setPanel("detail"); } }} />
+      </Sheet>
+
       <Sheet open={openPanel === "drafts"} onClose={() => setPanel(null)} kicker="Scatti rapidi" title="Da completare" wide>
         {drafts.length === 0 ? <Empty title="Niente in sospeso.">Gli scatti rapidi presi durante un&apos;uscita aspettano qui la loro didascalia.</Empty> : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">

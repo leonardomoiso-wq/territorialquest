@@ -40,12 +40,15 @@ Durante l'uscita la mappa si inclina e segue chi cammina:
 - **Sagoma di carta** al centro, con l'anello d'azione di 80 m; i compagni di squadra sono sagome più piccole.
 - **Cartelli in piedi** per i luoghi: freccia se sono da raggiungere, spunta se raggiunti,
   timbro ocra se completati dal team.
-- **Nebbia di carta** leggera sulle zone mai attraversate. Le celle che si accendono hanno una breve dissolvenza dorata.
+- **Nebbia di carta** leggera sulle zone mai attraversate. Le celle che si accendono hanno una breve dissolvenza nel colore della squadra.
 - **Barra in basso**: stemma della squadra con la mappa accesa (%), pulsante grande *Raccogli*
   con lo scatto rapido, *Vicino a te* con i prossimi luoghi.
 - **Colonne laterali**: a sinistra Conferma, Foto, Percorsi, Come; a destra Bussola o Nord, Vista, Strati, Su di me.
-- **Ricompense**: all'arrivo il timbro si calca sulla carta; dopo una raccolta un ritaglio vola nello stemma.
-  Ogni momento si chiude con un tocco.
+- **Ricompense**: all'arrivo il cartello esce dal terreno e si alza (0,6 s) e il timbro si calca sulla carta (0,9 s);
+  dopo una raccolta la foto vera, come una polaroid, vola nel **Diario**. Ogni momento si chiude con un tocco.
+- **Diario**: le proprie raccolte e i luoghi raggiunti, giorno per giorno, con lo stato di conferma e i punti.
+- **Riepilogo a taccuino**: pagina a righe con la mini mappa delle celle attraversate (non il tracciato GPS),
+  i luoghi raggiunti, i rilievi raccolti e i punti in arrivo per il gruppo.
 - **Vista**: Esplora o Piatta; grafica Automatica, Ricca (edifici in rilievo, cielo dell'ora del giorno) o Essenziale.
   In automatica, sotto i 30 fotogrammi al secondo edifici e cielo si spengono da soli.
   Se il telefono chiede meno movimento, le animazioni si fermano.
