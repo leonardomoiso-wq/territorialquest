@@ -61,11 +61,11 @@ export function Lines({ series, unit, order, height = 180 }: {
         {ticks.map((v) => (
           <g key={v}>
             <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="currentColor" strokeOpacity="0.1" />
-            <text x={L - 6} y={y(v) + 4} textAnchor="end" className="fill-current text-[10px] opacity-60">{formatValue(Math.round(v))}</text>
+            <text x={L - 6} y={y(v) + 4} textAnchor="end" className="fill-current text-[11px] opacity-60">{formatValue(Math.round(v))}</text>
           </g>
         ))}
-        <text x={L} y={H - 6} className="fill-current text-[10px] opacity-60">{t0}</text>
-        <text x={W - R} y={H - 6} textAnchor="end" className="fill-current text-[10px] opacity-60">{t1}</text>
+        <text x={L} y={H - 6} className="fill-current text-[11px] opacity-60">{t0}</text>
+        <text x={W - R} y={H - 6} textAnchor="end" className="fill-current text-[11px] opacity-60">{t1}</text>
         {series.map((s) => (
           <polyline key={s.key} fill="none" stroke={colorFor(s.key, order)} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
             points={s.points.map((p) => `${x(p.t)},${y(p.v)}`).join(" ")} />
@@ -102,9 +102,9 @@ export function Spark({ points, unit }: { points: { t: number; v: number }[]; un
   const d = points.map((p) => `${((p.t - t0) / Math.max(1, t1 - t0)) * W},${H - 3 - ((p.v - lo) / Math.max(1e-9, hi - lo)) * (H - 6)}`).join(" ");
   return (
     <span className="inline-flex items-center gap-2" title={`${t0}: ${formatValue(points[0].v, unit)} → ${t1}: ${formatValue(points[points.length - 1].v, unit)}`}>
-      <span className="num soft text-[10px]">{t0}</span>
+      <span className="num soft text-[11px]">{t0}</span>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-6 w-24" aria-hidden><polyline points={d} fill="none" stroke="var(--color-leaf)" strokeWidth="2" strokeLinejoin="round" /></svg>
-      <span className="num soft text-[10px]">{t1}</span>
+      <span className="num soft text-[11px]">{t1}</span>
     </span>
   );
 }
@@ -114,7 +114,7 @@ export function ValueTable({ columns, rows }: { columns: { key: string; label: s
   return (
     <div className="max-h-80 overflow-auto rounded-2xl border hairline">
       <table className="w-full text-left text-[12px]">
-        <thead className="sticky top-0 bg-paper-2"><tr>{columns.map((c) => <th key={c.key} className="label px-3 py-2 !text-[9px] whitespace-nowrap">{c.label}{c.unit ? ` (${c.unit})` : ""}</th>)}</tr></thead>
+        <thead className="sticky top-0 bg-paper-2"><tr>{columns.map((c) => <th key={c.key} className="label px-3 py-2 !text-[11px] whitespace-nowrap">{c.label}{c.unit ? ` (${c.unit})` : ""}</th>)}</tr></thead>
         <tbody className="divide-y divide-line">
           {rows.map((r, i) => <tr key={i}>{columns.map((c) => <td key={c.key} className="num px-3 py-1.5 whitespace-nowrap">{formatValue(r[c.key] as number | string | null)}</td>)}</tr>)}
         </tbody>

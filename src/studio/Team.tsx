@@ -76,7 +76,7 @@ export default function Team({ data, me, now, refresh }: Ctx) {
         {data.teams.length === 0 ? (
           <Empty title="Ancora nessun team.">Crea i team: i giocatori sceglieranno il proprio entrando, oppure li assegni tu da qui.</Empty>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-2">
             {data.teams.map((t) => {
               const members = players.filter((m) => m.team_id === t.id);
               const obs = data.observations.filter((o) => o.team_id === t.id);

@@ -19,6 +19,8 @@ export function Rilievi({ data, now, refresh }: Ctx) {
   const [status, setStatus] = useState<ObservationStatus | "all">("pending");
   const [theme, setTheme] = useState("");
   const [form, setForm] = useState("");
+  /** Si mostrano 20 rilievi alla volta: la pagina resta leggera anche su telefono. */
+  const [shown, setShown] = useState(20);
   const { busy, error, run } = useAction();
   const act = (fn: () => Promise<unknown>) => run(async () => { await fn(); await refresh(); });
   const scored = useMemo(() => new Map(scoreObservations(data.observations).map((s) => [s.observation.id, s])), [data.observations]);
@@ -29,18 +31,18 @@ export function Rilievi({ data, now, refresh }: Ctx) {
     <div>
       <SectionTitle kicker="Qualità prima della quantità" title="Rilievi" />
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <Segmented value={status} onChange={setStatus} options={[
+        <Segmented className="max-w-full overflow-x-auto" value={status} onChange={(v) => { setStatus(v); setShown(20); }} options={[
           { id: "pending", label: `In attesa ${count("pending")}` },
           { id: "validated", label: `Validati ${count("validated")}` },
           { id: "flagged", label: `Segnalati ${count("flagged")}` },
           { id: "all", label: "Tutti" },
         ]} />
-        <Select aria-label="Forma" value={form} onChange={(e) => setForm(e.target.value)} className="w-48">
+        <Select aria-label="Forma" value={form} onChange={(e) => setForm(e.target.value)} className="w-full sm:w-48">
           <option value="">Tutte le forme</option>
           {FORMS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
           <option value="indagine">Indagine sul sito</option>
         </Select>
-        <Select aria-label="Tema" value={theme} onChange={(e) => setTheme(e.target.value)} className="w-56">
+        <Select aria-label="Tema" value={theme} onChange={(e) => setTheme(e.target.value)} className="w-full sm:w-56">
           <option value="">Tutti i temi</option>
           {data.themes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </Select>
@@ -51,14 +53,15 @@ export function Rilievi({ data, now, refresh }: Ctx) {
         <Empty title="Niente da vedere qui.">{status === "pending" ? "Tutti i rilievi sono stati esaminati." : "Nessun rilievo corrisponde ai filtri."}</Empty>
       ) : (
         <div className="space-y-3">
-          {list.slice(0, 200).map((o) => {
+          {list.slice(0, shown).map((o) => {
             const s = scored.get(o.id);
             const team = teamOf(data, o.team_id), th = themeOf(data, o.theme_id), img = mediaUrl(o.media_path);
             return (
               <Card key={o.id} className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 gap-4">
                 {img
-                  ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={img} alt="" className="size-20 shrink-0 rounded-2xl object-cover" loading="lazy" />
-                  : <div className="grid size-20 shrink-0 place-items-center rounded-2xl text-white" style={{ background: formOf(o.form).color }}><FormIcon form={o.form} className="!size-7" /></div>}
+                  ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={img} alt="" className="size-16 shrink-0 rounded-2xl object-cover sm:size-20" loading="lazy" />
+                  : <div className="grid size-16 shrink-0 place-items-center rounded-2xl text-white sm:size-20" style={{ background: formOf(o.form).color }}><FormIcon form={o.form} className="!size-7" /></div>}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <FormTag form={o.form} />
@@ -78,16 +81,18 @@ export function Rilievi({ data, now, refresh }: Ctx) {
                     {o.source_url && <a href={o.source_url} target="_blank" rel="noreferrer" className="underline underline-offset-2">fonte</a>}
                   </div>
                 </div>
+                </div>
                 <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
                   <div className="num text-right text-sm">
                     {o.status === "validated" ? <span className="text-leaf">+{s?.value ?? 0} pt</span> : o.status === "pending" ? <span className="soft">fino a +{Math.round((s?.potential ?? 0) * 1.5 * 10) / 10} pt</span> : <span className="soft">non conta</span>}
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  {/* su telefono tre pulsanti larghi a tutta riga */}
+                  <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap">
                     {QUALITY.map(([q, label]) => (
                       <Button key={q} size="sm" variant={o.status === "validated" && o.quality === q ? "primary" : "outline"} disabled={busy} onClick={() => act(() => validateObservation(o.id, q))}>{label}</Button>
                     ))}
                   </div>
-                  <div className="flex gap-1.5 sm:justify-end">
+                  <div className="grid grid-cols-2 gap-1.5 sm:flex sm:justify-end">
                     {o.status !== "flagged"
                       ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(() => validateObservation(o.id, 1, "flagged"))}>Segnala</Button>
                       : <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(() => validateObservation(o.id, 1, "pending"))}>Riapri</Button>}
@@ -97,6 +102,9 @@ export function Rilievi({ data, now, refresh }: Ctx) {
               </Card>
             );
           })}
+          {list.length > shown && (
+            <Button variant="outline" className="w-full" onClick={() => setShown((n) => n + 20)}>Mostra altri {Math.min(20, list.length - shown)} di {list.length - shown}</Button>
+          )}
         </div>
       )}
     </div>
@@ -112,7 +120,7 @@ export function Dati({ data, refresh }: Ctx) {
     <div className="space-y-10">
       <section>
         <SectionTitle kicker="Interoperabilità" title="Esporta i dati" />
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 md:grid-cols-2">
           <Card className="!p-6">
             <Tag>GeoJSON – EPSG:4326</Tag>
             <h3 className="display mt-5 text-[22px]">Per QGIS e strumenti GIS</h3>

@@ -69,8 +69,9 @@ function Panel() {
   return (
     <main className="on-paper min-h-dvh pb-16">
       <header className="sticky top-0 z-30 border-b hairline bg-paper/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center gap-4 px-5 py-3 sm:px-8">
-          <Link href="/studio" aria-label="Tutte le campagne"><Logo /></Link>
+        <div className="mx-auto flex max-w-[1500px] items-center gap-2.5 px-4 py-3 sm:gap-4 sm:px-8">
+          {/* su telefono resta solo il simbolo: spazio per nome e comandi */}
+          <Link href="/studio" aria-label="Tutte le campagne" className="shrink-0"><Logo className="[&>span]:hidden sm:[&>span]:inline" /></Link>
           <span className="soft hidden sm:inline">/</span>
           <h1 className="min-w-0 flex-1 truncate text-[17px] tracking-[-0.02em]">{c.name}</h1>
           <span className="hidden items-center gap-2 text-sm md:inline-flex">
@@ -82,7 +83,7 @@ function Panel() {
           {c.status === "live"
             ? <Button variant="outline" size="sm" onClick={() => setStatus("paused")} disabled={busy}>Pausa</Button>
             : <Button variant="glow" size="sm" onClick={() => setStatus("live")} disabled={busy}>{c.status === "paused" ? "Riprendi" : "Avvia"}</Button>}
-          <LinkButton href={`/mappa/${id}`} size="sm" variant="outline" className="hidden sm:inline-flex">Mappa</LinkButton>
+          <span className="hidden sm:contents"><LinkButton href={`/mappa/${id}`} size="sm" variant="outline">Mappa</LinkButton></span>
           <LinkButton href={`/campo/${id}`} size="sm">Campo</LinkButton>
         </div>
         <nav className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto px-4 sm:px-7" aria-label="Sezioni">
@@ -93,8 +94,8 @@ function Panel() {
               className={cx("relative h-11 px-3 text-sm whitespace-nowrap transition", view === v.id ? "text-ink" : "soft hover:text-ink")}
             >
               {v.label}
-              {v.id === "rilievi" && pending > 0 && <span className="num ml-1.5 rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-paper">{pending}</span>}
-              {v.id === "pubblico" && queue > 0 && <span className="num ml-1.5 rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-paper">{queue}</span>}
+              {v.id === "rilievi" && pending > 0 && <span className="num ml-1.5 rounded-full bg-ink px-1.5 py-0.5 text-[11px] text-paper">{pending}</span>}
+              {v.id === "pubblico" && queue > 0 && <span className="num ml-1.5 rounded-full bg-ink px-1.5 py-0.5 text-[11px] text-paper">{queue}</span>}
               {view === v.id && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-ink" />}
             </button>
           ))}

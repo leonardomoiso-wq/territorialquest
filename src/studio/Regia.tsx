@@ -40,7 +40,7 @@ export default function Regia({ data, me, now }: Ctx) {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1fr_380px]">
       <div className="space-y-4">
         <div className="relative h-[62dvh] min-h-[420px] overflow-hidden rounded-panel border hairline">
           <MapView
@@ -113,7 +113,7 @@ export default function Regia({ data, me, now }: Ctx) {
             ].map(([label, v, color]) => (
               <div key={label as string}>
                 <Ring value={v as number} color={color as string} size={58} />
-                <div className="label soft mt-1.5 !text-[9px]">{label}</div>
+                <div className="label soft mt-1.5 !text-[11px]">{label}</div>
               </div>
             ))}
           </div>

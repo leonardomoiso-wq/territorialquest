@@ -34,7 +34,8 @@ const VARIANT: Record<Variant, string> = {
   danger: "text-alert hover:bg-alert/10",
 };
 const SIZE: Record<Size, string> = {
-  sm: "h-8 px-3.5 text-[13px]",
+  // sui touch screen i pulsanti piccoli restano comunque toccabili con un dito
+  sm: "h-8 px-3.5 text-[13px] pointer-coarse:h-10",
   md: "h-10 px-5 text-sm",
   lg: "h-13 px-7 text-[15px]",
 };
@@ -213,7 +214,7 @@ export function Segmented<T extends string>({
         <button
           key={o.id} type="button" role="tab" aria-selected={value === o.id} onClick={() => onChange(o.id)}
           className={cx(
-            "h-8 rounded-full px-3.5 text-[13px] font-medium transition",
+            "h-8 rounded-full px-3.5 text-[13px] font-medium transition pointer-coarse:h-10",
             value === o.id ? "bg-ink text-paper [.on-ink_&]:bg-paper [.on-ink_&]:text-ink" : "soft hover:text-current",
           )}
           style={value === o.id && o.color ? { background: o.color, color: "#fff" } : undefined}

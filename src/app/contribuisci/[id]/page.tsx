@@ -72,7 +72,7 @@ export default function Contribuisci() {
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
-      <MapView className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={map.areas} places={map.places} fit {...backdrop(c)}
+      <MapView className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={map.areas} places={map.places} fit creditsLift="5.25rem" {...backdrop(c)}
         contributions={mine.filter((x) => x.status !== "rejected")} pin={pin} focus={seek?.at ?? null} focusNonce={seek?.n} onClick={step === "punto" ? setPin : undefined} />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-5">

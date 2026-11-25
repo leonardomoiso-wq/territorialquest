@@ -127,7 +127,7 @@ export default function Fonti({ data, refresh }: Ctx) {
       ) : (KINDS.map((k) => byKind(k.id).length > 0 && (
         <section key={k.id}>
           <SectionTitle kicker={k.hint} title={`${k.label} – ${byKind(k.id).length}`} />
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 [&>*]:min-w-0 md:grid-cols-2 xl:grid-cols-3">
             {byKind(k.id).map((d) => (
               <Card key={d.id} className="cursor-pointer !p-4 transition hover:shadow-soft" onClick={() => setOpen(d)}>
                 <div className="flex items-center justify-between gap-2">
@@ -193,7 +193,7 @@ function CsvDraft({ p, onChange, onDrop }: {
       <button className="mt-3 text-sm underline-offset-2 hover:underline" onClick={() => setCols(!cols)}>{cols ? "Chiudi" : "Controlla"} le {d.columns.length} colonne e l&apos;anteprima</button>
       {cols && (
         <div className="mt-3 space-y-3">
-          <div className="grid gap-2 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 [&>*]:min-w-0 md:grid-cols-2">
             {d.columns.map((c, n) => (
               <div key={c.key} className="grid grid-cols-[7rem_1fr_4.5rem] items-center gap-2 rounded-xl bg-paper-2 p-2 text-[13px]">
                 <span className="num truncate" title={c.key}>{c.key}</span>

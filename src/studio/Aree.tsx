@@ -127,12 +127,12 @@ export default function Aree({ data, now, refresh }: Ctx) {
     setNote("Vista di partenza salvata.");
   });
   const upload = (file: File | undefined) => file && api.current && run(async () => {
-    const path = await uploadMedia(c.id, file);
+    const path = await uploadMedia(c.id, file, 4096); // mappa sovrapposta: resta nitida
     setAndSave({ overlay: { path, coordinates: api.current!.corners(), opacity: 0.7 } });
   });
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1fr_360px]">
       <div className="relative h-[76dvh] min-h-[480px] overflow-hidden rounded-panel border hairline">
         <MapView
           className="size-full" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={areas} observations={data.observations}

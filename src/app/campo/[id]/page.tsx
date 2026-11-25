@@ -62,7 +62,7 @@ function SideButton({ label, d, count, onClick, children }: { label: string; d?:
         {children ?? (d && <Icon d={d} />)}
         {!!count && <span className="num absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-ink px-1 text-center text-[11px] leading-5 text-paper">{count}</span>}
       </span>
-      <span className="label rounded-full bg-paper/80 px-1.5 !text-[9px] leading-4 backdrop-blur">{label}</span>
+      <span className="rounded-full bg-paper/85 px-1.5 text-[11px] leading-4 font-medium backdrop-blur">{label}</span>
     </button>
   );
 }
@@ -73,7 +73,7 @@ function Counter({ label, d, count, onClick }: { label: string; d: string; count
     <button type="button" aria-label={`${label}${count ? `: ${count}` : ""}`} title={label} onClick={onClick}
       className="relative grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-ink/6 active:scale-95">
       <Icon d={d} />
-      {count > 0 && <span className="num absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-ink px-1 text-center text-[10px] leading-4 text-paper">{count}</span>}
+      {count > 0 && <span className="num absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-ink px-1 text-center text-[11px] leading-4 text-paper">{count}</span>}
     </button>
   );
 }
@@ -397,7 +397,7 @@ export default function Campo() {
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView
         className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} observations={data.observations}
-        grid fog fit controls={false} walked={walked} {...backdrop(c)}
+        grid fog fit controls={false} creditsLift="7rem" walked={walked} {...backdrop(c)}
         places={data.places} routes={data.routes} reached={reached} activeRouteId={routeId} selectedPlaceId={placeId}
         onPlaceClick={(pid) => { setPlaceId(pid); setPanel("place"); }}
         focus={walking && follow && !picking ? position : centerOn?.at ?? null} focusNonce={centerOn?.n} onDrag={() => setFollow(false)}
@@ -421,7 +421,7 @@ export default function Campo() {
           <Dot color={phase === "live" ? "var(--color-leaf)" : phase === "paused" ? "var(--color-sun)" : "var(--color-mute)"} live={phase === "live"} />
           <span className="min-w-0">
             <span className="block truncate text-sm leading-tight">{c.name}</span>
-            <span className="label soft block !text-[9px]">{PHASE_LABEL[phase]}{phase === "live" ? ` – ${remaining(c.ends_at, now)}` : ""}</span>
+            <span className="label soft block !text-[11px]">{PHASE_LABEL[phase]}{phase === "live" ? ` – ${remaining(c.ends_at, now)}` : ""}</span>
           </span>
         </Link>
         <div className="hidden flex-col items-center gap-1 pt-2 md:flex">
@@ -548,10 +548,10 @@ export default function Campo() {
                   <span className="grid size-14 place-items-center rounded-full p-[3px] shadow-[var(--shadow-soft)]"
                     style={{ background: `conic-gradient(${myTeam?.color ?? "#2b2118"} ${litPct * 3.6}deg, rgb(245 241 230 / .85) 0)` }}>
                     <span className="grid size-full place-items-center rounded-full bg-paper">
-                      <span className="num text-[15px] font-medium leading-none">{litPct}<span className="text-[10px]">%</span></span>
+                      <span className="num text-[15px] font-medium leading-none">{litPct}<span className="text-[11px]">%</span></span>
                     </span>
                   </span>
-                  <span className="label max-w-full truncate rounded-full bg-paper/85 px-1.5 !text-[9px] leading-4 backdrop-blur">{myTeam?.name ?? "Accesa"}</span>
+                  <span className="max-w-full truncate rounded-full bg-paper/85 px-1.5 text-[11px] leading-4 font-medium backdrop-blur">{myTeam?.name ?? "Accesa"}</span>
                 </button>
 
                 {/* raccogli: il gesto principale, al centro e grande */}
@@ -636,7 +636,7 @@ export default function Campo() {
                   <ul className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
                     {figures.slice(0, 10).map((f) => (
                       <li key={f.dataset.id + f.column.key} className="min-w-0">
-                        <span className="label soft block truncate !text-[9px]">{f.column.label}{f.year ? ` ${f.year}` : ""}</span>
+                        <span className="label soft block truncate !text-[11px]">{f.column.label}{f.year ? ` ${f.year}` : ""}</span>
                         <span className="flex items-baseline justify-between gap-3">
                           <span className="display num text-[22px]">{formatValue(f.value, f.column.unit)}</span>
                           {f.series.length > 2 && <Spark points={f.series} unit={f.column.unit} />}
@@ -858,7 +858,7 @@ export default function Campo() {
           </div>
           <div className="mt-5 grid grid-cols-4 gap-2 text-center">
             {([["Copertura", ind.coverage, "var(--color-glow)"], ["Equilibrio", ind.balance, "#8fb3d1"], ["Affidabilità", ind.reliability, "#e08a6e"], ["Scambio", ind.exchange, "#e8c07a"]] as const).map(([l, v, col]) => (
-              <div key={l}><Ring value={v} color={col} size={56} /><div className="label soft mt-1.5 !text-[9px]">{l}</div></div>
+              <div key={l}><Ring value={v} color={col} size={56} /><div className="label soft mt-1.5 !text-[11px]">{l}</div></div>
             ))}
           </div>
           <p className="soft mt-5 border-t border-white/10 pt-4 text-sm">

@@ -69,7 +69,7 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
 
   return (
     <div className="space-y-10">
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-2">
         <Card className="space-y-3 !p-6">
           <Label>Visibilità</Label>
           <Toggle on={!!c.public_map} disabled={busy} onChange={(v) => set({ public_map: v })} title="Mappa pubblica"
@@ -109,7 +109,7 @@ export default function Pubblico({ data, me, now, refresh }: Ctx) {
         {list.length === 0 ? (
           <Empty title={tab === "pending" ? "Coda vuota." : "Niente qui."}>{c.contributions_open ? "I contributi arrivano dalla pagina per contribuire." : "Attiva i contributi individuali per ricevere proposte."}</Empty>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
+          <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1fr_420px]">
             <div className="space-y-3">
               {list.map((x) => {
                 const img = mediaUrl(x.media_path);

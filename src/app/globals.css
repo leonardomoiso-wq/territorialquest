@@ -198,6 +198,7 @@ body::after {
 }
 
 .maplibregl-map { font-family: var(--font-sans); }
+.maplibregl-ctrl-bottom-right { bottom: var(--credits-lift, 0px); transition: bottom 0.2s; }
 .maplibregl-ctrl-attrib { font-size: 10px; background: rgb(245 241 230 / 0.75) !important; border-radius: 2px 0 0 0; }
 .maplibregl-ctrl-group { border-radius: 3px !important; overflow: hidden; box-shadow: var(--shadow-soft) !important; }
 

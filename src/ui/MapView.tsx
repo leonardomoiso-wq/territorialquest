@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Map as MLMap, NavigationControl, setWorkerUrl,
+  AttributionControl, Map as MLMap, NavigationControl, setWorkerUrl,
   type GeoJSONSource, type MapMouseEvent, type MapTouchEvent, type StyleSpecification,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -129,8 +129,10 @@ interface Props {
   /** Adatta la vista alle aree al primo caricamento. */
   fit?: boolean;
   interactive?: boolean;
-  /** Pulsanti di zoom (su telefono basta il gesto). */
+  /** Pulsanti di zoom, solo su schermi larghi (su telefono basta il gesto). */
   controls?: boolean;
+  /** Solleva i crediti della mappa sopra i pulsanti in basso (es. "5rem"). */
+  creditsLift?: string;
   /**
    * Vista esplora: camera inclinata che segue chi cammina (e la bussola), cartelli in piedi,
    * sagome di carta, nebbia di carta sulle zone mai attraversate. rich aggiunge edifici e cielo;
@@ -514,10 +516,12 @@ export default function MapView(props: Props) {
         zoom: p.zoom,
         maxPitch: 75,
         interactive: p.interactive ?? true,
-        attributionControl: { compact: true },
+        attributionControl: false,
       });
+      // crediti compatti: una «i» che si apre al tocco
+      m.addControl(new AttributionControl({ compact: true }), "bottom-right");
       map.current = m;
-      if ((p.interactive ?? true) && (p.controls ?? true)) m.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
+      if ((p.interactive ?? true) && (p.controls ?? true) && window.matchMedia("(min-width: 768px)").matches) m.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
 
       m.on("styleimagemissing", (e: { id: string }) => ensureImage(m, e.id));
 
@@ -689,6 +693,7 @@ export default function MapView(props: Props) {
         m.addLayer({ id: "pin", type: "circle", source: "pin", paint: { "circle-radius": 7, "circle-color": "#2b2118", "circle-stroke-color": "#d6993e", "circle-stroke-width": 3 } });
 
         ready.current = true;
+        m.getContainer().querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show");
         sync();
 
         latest.current.onReady?.({
@@ -827,7 +832,7 @@ export default function MapView(props: Props) {
 
   const cursor = props.onClick || props.onPaint ? "crosshair" : undefined;
   return (
-    <div className={props.className} style={{ cursor }}>
+    <div className={props.className} style={{ cursor, ["--credits-lift" as string]: props.creditsLift }}>
       <div ref={el} className="size-full" />
     </div>
   );

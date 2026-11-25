@@ -94,7 +94,7 @@ export default function Tempi({ data, now, refresh }: Ctx) {
         {data.missions.length === 0 ? (
           <Empty title="Nessuna missione.">Le missioni sono traguardi condivisi da tutti i team, con un inizio e una fine. Alla scadenza si chiudono.</Empty>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 md:grid-cols-2">
             {data.missions.map((m) => {
               const p = missionProgress(m, data, now);
               return (

@@ -52,6 +52,17 @@ Durante l'uscita la mappa si inclina e segue chi cammina:
 - **Sicurezza e batteria**: schermo acceso solo durante l'uscita; oltre i 10 km/h compare l'invito a guardare la strada.
 - **Mappa di riserva**: se la mappa vettoriale non risponde, sotto resta una mappa chiara a immagini (© OpenStreetMap © CARTO).
 
+### Su telefono
+
+- **App installabile**: dal browser «Aggiungi a schermata Home» (iPhone: Condividi, Aggiungi alla schermata Home).
+  Si apre a schermo intero con l'icona di Territorial Quest e parte da «Entra».
+- **Senza rete**: le pagine già aperte si riaprono; quelle mai viste mostrano «Senza rete».
+  Il service worker conserva solo pagine e file dell'app, mai i dati di Supabase né le tessere della mappa.
+- **Foto ridotte prima dell'invio**: lato lungo 1600 px in JPEG (circa 300–500 KB invece di 4–8 MB),
+  senza i metadati dello scatto (posizione GPS, modello del telefono). Le immagini sovrapposte alle aree restano a 4096 px.
+- **Dove sono**: in Campo e nei contributi; se la posizione non arriva, spiega perché (permesso, localizzazione del computer, segnale).
+- Su touch screen i pulsanti piccoli diventano alti 40 px; i pulsanti di zoom compaiono solo su schermi larghi.
+
 ## Luoghi, percorsi e indagini sul sito
 
 - **Luoghi** (sezione Luoghi della regia): punti di interesse storici, naturalistici, culturali,

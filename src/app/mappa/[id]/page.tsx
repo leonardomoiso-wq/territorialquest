@@ -42,6 +42,8 @@ export default function Mappa() {
   const [item, setItem] = useState<Item | null>(null);
   const [list, setList] = useState(false);
   const [intro, setIntro] = useState(true);
+  // su telefono la presentazione parte chiusa: la mappa viene prima
+  useEffect(() => { if (window.innerWidth < 640) { const t = setTimeout(() => setIntro(false), 0); return () => clearTimeout(t); } }, []);
 
   useEffect(() => {
     loadPublicMap(id).then(setMap, (e) => { setError(explain(e)); setMap(null); });
@@ -81,7 +83,7 @@ export default function Mappa() {
     <main className="fixed inset-0 overflow-hidden bg-paper-2">
       <MapView
         className="absolute inset-0" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={map.areas} observations={obs} fit mode={mode}
-        {...backdrop(c)} controls
+        {...backdrop(c)} controls creditsLift="5.25rem"
         places={on.has("luoghi") ? map.places : []} routes={on.has("luoghi") ? map.routes : []} contributions={contribs}
         onObservationClick={(oid) => { const o = map.observations.find((x) => x.id === oid); if (o) setItem({ kind: "obs", o }); }}
         onContributionClick={(cid) => { const x = map.contributions.find((y) => y.id === cid); if (x) setItem({ kind: "contrib", c: x }); }}
@@ -95,7 +97,7 @@ export default function Mappa() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-5">
         <div className="glass pointer-events-auto w-full max-w-md rounded-[26px] p-4">
           <div className="flex items-center justify-between gap-3">
-            <Link href="/" aria-label="Territorial Quest"><Logo /></Link>
+            <Link href="/" aria-label="Territorial Quest"><Logo className="[&>span]:hidden sm:[&>span]:inline" /></Link>
             <Label>{c.public_map ? "Mappa pubblica" : "Archivio della campagna"}</Label>
           </div>
           <h1 className="display mt-3 text-[clamp(1.6rem,6vw,2.2rem)]">{c.name}</h1>
@@ -108,7 +110,7 @@ export default function Mappa() {
             {map.stats.walked_m > 0 && <span><b className="num font-medium">{formatMeters(map.stats.walked_m)}</b> a piedi</span>}
           </div>
           {(c.public_intro || c.description) && (
-            <button className="soft mt-2 text-xs underline-offset-2 hover:underline" onClick={() => setIntro(!intro)}>{intro ? "Riduci" : "Leggi la presentazione"}</button>
+            <button className="soft -mb-2 -ml-2 mt-0.5 h-10 px-2 text-[13px] underline-offset-2 hover:underline" onClick={() => setIntro(!intro)}>{intro ? "Riduci" : "Leggi la presentazione"}</button>
           )}
         </div>
         <div className="pointer-events-auto -mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0">

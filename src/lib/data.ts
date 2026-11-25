@@ -1,5 +1,6 @@
 "use client";
 
+import { shrinkImage } from "@/lib/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { areaAt, cellOf } from "@/domain/geo";
@@ -231,7 +232,9 @@ export const announce = (campaign_id: string, author_id: string, body: string, t
   unwrap(db().from("announcements").insert({ campaign_id, author_id, body, team_id }));
 
 /* ----------------------------------------------------------- osservazioni */
-export async function uploadMedia(campaignId: string, file: File): Promise<string> {
+/** Carica una foto ridotta (lato lungo 1600 px; per le mappe sovrapposte si passa un massimo più alto). */
+export async function uploadMedia(campaignId: string, original: File, max = 1600): Promise<string> {
+  const file = await shrinkImage(original, max);
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
   const path = `${campaignId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await db().storage.from("media").upload(path, file, { contentType: file.type, cacheControl: "31536000" });

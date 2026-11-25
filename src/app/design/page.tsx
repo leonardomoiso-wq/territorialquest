@@ -137,7 +137,7 @@ export default function Design() {
       </Block>
 
       <Block kicker="05 – Campi e contenitori" title="Moduli e schede">
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 [&>*]:min-w-0 md:grid-cols-2">
           <Card className="space-y-3 !p-6">
             <Field label="Titolo" placeholder="Giardino condiviso di via Cuneo" />
             <Select label="Tema"><option>Ambiente fisico</option><option>Flussi di mobilità</option></Select>

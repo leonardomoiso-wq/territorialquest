@@ -125,7 +125,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
   const totalPoints = data.places.reduce((s, p) => s + p.points, 0);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1fr_380px]">
       <div className="relative h-[76dvh] min-h-[480px] overflow-hidden rounded-panel border hairline">
         <MapView
           className="size-full" center={[c.center_lng, c.center_lat]} zoom={c.zoom} areas={data.areas} fit {...backdrop(c)}
@@ -320,7 +320,7 @@ export default function Luoghi({ data, refresh }: Ctx) {
                   <div key={path} className="group relative aspect-square overflow-hidden rounded-2xl bg-paper-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={mediaUrl(path) ?? ""} alt="" className="size-full object-cover" />
-                    {i === 0 && <span className="label glass absolute bottom-1.5 left-1.5 rounded-full px-2 py-0.5 !text-[9px]">copertina</span>}
+                    {i === 0 && <span className="label glass absolute bottom-1.5 left-1.5 rounded-full px-2 py-0.5 !text-[11px]">copertina</span>}
                     <div className="absolute inset-x-1.5 top-1.5 flex justify-between opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                       {i > 0 ? <button type="button" className="glass rounded-full px-2 py-0.5 text-[11px]" onClick={() => setPlace({ ...place, images: [path, ...place.images.filter((x) => x !== path)] })}>copertina</button> : <span />}
                       <button type="button" aria-label="Togli l'immagine" className="glass grid size-6 place-items-center rounded-full text-[11px]" onClick={() => setPlace({ ...place, images: place.images.filter((x) => x !== path) })}>✕</button>

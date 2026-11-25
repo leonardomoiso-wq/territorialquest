@@ -155,7 +155,7 @@ export function Community({ items, onAdd }: { items: Contribution[]; onAdd?: () 
                   <p>{x.title}: <b className="num font-medium">{formatValue(x.data?.value as number, String(x.data?.unit ?? "") || undefined)}</b></p>
                 ) : <p>{x.title}</p>}
                 {x.note && <p className="soft">{x.note}</p>}
-                <p className="label soft mt-0.5 !text-[9px]">{x.display_name}, {new Date(x.created_at).toLocaleDateString("it-IT")}</p>
+                <p className="label soft mt-0.5 !text-[11px]">{x.display_name}, {new Date(x.created_at).toLocaleDateString("it-IT")}</p>
               </li>
             ))}
           </ul>
