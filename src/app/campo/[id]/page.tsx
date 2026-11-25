@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Details, emptyEntry, FormPicker, FormTag, type Entry } from "@/campo/Collect";
+import { Atlante } from "@/campo/Atlante";
 import { Diario } from "@/campo/Diario";
 import { Celebration, Recap, type Cheer, type WalkSummary } from "@/campo/Moments";
 import Story from "@/campo/Story";
@@ -75,6 +76,8 @@ export default function Campo() {
   const { busy, error: actionError, run, setError } = useAction();
 
   const [panel, setPanel] = useState<Panel>(null);
+  /** Nel pannello del Diario: le proprie raccolte oppure l'Atlante collettivo. */
+  const [book, setBook] = useState<"diario" | "atlante">("diario");
   const [picking, setPicking] = useState(false);
   const [pin, setPin] = useState<LngLat | null>(null);
   const [position, setPosition] = useState<LngLat | null>(null);
@@ -815,9 +818,10 @@ export default function Campo() {
       />
 
       {/* ----------------------------------------------- foto da completare */}
-      <Sheet open={openPanel === "diario"} onClose={() => setPanel(null)} kicker={data.campaign.name} title="Il tuo diario" wide>
-        <Diario data={data} me={me} drafts={drafts.length} onDrafts={() => setPanel("drafts")}
-          onOpen={(oid) => { const o = data.observations.find((x) => x.id === oid); if (o) { setDetail(o); setPanel("detail"); } }} />
+      <Sheet open={openPanel === "diario"} onClose={() => setPanel(null)} kicker={data.campaign.name} title={book === "diario" ? "Il tuo diario" : "Atlante del gruppo"} wide>
+        <Segmented className="mb-5" value={book} onChange={setBook} options={[{ id: "diario", label: "Diario" }, { id: "atlante", label: "Atlante" }]} />
+        {book === "atlante" ? <Atlante data={data} /> : <Diario data={data} me={me} drafts={drafts.length} onDrafts={() => setPanel("drafts")}
+          onOpen={(oid) => { const o = data.observations.find((x) => x.id === oid); if (o) { setDetail(o); setPanel("detail"); } }} />}
       </Sheet>
 
       <Sheet open={openPanel === "drafts"} onClose={() => setPanel(null)} kicker="Scatti rapidi" title="Da completare" wide>

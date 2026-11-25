@@ -33,7 +33,7 @@ export function Tinted({
   if (!ASSETS.has(name)) return <>{fallback}</>;
   const group = name.split("/")[0];
   const src = `/assets/${name}${small ? (group === "scene" ? "-800" : "-256") : ""}.webp`;
-  const tones = muted ? [BASE.line, BASE["paper-2"], BASE.card] : [ink, accent, paper];
+  const tones = muted ? [BASE.mute, BASE.line, BASE.card] : [ink, accent, paper];
   const [a, b, c] = tones.map(rgb);
   const table = (k: 0 | 1 | 2) => `${a[k] / 255} ${b[k] / 255} ${c[k] / 255}`;
   const W = 100, H = 100 / ratio;

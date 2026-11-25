@@ -47,6 +47,9 @@ Durante l'uscita la mappa si inclina e segue chi cammina:
 - **Ricompense**: all'arrivo il cartello esce dal terreno e si alza (0,6 s) e il timbro si calca sulla carta (0,9 s);
   dopo una raccolta la foto vera, come una polaroid, vola nel **Diario**. Ogni momento si chiude con un tocco.
 - **Diario**: le proprie raccolte e i luoghi raggiunti, giorno per giorno, con lo stato di conferma e i punti.
+- **Atlante del gruppo** (nel pannello del Diario): forme raccolte, tipi di luogo raggiunti e ambienti attraversati
+  da tutti i team insieme; le caselle vuote mostrano un invito. Illustrazioni da `public/assets/atlante/`, ricolorate
+  con il colore della forma, del tipo o dell'ambiente; dove l'immagine manca c'è l'icona.
 - **Riepilogo a taccuino**: pagina a righe con la mini mappa delle celle attraversate (non il tracciato GPS),
   i luoghi raggiunti, i rilievi raccolti e i punti in arrivo per il gruppo.
 - **Vista**: Esplora o Piatta; grafica Automatica, Ricca (edifici in rilievo, cielo dell'ora del giorno) o Essenziale.

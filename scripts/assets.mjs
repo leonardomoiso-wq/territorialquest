@@ -48,10 +48,13 @@ for (const file of readdirSync(SRC).sort()) {
   const px = info.width * info.height;
   const lum = new Float32Array(px);
   const alpha = new Uint8ClampedArray(px);
+  // fondo verde da ritagliare oppure fondo bianco (che nell'app diventa il colore carta)
+  const greenBg = rule.cutout && data[1] - Math.max(data[0], data[2]) > 90;
+  const whiteBg = rule.cutout && !greenBg;
 
   for (let i = 0; i < px; i++) {
     let r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2], a = data[i * 4 + 3];
-    if (rule.cutout) {
+    if (greenBg) {
       // quanto il pixel è «verde sfondo»: verde molto più forte di rosso e blu
       const green = g - Math.max(r, b);
       if (green > 90) a = 0;
@@ -59,6 +62,8 @@ for (const file of readdirSync(SRC).sort()) {
       if (green > 0) g = Math.max(r, b); // toglie il riflesso verde sui bordi
     }
     lum[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    // fondo bianco: il quasi bianco diventa trasparente, così sotto si vede la carta vera dell'interfaccia
+    if (whiteBg) a = lum[i] > 246 ? 0 : lum[i] > 226 ? Math.round(a * (246 - lum[i]) / 20) : a;
     alpha[i] = a;
   }
 
@@ -70,14 +75,28 @@ for (const file of readdirSync(SRC).sort()) {
   const hi = rule.keepTones ? 255 : visible[Math.floor(visible.length * 0.99)] ?? 255;
   const span = Math.max(1, hi - lo);
 
+  // accento tarato: il grigio più frequente tra i toni medi va a metà scala,
+  // così nell'app prende pieno il colore d'accento (gamma sui toni, nero e bianco restano)
+  let gamma = 1;
+  if (!rule.keepTones) {
+    const hist = new Array(256).fill(0);
+    for (let i = 0; i < px; i += 2) if (alpha[i] > 200) { const v = Math.round(((lum[i] - lo) / span) * 255); if (v >= 70 && v <= 215) hist[v]++; }
+    let peak = 0;
+    for (let v = 70; v <= 215; v++) if (hist[v] > hist[peak]) peak = v;
+    if (peak > 0) gamma = Math.log(0.5) / Math.log(peak / 255);
+  }
+
   const out = Buffer.alloc(px * 2);
   for (let i = 0; i < px; i++) {
-    out[i * 2] = Math.max(0, Math.min(255, Math.round(((lum[i] - lo) / span) * 255)));
+    const t = Math.max(0, Math.min(1, (lum[i] - lo) / span));
+    out[i * 2] = Math.round(Math.pow(t, gamma) * 255);
     out[i * 2 + 1] = alpha[i];
   }
 
   let img = sharp(out, { raw: { width: info.width, height: info.height, channels: 2 } });
-  if (rule.cutout) img = sharp(await img.png().toBuffer()).trim({ threshold: 1 });
+  if (greenBg) img = sharp(await img.png().toBuffer()).trim({ threshold: 1 });
+  // fondo bianco: si tolgono i margini bianchi (soglia larga per la grana della carta)
+  if (whiteBg) img = sharp(await img.png().toBuffer()).trim({ threshold: 1 });
   let base = await img.png().toBuffer();
   if (rule.square) {
     const meta = await sharp(base).metadata();
@@ -106,7 +125,7 @@ for (const file of readdirSync(SRC).sort()) {
     await resized.webp({ quality: 86, alphaQuality: 90 }).toFile(target);
   }
   done.push(`${rule.group}/${slug}`);
-  console.log(`✓ ${file} → ${rule.group}/${slug}.webp (toni ${Math.round(lo)}–${Math.round(hi)})`);
+  console.log(`✓ ${file} → ${rule.group}/${slug}.webp (toni ${Math.round(lo)}–${Math.round(hi)}, accento γ ${gamma.toFixed(2)}${whiteBg ? ", fondo bianco" : greenBg ? ", ritagliato" : ""})`);
 }
 
 const list = [...new Set(done)].sort();
